@@ -3,9 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { analyzePlatePhoto, type ImageMediaType } from "@/lib/ai/respond";
+import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
 import { foodMealFields } from "@/lib/foods";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  ALLOWED_PHOTO_TYPES,
+  MAX_PHOTO_BYTES,
+} from "@/lib/validations/progress";
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -310,4 +316,128 @@ export async function swapMealFood(values: unknown): Promise<RecalcResult> {
     .eq("id", parsed.data.mealId);
   revalidatePath("/plan");
   return { calories, content, quantity: qty, foodId: parsed.data.foodId };
+}
+
+// ---------------------------------------------------------------------------
+// "Tabağını paylaş" → foto analizi → gerçekleşen öğünü uygula
+// ---------------------------------------------------------------------------
+export type ScanItem = { name: string; calories: number };
+export type ScanResult =
+  | { error: string }
+  | { items: ScanItem[]; note: string };
+
+/** Fotoğrafı analiz edip tanınan öğeleri döndürür (kaydetmez). */
+export async function scanPlatePhoto(formData: FormData): Promise<ScanResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const photo = formData.get("photo");
+  if (!(photo instanceof File) || photo.size === 0) {
+    return { error: "Fotoğraf seçilmedi." };
+  }
+  if (!ALLOWED_PHOTO_TYPES.includes(photo.type)) {
+    return { error: "Yalnızca JPEG, PNG veya WEBP." };
+  }
+  if (photo.size > MAX_PHOTO_BYTES) {
+    return { error: "Fotoğraf en fazla 5 MB olabilir." };
+  }
+
+  const base64 = Buffer.from(await photo.arrayBuffer()).toString("base64");
+  const rules = await getActiveDietitianRules();
+
+  try {
+    const scan = await analyzePlatePhoto({
+      imageBase64: base64,
+      mediaType: photo.type as ImageMediaType,
+      dietitianRules: rules,
+      planContext: null,
+    });
+    return {
+      items: scan.items.map((i) => ({ name: i.name, calories: i.calories })),
+      note: scan.note,
+    };
+  } catch {
+    return { error: "Fotoğraf analiz edilemedi, tekrar dene." };
+  }
+}
+
+const applySchema = z.object({
+  planId: z.string().uuid(),
+  dayOfWeek: z.coerce.number().int().min(0).max(6),
+  mealType: MEAL_TYPE_ENUM,
+  items: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(200),
+        calories: z.coerce.number().int().min(0).max(3000),
+      }),
+    )
+    .min(1)
+    .max(20),
+});
+
+export type ApplyResult =
+  | { error: string }
+  | {
+      dayOfWeek: number;
+      mealType: (typeof MEAL_TYPE_ENUM)["_output"];
+      meals: {
+        id: string;
+        day_of_week: number;
+        meal_type: (typeof MEAL_TYPE_ENUM)["_output"];
+        content: string;
+        calories: number | null;
+        food_id: string | null;
+        quantity: number | null;
+      }[];
+    };
+
+/** Tanınan öğeleri o gün/öğün için GERÇEKLEŞEN öğün olarak uygular (eskiyi değiştirir). */
+export async function applyMealFromItems(
+  values: unknown,
+): Promise<ApplyResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const parsed = applySchema.safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz veri." };
+
+  const admin = createAdminClient();
+  const { data: plan } = await admin
+    .from("diet_plans")
+    .select("client_id")
+    .eq("id", parsed.data.planId)
+    .single();
+  if (plan?.client_id !== user.id) return { error: "Yetkin yok." };
+
+  // O gün + öğün tipindeki mevcut öğeleri kaldır.
+  await admin
+    .from("meals")
+    .delete()
+    .eq("plan_id", parsed.data.planId)
+    .eq("day_of_week", parsed.data.dayOfWeek)
+    .eq("meal_type", parsed.data.mealType);
+
+  const rows = parsed.data.items.map((it) => ({
+    plan_id: parsed.data.planId,
+    day_of_week: parsed.data.dayOfWeek,
+    meal_type: parsed.data.mealType,
+    content: it.name,
+    calories: it.calories,
+  }));
+
+  const { data, error } = await admin
+    .from("meals")
+    .insert(rows)
+    .select(
+      "id, day_of_week, meal_type, content, calories, food_id, quantity",
+    );
+  if (error || !data) return { error: "Uygulanamadı." };
+
+  revalidatePath("/plan");
+  return {
+    dayOfWeek: parsed.data.dayOfWeek,
+    mealType: parsed.data.mealType,
+    meals: data,
+  };
 }

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   addFoodMeal,
+  applyMealFromItems,
   deleteMealItem,
+  scanPlatePhoto,
   setMealQuantity,
   swapMealFood,
   updateMeal,
@@ -66,6 +68,60 @@ export function EditableMeals({
   const [addType, setAddType] = useState<MealType>("breakfast");
   const [addQty, setAddQty] = useState("1");
   const [addFood, setAddFood] = useState<Food | null>(null);
+
+  // "Tabağını paylaş" — foto ile gerçekleşen öğün
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [photoType, setPhotoType] = useState<MealType>("breakfast");
+  const [scanning, setScanning] = useState(false);
+  const [scanItems, setScanItems] = useState<
+    { name: string; calories: number }[] | null
+  >(null);
+  const [applying, setApplying] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function onScanFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setScanning(true);
+    setScanItems(null);
+    setError(null);
+    const fd = new FormData();
+    fd.set("photo", file);
+    const res = await scanPlatePhoto(fd);
+    setScanning(false);
+    if ("error" in res) {
+      setError(res.error);
+      return;
+    }
+    setScanItems(res.items);
+  }
+
+  async function applyPhoto() {
+    if (!scanItems || scanItems.length === 0) return;
+    setApplying(true);
+    setError(null);
+    const res = await applyMealFromItems({
+      planId,
+      dayOfWeek: selectedDay,
+      mealType: photoType,
+      items: scanItems,
+    });
+    setApplying(false);
+    if ("error" in res) {
+      setError(res.error);
+      return;
+    }
+    setMeals((prev) => [
+      ...prev.filter(
+        (m) =>
+          !(m.day_of_week === res.dayOfWeek && m.meal_type === res.mealType),
+      ),
+      ...res.meals,
+    ]);
+    setPhotoOpen(false);
+    setScanItems(null);
+  }
 
   function patch(id: string, p: Partial<Meal>) {
     setMeals((prev) => prev.map((m) => (m.id === id ? { ...m, ...p } : m)));
@@ -413,6 +469,113 @@ export function EditableMeals({
               className="text-xs font-medium text-emerald-600 hover:underline"
             >
               + Besin ekle (listeden)
+            </button>
+          )}
+        </div>
+
+        {/* Tabağını paylaş — foto ile gerçekleşen öğün */}
+        <div className="border-t border-gray-100 px-4 py-3 dark:border-gray-800">
+          {photoOpen ? (
+            <div className="space-y-3">
+              <p className="text-sm font-medium">📷 Tabağını paylaş</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={photoType}
+                  onChange={(e) => setPhotoType(e.target.value as MealType)}
+                  className={selectClass}
+                >
+                  {MEAL_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={onScanFile}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={scanning}
+                >
+                  {scanning ? "Okunuyor…" : "Fotoğraf seç / çek"}
+                </Button>
+              </div>
+
+              {scanItems && (
+                <div className="space-y-2 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                  <p className="text-xs text-gray-500">
+                    Tanınan öğeler (yanlışları çıkarabilirsin):
+                  </p>
+                  <ul className="space-y-1">
+                    {scanItems.map((it, i) => (
+                      <li
+                        key={i}
+                        className="flex items-center justify-between text-sm"
+                      >
+                        <span>{it.name}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400">
+                            {it.calories} kcal
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setScanItems(
+                                (items) =>
+                                  items?.filter((_, j) => j !== i) ?? null,
+                              )
+                            }
+                            className="text-xs text-red-600"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs font-medium">
+                    Toplam ~
+                    {scanItems.reduce((s, it) => s + it.calories, 0)} kcal
+                  </p>
+                  <Button
+                    onClick={applyPhoto}
+                    disabled={applying || scanItems.length === 0}
+                  >
+                    {applying
+                      ? "Uygulanıyor…"
+                      : "Gerçekleşen öğün olarak uygula"}
+                  </Button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPhotoOpen(false);
+                  setScanItems(null);
+                }}
+                className="text-xs text-gray-400 hover:underline"
+              >
+                Kapat
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setPhotoOpen(true);
+                setScanItems(null);
+                setPhotoType("breakfast");
+              }}
+              className="text-xs font-medium text-emerald-600 hover:underline"
+            >
+              📷 Tabağını paylaş (gerçekleşen öğün)
             </button>
           )}
         </div>
