@@ -2,20 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { sendMessage } from "@/app/(app)/sohbet/actions";
+import { sendMessage, sendPhotoMessage } from "@/app/(app)/sohbet/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { MessageType } from "@/types/database";
 
+const BUCKET = "progress-photos";
+
 export type ChatMessageRow = {
   id: string;
   sender_id: string | null;
   type: MessageType;
   content: string;
+  image_path: string | null;
   created_at: string;
 };
+
+const SELECT = "id, sender_id, type, content, image_path, created_at";
 
 export function MessageThread({
   conversationId,
@@ -29,43 +34,40 @@ export function MessageThread({
   const [messages, setMessages] = useState<ChatMessageRow[]>(initialMessages);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Fotoğraflı mesajlar için imzalı URL üret (gizli bucket).
   useEffect(() => {
+    const missing = messages
+      .map((m) => m.image_path)
+      .filter((p): p is string => Boolean(p) && !(p! in imageUrls));
+    if (missing.length === 0) return;
     const supabase = createClient();
-    const channel = supabase
-      .channel(`messages:${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const row = payload.new as ChatMessageRow;
-          setMessages((prev) =>
-            prev.some((m) => m.id === row.id) ? prev : [...prev, row],
-          );
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [conversationId]);
+    (async () => {
+      const entries: [string, string][] = [];
+      for (const path of missing) {
+        const { data } = await supabase.storage
+          .from(BUCKET)
+          .createSignedUrl(path, 3600);
+        if (data?.signedUrl) entries.push([path, data.signedUrl]);
+      }
+      if (entries.length > 0) {
+        setImageUrls((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+      }
+    })();
+  }, [messages, imageUrls]);
 
   async function refetch() {
     const supabase = createClient();
     const { data } = await supabase
       .from("messages")
-      .select("id, sender_id, type, content, created_at")
+      .select(SELECT)
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true });
     if (data) setMessages(data as ChatMessageRow[]);
@@ -78,23 +80,44 @@ export function MessageThread({
     setSending(true);
     setInput("");
 
-    // İyimser: kullanıcı mesajını hemen göster.
     const optimistic: ChatMessageRow = {
       id: `temp-${Date.now()}`,
       sender_id: currentUserId,
       type: "user",
       content: text,
+      image_path: null,
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimistic]);
 
     const result = await sendMessage({ conversationId, content: text });
-    // Realtime'a güvenmeden, yetkili listeyi yeniden çek (kullanıcı + AI yanıtı).
     await refetch();
     setSending(false);
-    if (result && "error" in result) {
-      setInput(text); // hata: metni geri koy
-    }
+    if (result && "error" in result) setInput(text);
+  }
+
+  async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || sending) return;
+    setSending(true);
+
+    const optimistic: ChatMessageRow = {
+      id: `temp-${Date.now()}`,
+      sender_id: currentUserId,
+      type: "user",
+      content: "📷 Tabağımın fotoğrafını paylaştım",
+      image_path: null,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
+
+    const fd = new FormData();
+    fd.set("conversationId", conversationId);
+    fd.set("photo", file);
+    await sendPhotoMessage(fd);
+    await refetch();
+    setSending(false);
   }
 
   return (
@@ -106,7 +129,7 @@ export function MessageThread({
       >
         {messages.length === 0 && (
           <p className="pt-10 text-center text-sm text-gray-500">
-            Henüz mesaj yok. İlk mesajını yaz.
+            Henüz mesaj yok. İlk mesajını yaz ya da tabağının fotoğrafını paylaş.
           </p>
         )}
 
@@ -119,6 +142,7 @@ export function MessageThread({
             );
           }
           const mine = m.type === "user" && m.sender_id === currentUserId;
+          const url = m.image_path ? imageUrls[m.image_path] : undefined;
           return (
             <div
               key={m.id}
@@ -139,6 +163,14 @@ export function MessageThread({
                     Asistan
                   </span>
                 )}
+                {url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={url}
+                    alt="Tabak fotoğrafı"
+                    className="mb-1 max-h-56 rounded-lg object-cover"
+                  />
+                )}
                 {m.content}
               </div>
             </div>
@@ -156,8 +188,25 @@ export function MessageThread({
 
       <form
         onSubmit={onSend}
-        className="flex gap-2 border-t border-gray-200 p-3 dark:border-gray-800"
+        className="flex items-center gap-2 border-t border-gray-200 p-3 dark:border-gray-800"
       >
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={onPhoto}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => fileRef.current?.click()}
+          disabled={sending}
+          aria-label="Fotoğraf ekle"
+          className="px-3"
+        >
+          📷
+        </Button>
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}

@@ -299,6 +299,7 @@ export type Database = {
           sender_id: string | null;
           type: MessageType;
           content: string;
+          image_path: string | null;
           created_at: string;
         };
         Insert: {
@@ -307,6 +308,7 @@ export type Database = {
           sender_id?: string | null;
           type?: MessageType;
           content: string;
+          image_path?: string | null;
           created_at?: string;
         };
         Update: {
@@ -315,6 +317,7 @@ export type Database = {
           sender_id?: string | null;
           type?: MessageType;
           content?: string;
+          image_path?: string | null;
           created_at?: string;
         };
         Relationships: [];

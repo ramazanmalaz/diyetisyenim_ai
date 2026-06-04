@@ -2,13 +2,31 @@
 
 import { redirect } from "next/navigation";
 
-import { generateDietAnswer, type ChatMessage } from "@/lib/ai/respond";
+import {
+  generateDietAnswer,
+  generateVisionAnswer,
+  type ChatMessage,
+  type ImageMediaType,
+} from "@/lib/ai/respond";
 import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
 import { DAYS, mealTypeLabel, mealTypeOrder } from "@/lib/diet";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { messageSchema } from "@/lib/validations/chat";
+import {
+  ALLOWED_PHOTO_TYPES,
+  MAX_PHOTO_BYTES,
+} from "@/lib/validations/progress";
+
+const CHAT_BUCKET = "progress-photos";
+
+function mediaTypeFromPath(path: string): ImageMediaType {
+  const ext = path.split(".").pop()?.toLowerCase();
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  return "image/jpeg";
+}
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -103,6 +121,57 @@ export async function sendMessage(values: unknown): Promise<ActionResult> {
 }
 
 /**
+ * Tabak fotoğrafı mesajı: Storage'a yükler, mesaj olarak ekler ve AI vision
+ * analizini tetikler. RLS yazımı service-role ile (sahiplik sunucuda doğrulanır).
+ */
+export async function sendPhotoMessage(
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const conversationId = formData.get("conversationId");
+  const photo = formData.get("photo");
+  if (typeof conversationId !== "string") {
+    return { error: "Konuşma bulunamadı." };
+  }
+  if (!(photo instanceof File) || photo.size === 0) {
+    return { error: "Fotoğraf seçilmedi." };
+  }
+  if (!ALLOWED_PHOTO_TYPES.includes(photo.type)) {
+    return { error: "Yalnızca JPEG, PNG veya WEBP yükleyebilirsin." };
+  }
+  if (photo.size > MAX_PHOTO_BYTES) {
+    return { error: "Fotoğraf en fazla 5 MB olabilir." };
+  }
+
+  const admin = createAdminClient();
+  const ext = photo.name.split(".").pop() ?? "jpg";
+  const path = `${user.id}/chat/${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await admin.storage
+    .from(CHAT_BUCKET)
+    .upload(path, photo, { contentType: photo.type });
+  if (uploadError) {
+    return { error: "Fotoğraf yüklenemedi." };
+  }
+
+  const { error: insertError } = await admin.from("messages").insert({
+    conversation_id: conversationId,
+    sender_id: user.id,
+    type: "user",
+    content: "📷 Tabağımın fotoğrafını paylaştım",
+    image_path: path,
+  });
+  if (insertError) {
+    return { error: "Mesaj eklenemedi." };
+  }
+
+  await respondWithAi(conversationId, user.id);
+  return { success: true };
+}
+
+/**
  * Kullanıcının aktif planını AI'a bağlam olarak verecek metni üretir.
  */
 async function buildPlanContext(
@@ -153,24 +222,23 @@ async function respondWithAi(
 
   const { data: recent } = await admin
     .from("messages")
-    .select("type, content")
+    .select("type, content, image_path")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: false })
     .limit(15);
 
   if (!recent || recent.length === 0) return;
 
+  const latest = recent[0];
   const transcript = [...recent]
     .reverse()
-    .map((m) => `${m.type === "ai" ? "Asistan" : "Danışan"}: ${m.content}`)
+    .map(
+      (m) =>
+        `${m.type === "ai" ? "Asistan" : "Danışan"}: ${
+          m.image_path ? "[tabak fotoğrafı paylaştı]" : m.content
+        }`,
+    )
     .join("\n");
-
-  const prompt: ChatMessage[] = [
-    {
-      role: "user",
-      content: `Aşağıdaki konuşmada son mesaja, kullanıcının kişisel diyet asistanı olarak yanıt ver.\n\n${transcript}`,
-    },
-  ];
 
   const [rules, planContext] = await Promise.all([
     getActiveDietitianRules(),
@@ -179,7 +247,29 @@ async function respondWithAi(
 
   let answer: string;
   try {
-    answer = await generateDietAnswer(prompt, rules, planContext);
+    if (latest.type === "user" && latest.image_path) {
+      // Fotoğraf mesajı → Claude vision ile analiz et.
+      const { data: blob } = await admin.storage
+        .from(CHAT_BUCKET)
+        .download(latest.image_path);
+      if (!blob) throw new Error("Fotoğraf indirilemedi.");
+      const base64 = Buffer.from(await blob.arrayBuffer()).toString("base64");
+      answer = await generateVisionAnswer({
+        imageBase64: base64,
+        mediaType: mediaTypeFromPath(latest.image_path),
+        transcript,
+        dietitianRules: rules,
+        planContext,
+      });
+    } else {
+      const prompt: ChatMessage[] = [
+        {
+          role: "user",
+          content: `Aşağıdaki konuşmada son mesaja, kullanıcının kişisel diyet asistanı olarak yanıt ver.\n\n${transcript}`,
+        },
+      ];
+      answer = await generateDietAnswer(prompt, rules, planContext);
+    }
   } catch {
     answer = "Şu anda yanıt veremiyorum, lütfen biraz sonra tekrar dene.";
   }
