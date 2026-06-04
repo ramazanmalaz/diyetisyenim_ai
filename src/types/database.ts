@@ -130,6 +130,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      foods: {
+        Row: {
+          id: string;
+          name: string;
+          unit_label: string;
+          kcal_per_unit: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          unit_label: string;
+          kcal_per_unit: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          unit_label?: string;
+          kcal_per_unit?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       intakes: {
         Row: {
           id: string;
@@ -183,6 +207,8 @@ export type Database = {
           meal_type: MealType;
           content: string;
           calories: number | null;
+          food_id: string | null;
+          quantity: number | null;
           sort_order: number;
           created_at: string;
         };
@@ -193,6 +219,8 @@ export type Database = {
           meal_type: MealType;
           content?: string;
           calories?: number | null;
+          food_id?: string | null;
+          quantity?: number | null;
           sort_order?: number;
           created_at?: string;
         };
@@ -203,6 +231,8 @@ export type Database = {
           meal_type?: MealType;
           content?: string;
           calories?: number | null;
+          food_id?: string | null;
+          quantity?: number | null;
           sort_order?: number;
           created_at?: string;
         };

@@ -25,9 +25,16 @@ export default async function PlanPage() {
   const { data: meals } = plan
     ? await supabase
         .from("meals")
-        .select("id, day_of_week, meal_type, content, calories")
+        .select(
+          "id, day_of_week, meal_type, content, calories, food_id, quantity",
+        )
         .eq("plan_id", plan.id)
     : { data: [] };
+
+  const { data: foods } = await supabase
+    .from("foods")
+    .select("id, name, unit_label, kcal_per_unit")
+    .order("name");
 
   // Planlanan ortalama günlük kalori (ring için).
   const rows = meals ?? [];
@@ -78,7 +85,11 @@ export default async function PlanPage() {
         Bir öğeyi değiştirmek için “Düzenle”ye dokun (örn. 5 zeytin → 6, beyaz
         peynir → kaşar). Kalori toplamı buna göre güncellenir.
       </p>
-      <EditableMeals initial={meals ?? []} planId={plan.id} />
+      <EditableMeals
+        initial={meals ?? []}
+        planId={plan.id}
+        foods={foods ?? []}
+      />
     </div>
   );
 }
