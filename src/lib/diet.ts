@@ -19,6 +19,24 @@ export const MEAL_TYPES: { value: MealType; label: string }[] = [
   { value: "dinner", label: "Akşam" },
 ];
 
+export const DAYS_SHORT = [
+  "Pzt",
+  "Sal",
+  "Çar",
+  "Per",
+  "Cum",
+  "Cmt",
+  "Paz",
+] as const;
+
+export const MEAL_ICON: Record<MealType, string> = {
+  breakfast: "🍳",
+  snack_morning: "🍎",
+  lunch: "🥗",
+  snack_afternoon: "🥜",
+  dinner: "🍽️",
+};
+
 export function mealTypeLabel(type: MealType): string {
   return MEAL_TYPES.find((m) => m.value === type)?.label ?? type;
 }

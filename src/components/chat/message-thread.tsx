@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 import { sendMessage, sendPhotoMessage } from "@/app/(app)/sohbet/actions";
+import {
+  FoodScanCard,
+  type FoodScanData,
+} from "@/components/chat/food-scan-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "@/components/ui/markdown";
@@ -142,6 +146,24 @@ export function MessageThread({
               </p>
             );
           }
+
+          // Food-scan kartı (yapılandırılmış tabak analizi)
+          if (m.type === "ai" && m.content.startsWith("[[FOODSCAN]]")) {
+            let scan: FoodScanData | null = null;
+            try {
+              scan = JSON.parse(m.content.slice(12)) as FoodScanData;
+            } catch {
+              scan = null;
+            }
+            if (scan) {
+              return (
+                <div key={m.id} className="flex justify-start">
+                  <FoodScanCard data={scan} />
+                </div>
+              );
+            }
+          }
+
           const mine = m.type === "user" && m.sender_id === currentUserId;
           const url = m.image_path ? imageUrls[m.image_path] : undefined;
           return (

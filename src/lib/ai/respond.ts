@@ -1,3 +1,6 @@
+import type AnthropicNS from "@anthropic-ai/sdk";
+import { z } from "zod";
+
 import { anthropic, DEFAULT_MODEL, MAX_TOKENS } from "./client";
 import { buildChatSystemPrompt, buildSystemPrompt } from "./prompt";
 
@@ -107,4 +110,110 @@ ${params.transcript}`,
     .map((block) => block.text)
     .join("")
     .trim();
+}
+
+// ---------------------------------------------------------------------------
+// Yapılandırılmış tabak analizi (Negatives/Positives kartı için)
+// ---------------------------------------------------------------------------
+const foodScanSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(200),
+        calories: z.coerce.number().int().min(0).max(5000),
+        verdict: z.enum(["positive", "caution"]),
+      }),
+    )
+    .min(1)
+    .max(60),
+  total_calories: z.coerce.number().int().min(0).max(50000),
+  note: z.string().max(2000),
+});
+
+export type FoodScan = z.infer<typeof foodScanSchema>;
+
+const FOODSCAN_SCHEMA: AnthropicNS.Tool.InputSchema = {
+  type: "object",
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Yiyecek adı (miktarla)" },
+          calories: { type: "integer" },
+          verdict: {
+            type: "string",
+            enum: ["positive", "caution"],
+            description:
+              "Sağlıklı/plana uygunsa positive; yüksek kalorili/işlenmiş/aşırı ise caution",
+          },
+        },
+        required: ["name", "calories", "verdict"],
+      },
+    },
+    total_calories: { type: "integer" },
+    note: {
+      type: "string",
+      description: "Kısa Türkçe yorum + planla karşılaştırma",
+    },
+  },
+  required: ["items", "total_calories", "note"],
+};
+
+/**
+ * Tabak fotoğrafını Claude vision + tool-use ile YAPILANDIRILMIŞ analiz eder:
+ * her öğe için kalori + olumlu/dikkat değerlendirmesi ve genel not.
+ */
+export async function analyzePlatePhoto(params: {
+  imageBase64: string;
+  mediaType: ImageMediaType;
+  dietitianRules: string | null;
+  planContext: string | null;
+}): Promise<FoodScan> {
+  const system = buildChatSystemPrompt(
+    params.dietitianRules,
+    params.planContext,
+  );
+
+  const response = await anthropic.messages.create({
+    model: DEFAULT_MODEL,
+    max_tokens: 2048,
+    system: [
+      { type: "text", text: system, cache_control: { type: "ephemeral" } },
+    ],
+    tools: [
+      {
+        name: "save_food_scan",
+        description: "Tabak fotoğrafı analizini kaydeder.",
+        input_schema: FOODSCAN_SCHEMA,
+      },
+    ],
+    tool_choice: { type: "tool", name: "save_food_scan" },
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: params.mediaType,
+              data: params.imageBase64,
+            },
+          },
+          {
+            type: "text",
+            text: "Bu tabak/sofra fotoğrafındaki yiyecekleri oku. Her öğeyi tahmini kalorisiyle ve verdict (positive=sağlıklı/plana uygun, caution=yüksek kalorili/işlenmiş/aşırı) ile listele. note alanına kısa bir genel yorum + kullanıcının planıyla karşılaştırma yaz. Yalnızca save_food_scan aracını çağır.",
+          },
+        ],
+      },
+    ],
+  });
+
+  const toolUse = response.content.find((block) => block.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") {
+    throw new Error("Analiz başarısız.");
+  }
+  return foodScanSchema.parse(toolUse.input);
 }

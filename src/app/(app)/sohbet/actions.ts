@@ -3,8 +3,8 @@
 import { redirect } from "next/navigation";
 
 import {
+  analyzePlatePhoto,
   generateDietAnswer,
-  generateVisionAnswer,
   type ChatMessage,
   type ImageMediaType,
 } from "@/lib/ai/respond";
@@ -266,19 +266,36 @@ async function respondWithAi(
   let answer: string;
   try {
     if (latest.type === "user" && latest.image_path) {
-      // Fotoğraf mesajı → Claude vision ile analiz et.
+      // Fotoğraf mesajı → Claude vision + tool-use ile YAPILANDIRILMIŞ analiz.
       const { data: blob } = await admin.storage
         .from(CHAT_BUCKET)
         .download(latest.image_path);
       if (!blob) throw new Error("Fotoğraf indirilemedi.");
       const base64 = Buffer.from(await blob.arrayBuffer()).toString("base64");
-      answer = await generateVisionAnswer({
+
+      const scan = await analyzePlatePhoto({
         imageBase64: base64,
         mediaType: mediaTypeFromPath(latest.image_path),
-        transcript,
         dietitianRules: rules,
         planContext,
       });
+
+      const { data: planRow } = await admin
+        .from("diet_plans")
+        .select("daily_calorie_target")
+        .eq("client_id", userId)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Food-scan kartı olarak işaretle (UI sentinel'i tanıyıp kart render eder).
+      answer =
+        "[[FOODSCAN]]" +
+        JSON.stringify({
+          ...scan,
+          dailyTarget: planRow?.daily_calorie_target ?? null,
+        });
     } else {
       const prompt: ChatMessage[] = [
         {

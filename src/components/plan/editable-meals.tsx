@@ -9,7 +9,15 @@ import {
 } from "@/app/(app)/plan/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DAYS, MEAL_TYPES, mealTypeLabel, mealTypeOrder } from "@/lib/diet";
+import {
+  DAYS,
+  DAYS_SHORT,
+  MEAL_ICON,
+  MEAL_TYPES,
+  mealTypeLabel,
+  mealTypeOrder,
+} from "@/lib/diet";
+import { cn } from "@/lib/utils";
 import type { MealType } from "@/types/database";
 
 type Meal = {
@@ -36,6 +44,11 @@ export function EditableMeals({
   const [draftCalories, setDraftCalories] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Seçili gün — varsayılan bugün (0=Pzt ... 6=Paz).
+  const [selectedDay, setSelectedDay] = useState<number>(
+    () => (new Date().getDay() + 6) % 7,
+  );
 
   // "Öğe ekle" durumu (hangi gün açık)
   const [addingDay, setAddingDay] = useState<number | null>(null);
@@ -129,11 +142,35 @@ export function EditableMeals({
   return (
     <div className="space-y-4">
       {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {/* Gün çipleri — varsayılan bugün */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {DAYS_SHORT.map((d, i) => (
+          <button
+            key={d + i}
+            type="button"
+            onClick={() => {
+              setSelectedDay(i);
+              setAddingDay(null);
+              setEditingId(null);
+            }}
+            className={cn(
+              "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-[background-color,box-shadow] duration-200",
+              i === selectedDay
+                ? "bg-emerald-600 text-white shadow-[0_4px_12px_-4px_rgb(11_109_72/0.6)]"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700",
+            )}
+          >
+            {d}
+          </button>
+        ))}
+      </div>
+
       {DAYS.map((day, i) => {
+        if (i !== selectedDay) return null;
         const list = (byDay.get(i) ?? []).sort(
           (a, b) => mealTypeOrder(a.meal_type) - mealTypeOrder(b.meal_type),
         );
-        if (list.length === 0) return null;
         const dayTotal = list.reduce((s, m) => s + (m.calories ?? 0), 0);
         return (
           <div
@@ -152,7 +189,7 @@ export function EditableMeals({
                   {editingId === m.id ? (
                     <div className="space-y-2">
                       <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                        {mealTypeLabel(m.meal_type)}
+                        {MEAL_ICON[m.meal_type]} {mealTypeLabel(m.meal_type)}
                       </p>
                       <Input
                         value={draftContent}
@@ -187,6 +224,7 @@ export function EditableMeals({
                     <div className="flex items-start justify-between gap-3">
                       <div className="text-sm">
                         <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                          <span aria-hidden>{MEAL_ICON[m.meal_type]}</span>{" "}
                           {mealTypeLabel(m.meal_type)}:
                         </span>{" "}
                         <span className="whitespace-pre-wrap">{m.content}</span>
