@@ -19,6 +19,8 @@ export type AppointmentStatus =
   | "cancelled"
   | "completed";
 export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+export type ActivityLevel = "sedentary" | "light" | "moderate" | "active";
+export type Sex = "female" | "male";
 
 export type Database = {
   public: {
@@ -89,6 +91,10 @@ export type Database = {
           status: PlanStatus;
           valid_from: string | null;
           valid_to: string | null;
+          daily_calorie_target: number | null;
+          estimated_weeks: number | null;
+          goal_loss_kg: number | null;
+          source: string;
           created_at: string;
           updated_at: string;
         };
@@ -100,6 +106,10 @@ export type Database = {
           status?: PlanStatus;
           valid_from?: string | null;
           valid_to?: string | null;
+          daily_calorie_target?: number | null;
+          estimated_weeks?: number | null;
+          goal_loss_kg?: number | null;
+          source?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -111,8 +121,57 @@ export type Database = {
           status?: PlanStatus;
           valid_from?: string | null;
           valid_to?: string | null;
+          daily_calorie_target?: number | null;
+          estimated_weeks?: number | null;
+          goal_loss_kg?: number | null;
+          source?: string;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      intakes: {
+        Row: {
+          id: string;
+          client_id: string;
+          sex: Sex;
+          age: number;
+          height_cm: number;
+          current_weight_kg: number;
+          activity_level: ActivityLevel;
+          goal_loss_kg: number;
+          goal_weeks: number;
+          health_notes: string | null;
+          dislikes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          sex: Sex;
+          age: number;
+          height_cm: number;
+          current_weight_kg: number;
+          activity_level?: ActivityLevel;
+          goal_loss_kg: number;
+          goal_weeks: number;
+          health_notes?: string | null;
+          dislikes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          sex?: Sex;
+          age?: number;
+          height_cm?: number;
+          current_weight_kg?: number;
+          activity_level?: ActivityLevel;
+          goal_loss_kg?: number;
+          goal_weeks?: number;
+          health_notes?: string | null;
+          dislikes?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -123,6 +182,7 @@ export type Database = {
           day_of_week: number;
           meal_type: MealType;
           content: string;
+          calories: number | null;
           sort_order: number;
           created_at: string;
         };
@@ -132,6 +192,7 @@ export type Database = {
           day_of_week: number;
           meal_type: MealType;
           content?: string;
+          calories?: number | null;
           sort_order?: number;
           created_at?: string;
         };
@@ -141,6 +202,7 @@ export type Database = {
           day_of_week?: number;
           meal_type?: MealType;
           content?: string;
+          calories?: number | null;
           sort_order?: number;
           created_at?: string;
         };
@@ -339,6 +401,8 @@ export type Database = {
       message_type: MessageType;
       appointment_status: AppointmentStatus;
       payment_status: PaymentStatus;
+      activity_level: ActivityLevel;
+      sex: Sex;
     };
     CompositeTypes: Record<string, never>;
   };

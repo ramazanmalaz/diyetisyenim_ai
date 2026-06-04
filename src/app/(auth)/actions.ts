@@ -20,15 +20,18 @@ export async function login(values: unknown): Promise<ActionResult> {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) {
+  const { data: signInData, error } =
+    await supabase.auth.signInWithPassword(parsed.data);
+  if (error || !signInData.user) {
     return { error: "E-posta veya şifre hatalı." };
   }
 
-  // Role göre yönlendir.
+  // Role göre yönlendir. Personel tüm profilleri görebildiği için (RLS),
+  // sorguyu mutlaka kullanıcının kendi id'siyle filtrele — aksi halde .single() patlar.
   const { data } = await supabase
     .from("profiles")
     .select("role")
+    .eq("id", signInData.user.id)
     .single();
 
   const role = data?.role ?? "client";

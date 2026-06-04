@@ -8,6 +8,7 @@ export type MealItem = {
   day_of_week: number;
   meal_type: MealType;
   content: string;
+  calories?: number | null;
 };
 
 /**
@@ -39,13 +40,19 @@ export function MealList({
           (a, b) => mealTypeOrder(a.meal_type) - mealTypeOrder(b.meal_type),
         );
         if (list.length === 0) return null;
+        const dayTotal = list.reduce((sum, m) => sum + (m.calories ?? 0), 0);
         return (
           <div
             key={day}
             className="rounded-xl border border-gray-200 dark:border-gray-800"
           >
-            <h3 className="border-b border-gray-200 px-4 py-2 font-semibold dark:border-gray-800">
-              {day}
+            <h3 className="flex items-center justify-between border-b border-gray-200 px-4 py-2 font-semibold dark:border-gray-800">
+              <span>{day}</span>
+              {dayTotal > 0 && (
+                <span className="text-xs font-normal text-gray-500">
+                  ~{dayTotal} kcal
+                </span>
+              )}
             </h3>
             <ul className="divide-y divide-gray-100 dark:divide-gray-800">
               {list.map((m) => (
@@ -59,7 +66,14 @@ export function MealList({
                     </span>{" "}
                     <span className="whitespace-pre-wrap">{m.content}</span>
                   </div>
-                  {action?.(m)}
+                  <div className="flex shrink-0 items-center gap-2">
+                    {m.calories != null && (
+                      <span className="text-xs text-gray-400">
+                        {m.calories} kcal
+                      </span>
+                    )}
+                    {action?.(m)}
+                  </div>
                 </li>
               ))}
             </ul>

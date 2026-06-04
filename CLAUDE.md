@@ -9,22 +9,43 @@ import edilen `AGENTS.md` dosyasını da dikkate al (kod yazmadan önce
 
 ---
 
-## 1. Proje Özeti
+## 1. Proje Özeti (GÜNCEL VİZYON)
 
-**DiyetChat**, bir diyetisyen tarafından yönetilen, WhatsApp grubu benzeri sohbet
-deneyimi sunan bir web uygulamasıdır. Kullanıcılar:
+**DiyetChat**, kullanıcının karşısında **yapay zekâ bir diyetisyen** varmış gibi
+çalışan, **sohbet merkezli** bir diyet uygulamasıdır. Diyet yapmak isteyen kişi
+gelir, tek bir **"Diyete Başla"** girişiyle süreç başlar ve her şey bir **mesaj
+penceresi (chat)** üzerinden yürür.
 
-- Grup ve birebir sohbet edebilir,
-- Diyetle ilgili sorularına **yapay zekâ (Claude API)** üzerinden anında yanıt alabilir,
-- Diyetisyenin oluşturduğu kişiye özel diyet planlarını görüntüleyebilir,
-- Kilo / ölçü / su / öğün takibi yapabilir,
-- Online randevu alıp ödeme yapabilir.
+> **Önceki sürümden farkı:** Eski tasarım "diyetisyenin yönettiği çok özellikli
+> platform" idi (grup, randevu, ödeme, manuel plan vb.). Yeni yön **sade ve
+> AI-odaklı**: kullanıcı doğrudan AI diyetisyenle konuşur. Panel tek girişe
+> (**Diyete Başla**) indirgenir; diğer modüller (randevu, ödeme, manuel plan,
+> grup) şimdilik arka planda/gizli kalır, sonra yeniden değerlendirilecek.
 
-Diyetisyen (admin) tüm kullanıcıları, planları, randevuları ve ödemeleri yönetir.
+### Çekirdek akış (AI diyetisyen)
+1. **Tanışma / sorular:** AI, kullanıcıya durumunu öğrenmek için sorular sorar
+   (yaş, kilo, boy, hareket düzeyi, sağlık durumu, alerjiler, sevmedikleri…).
+   **Zorunlu olarak** "**ne kadar sürede kaç kilo** vermek istiyorsun?" şeklinde
+   **şıklı (çoktan seçmeli)** bir soru sorulur.
+2. **Plan üretimi:** Yanıtlara göre AI **kişiye özel bir diyet programı** üretir;
+   **günlük kalori hedefi** ve **hedefe yaklaşık ulaşma süresi** bildirir.
+3. **Takip:** Kullanıcı programı uygulama içinde takip eder.
+4. **Danışma (chat):** Kullanıcı her şeyi AI'a sorar:
+   - **İkame:** "Kahvaltıda peynir yerine omlet yiyebilir miyim?" → AI uygunsa
+     onaylar; **diyete etkisi büyükse "olmaz" der**.
+   - **Sağlık:** "Karaciğer problemim var, maydanoz dokunur mu?" → AI yanıtlar
+     (bkz. §5 güvenlik guardrail'leri).
+5. **Düzenleme:** Kullanıcı programdaki öğeleri değiştirebilir (5 siyah zeytin
+   yerine 6, beyaz peynir yerine kaşar…); **kalori hesabı buna göre güncellenir**.
+6. **Fotoğraf analizi:** Kullanıcı tabağının/sofrasının fotoğrafını ekler; AI
+   (görü/vision) tabaktakileri okur. **Yanlış okuma olursa kullanıcı düzeltir**;
+   AI son duruma göre yorum yapar ve kaloriyi güncel. tutar.
 
 ### Roller
-- **client** (danışan): Standart kullanıcı. Sohbet eder, planını görür, ilerlemesini girer, randevu/ödeme yapar.
-- **dietitian / admin**: Tüm danışanları, planları, randevuları, ödemeleri ve AI davranış kurallarını yönetir.
+- **client** (kullanıcı): "Diyete Başla" ile AI diyetisyenle konuşur, planını
+  uygular, sorular sorar, öğeleri/fotoğrafları günceller.
+- **dietitian / admin**: Yönetim paneli (`/yonetim`) korunur; AI kurallarını ve
+  (ileride) kullanıcıları yönetir. Bu sürümde ikincil önemdedir.
 
 ---
 
@@ -177,3 +198,35 @@ IYZICO_SECRET_KEY=
 IYZICO_BASE_URL=
 NEXT_PUBLIC_APP_URL=
 ```
+
+---
+
+## 10. Yol Haritası — AI Diyetisyen (yeni yön)
+
+Hedef: §1'deki çekirdek akışı hayata geçirmek. Aşamalar:
+
+- [x] **Sadeleştirme:** Danışan paneli tek girişe indirildi (**Diyete Başla** →
+      sohbet penceresi). Diğer modüller gizli/arka planda.
+- [ ] **Onboarding (AI soruları):** Yeni kullanıcı sohbete girince AI yapılandırılmış
+      sorular sorar. **Zorunlu** çoktan seçmeli soru: *"Ne kadar sürede kaç kilo?"*
+      Yanıtlar `client_profile`/`intake` olarak saklanır.
+- [ ] **Plan üretimi:** AI yanıtlardan **yapılandırılmış** diyet planı üretir
+      (öğünler + her öğenin miktarı + kalorisi), **günlük kalori hedefi** ve
+      **tahmini süre** hesaplanır. Plan `diet_plans`/`meals` üzerine oturur
+      (gerekirse kalori/öğe alanları eklenir).
+- [ ] **Takip + düzenleme:** Kullanıcı öğeleri değiştirir (miktar/ikame); **kalori
+      yeniden hesaplanır**. İkame talebinde AI "diyete etkisi büyükse reddet" kuralını
+      uygular.
+- [ ] **Sohbet danışma:** İkame + sağlık soruları aynı mesaj penceresinde,
+      plan bağlamı (kullanıcının aktif planı) prompt'a verilerek yanıtlanır.
+- [ ] **Fotoğraf analizi (vision):** Kullanıcı tabağı fotoğraflar → AI (Claude
+      vision) içerikleri okur → kullanıcı yanlışları düzeltir → AI yorumlar ve
+      kaloriyi günceller. Fotoğraflar `progress-photos` Storage'da.
+
+**İlkeler:**
+- Her şey **tek bir sohbet penceresinden** akar (kullanıcı bir diyetisyenle
+  konuşuyormuş hissi). Mesaj penceresi her ekranda erişilebilir olmalı.
+- AI'nın plan/kalori üretimi **yapılandırılmış çıktı** (JSON şeması) ile alınmalı
+  ki uygulama içinde takip/düzenleme yapılabilsin (serbest metin değil).
+- Sağlık güvenliği guardrail'leri (§5) her zaman geçerli; tıbbi teşhis yok,
+  riskli/aşırı düşük kalori hedefleri reddedilir veya güvenli aralığa çekilir.

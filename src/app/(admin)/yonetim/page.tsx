@@ -2,32 +2,13 @@ import Link from "next/link";
 
 import { requireStaff } from "@/lib/auth";
 
+// Yalnızca AI odaklı sürüm: randevu, ödeme, manuel plan, grup ve danışan
+// yönetimi şimdilik gizli. Yönetim yalnızca AI davranışını ayarlamak için.
 const cards: { title: string; desc: string; href?: string }[] = [
-  { title: "Danışanlar", desc: "Danışan listesi ve detayları." },
-  {
-    title: "Diyet Planları",
-    desc: "Plan oluştur ve ata.",
-    href: "/yonetim/planlar",
-  },
-  {
-    title: "Randevular",
-    desc: "Görüşme takvimi.",
-    href: "/yonetim/randevular",
-  },
-  {
-    title: "Ödemeler",
-    desc: "Abonelik ve tahsilatlar.",
-    href: "/yonetim/odemeler",
-  },
   {
     title: "AI Kuralları",
-    desc: "Asistanın davranışını ayarla.",
+    desc: "Yapay zekâ diyetisyenin davranışını ayarla.",
     href: "/yonetim/ai-kurallari",
-  },
-  {
-    title: "Sohbetler",
-    desc: "Grup ve birebir konuşmalar.",
-    href: "/yonetim/sohbetler",
   },
 ];
 
@@ -41,8 +22,7 @@ export default async function YonetimPage() {
           Yönetim Paneli — {profile.full_name ?? "Diyetisyen"}
         </h1>
         <p className="text-gray-500">
-          Danışanları, diyet planlarını, randevuları ve AI kurallarını buradan
-          yöneteceksin.
+          Yapay zekâ diyetisyenin davranış kurallarını buradan ayarlayabilirsin.
         </p>
       </div>
 
