@@ -16,6 +16,8 @@
 /playwright-report
 /playwright/.cache
 /.screenshots
+/hatalar
+/Hatalar
 
 # next.js
 /.next/
