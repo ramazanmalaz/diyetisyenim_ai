@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { generateDietAnswer, type ChatMessage } from "@/lib/ai/respond";
 import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
+import { DAYS, mealTypeLabel, mealTypeOrder } from "@/lib/diet";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { messageSchema } from "@/lib/validations/chat";
@@ -95,17 +96,59 @@ export async function sendMessage(values: unknown): Promise<ActionResult> {
     .single();
 
   if (conversation?.ai_enabled) {
-    await respondWithAi(parsed.data.conversationId);
+    await respondWithAi(parsed.data.conversationId, user.id);
   }
 
   return { success: true };
 }
 
 /**
- * Konuşmadaki son mesajları transkripte çevirip AI yanıtı üretir ve kaydeder.
- * AI mesajı (type='ai', sender_id=null) service-role ile eklenir.
+ * Kullanıcının aktif planını AI'a bağlam olarak verecek metni üretir.
  */
-async function respondWithAi(conversationId: string): Promise<void> {
+async function buildPlanContext(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+): Promise<string | null> {
+  const { data: plan } = await admin
+    .from("diet_plans")
+    .select("id, daily_calorie_target")
+    .eq("client_id", userId)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!plan) return null;
+
+  const { data: meals } = await admin
+    .from("meals")
+    .select("day_of_week, meal_type, content, calories")
+    .eq("plan_id", plan.id);
+  if (!meals || meals.length === 0) return null;
+
+  const lines = [...meals]
+    .sort(
+      (a, b) =>
+        a.day_of_week - b.day_of_week ||
+        mealTypeOrder(a.meal_type) - mealTypeOrder(b.meal_type),
+    )
+    .map(
+      (m) =>
+        `${DAYS[m.day_of_week]} - ${mealTypeLabel(m.meal_type)}: ${m.content}${
+          m.calories != null ? ` (${m.calories} kcal)` : ""
+        }`,
+    );
+
+  return `Günlük kalori hedefi: ${plan.daily_calorie_target ?? "?"} kcal\n${lines.join("\n")}`;
+}
+
+/**
+ * Konuşmadaki son mesajları transkripte çevirip AI yanıtı üretir ve kaydeder.
+ * Kullanıcının aktif planı bağlam olarak verilir. AI mesajı service-role ile eklenir.
+ */
+async function respondWithAi(
+  conversationId: string,
+  userId: string,
+): Promise<void> {
   const admin = createAdminClient();
 
   const { data: recent } = await admin
@@ -125,15 +168,18 @@ async function respondWithAi(conversationId: string): Promise<void> {
   const prompt: ChatMessage[] = [
     {
       role: "user",
-      content: `Aşağıdaki konuşmada son mesaja, bir beslenme asistanı olarak yanıt ver.\n\n${transcript}`,
+      content: `Aşağıdaki konuşmada son mesaja, kullanıcının kişisel diyet asistanı olarak yanıt ver.\n\n${transcript}`,
     },
   ];
 
-  const rules = await getActiveDietitianRules();
+  const [rules, planContext] = await Promise.all([
+    getActiveDietitianRules(),
+    buildPlanContext(admin, userId),
+  ]);
 
   let answer: string;
   try {
-    answer = await generateDietAnswer(prompt, rules);
+    answer = await generateDietAnswer(prompt, rules, planContext);
   } catch {
     answer = "Şu anda yanıt veremiyorum, lütfen biraz sonra tekrar dene.";
   }

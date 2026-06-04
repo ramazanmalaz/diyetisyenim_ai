@@ -61,15 +61,38 @@ export function MessageThread({
     };
   }, [conversationId]);
 
+  async function refetch() {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("messages")
+      .select("id, sender_id, type, content, created_at")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true });
+    if (data) setMessages(data as ChatMessageRow[]);
+  }
+
   async function onSend(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
     if (!text || sending) return;
     setSending(true);
     setInput("");
+
+    // İyimser: kullanıcı mesajını hemen göster.
+    const optimistic: ChatMessageRow = {
+      id: `temp-${Date.now()}`,
+      sender_id: currentUserId,
+      type: "user",
+      content: text,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
+
     const result = await sendMessage({ conversationId, content: text });
+    // Realtime'a güvenmeden, yetkili listeyi yeniden çek (kullanıcı + AI yanıtı).
+    await refetch();
     setSending(false);
-    if ("error" in result) {
+    if (result && "error" in result) {
       setInput(text); // hata: metni geri koy
     }
   }
@@ -121,6 +144,13 @@ export function MessageThread({
             </div>
           );
         })}
+        {sending && (
+          <div className="flex justify-start">
+            <div className="rounded-2xl bg-gray-100 px-4 py-2 text-sm text-gray-500 dark:bg-gray-800">
+              Asistan yazıyor…
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 

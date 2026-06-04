@@ -1,5 +1,5 @@
 import { anthropic, DEFAULT_MODEL, MAX_TOKENS } from "./client";
-import { buildSystemPrompt } from "./prompt";
+import { buildChatSystemPrompt, buildSystemPrompt } from "./prompt";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -31,8 +31,9 @@ export function streamDietAnswer(
 export async function generateDietAnswer(
   messages: ChatMessage[],
   dietitianRules: string | null,
+  planContext: string | null = null,
 ): Promise<string> {
-  const system = buildSystemPrompt(dietitianRules);
+  const system = buildChatSystemPrompt(dietitianRules, planContext);
 
   const response = await anthropic.messages.create({
     model: DEFAULT_MODEL,
