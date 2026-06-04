@@ -2,7 +2,7 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #13211a;
 }
 
 @theme inline {
@@ -10,17 +10,57 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
+}
+
+@theme {
+  /* Özel marka yeşili — Tailwind'in varsayılan emerald'ı yerine bespoke bir ramp.
+     Mevcut emerald-* sınıfları bu değerlerle yeniden renklenir. */
+  --color-emerald-50: #ecfdf3;
+  --color-emerald-100: #d2f7e0;
+  --color-emerald-200: #a8efc4;
+  --color-emerald-300: #6fe1a3;
+  --color-emerald-400: #36c980;
+  --color-emerald-500: #14a866;
+  --color-emerald-600: #0e8b58;
+  --color-emerald-700: #0b6d48;
+  --color-emerald-800: #0a573b;
+  --color-emerald-900: #084632;
+  --color-emerald-950: #03281d;
+
+  /* Katmanlı, renk tonlu yumuşak gölge (düz shadow-md yerine) */
+  --shadow-soft:
+    0 1px 2px rgb(7 40 29 / 0.05), 0 10px 28px -12px rgb(7 40 29 / 0.18);
+  --shadow-float:
+    0 2px 6px rgb(7 40 29 / 0.06), 0 20px 48px -16px rgb(7 40 29 / 0.24);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0a0f0c;
+    --foreground: #e7efe9;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Başlıklar display fontuyla, sıkı harf aralığı */
+h1,
+h2,
+h3 {
+  font-family: var(--font-fraunces), var(--font-geist-sans), serif;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+/* Erişilebilir, tutarlı odak halkası */
+:focus-visible {
+  outline: 2px solid var(--color-emerald-500);
+  outline-offset: 2px;
 }

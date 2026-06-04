@@ -49,19 +49,19 @@ export default async function PlanPage() {
 
       {/* Özet kartı */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-gray-200 p-4 text-center dark:border-gray-800">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-950">
           <p className="text-2xl font-bold text-emerald-600">
             {plan.daily_calorie_target ?? "—"}
           </p>
           <p className="text-xs text-gray-500">günlük kcal hedefi</p>
         </div>
-        <div className="rounded-xl border border-gray-200 p-4 text-center dark:border-gray-800">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-950">
           <p className="text-2xl font-bold text-emerald-600">
             {plan.goal_loss_kg ?? "—"}
           </p>
           <p className="text-xs text-gray-500">hedef (kg)</p>
         </div>
-        <div className="rounded-xl border border-gray-200 p-4 text-center dark:border-gray-800">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-950">
           <p className="text-2xl font-bold text-emerald-600">
             ~{plan.estimated_weeks ?? "—"}
           </p>

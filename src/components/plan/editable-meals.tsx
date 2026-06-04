@@ -138,7 +138,7 @@ export function EditableMeals({
         return (
           <div
             key={day}
-            className="rounded-xl border border-gray-200 dark:border-gray-800"
+            className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-950"
           >
             <h3 className="flex items-center justify-between border-b border-gray-200 px-4 py-2 font-semibold dark:border-gray-800">
               <span>{day}</span>
