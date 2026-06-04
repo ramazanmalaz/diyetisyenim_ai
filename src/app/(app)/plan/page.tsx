@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { openAssistant } from "@/app/(app)/sohbet/actions";
+import { CalorieHero } from "@/components/plan/calorie-hero";
 import { EditableMeals } from "@/components/plan/editable-meals";
 import { Button } from "@/components/ui/button";
 import { requireProfile } from "@/lib/auth";
@@ -28,6 +29,13 @@ export default async function PlanPage() {
         .eq("plan_id", plan.id)
     : { data: [] };
 
+  // Planlanan ortalama günlük kalori (ring için).
+  const rows = meals ?? [];
+  const days = new Set(rows.map((m) => m.day_of_week)).size || 1;
+  const plannedTotal = Math.round(
+    rows.reduce((s, m) => s + (m.calories ?? 0), 0) / days,
+  );
+
   if (!plan) {
     return (
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center">
@@ -47,27 +55,12 @@ export default async function PlanPage() {
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
       <h1 className="text-2xl font-bold">Diyet Planım</h1>
 
-      {/* Özet kartı */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-950">
-          <p className="text-2xl font-bold text-emerald-600">
-            {plan.daily_calorie_target ?? "—"}
-          </p>
-          <p className="text-xs text-gray-500">günlük kcal hedefi</p>
-        </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-950">
-          <p className="text-2xl font-bold text-emerald-600">
-            {plan.goal_loss_kg ?? "—"}
-          </p>
-          <p className="text-xs text-gray-500">hedef (kg)</p>
-        </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-950">
-          <p className="text-2xl font-bold text-emerald-600">
-            ~{plan.estimated_weeks ?? "—"}
-          </p>
-          <p className="text-xs text-gray-500">tahmini hafta</p>
-        </div>
-      </div>
+      <CalorieHero
+        dailyTarget={plan.daily_calorie_target}
+        goalLossKg={plan.goal_loss_kg}
+        estimatedWeeks={plan.estimated_weeks}
+        plannedTotal={plannedTotal}
+      />
 
       {/* Hızlı erişim */}
       <div className="grid gap-2 sm:grid-cols-2">
