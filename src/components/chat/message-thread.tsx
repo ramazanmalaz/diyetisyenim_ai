@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { sendMessage, sendPhotoMessage } from "@/app/(app)/sohbet/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Markdown } from "@/components/ui/markdown";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { MessageType } from "@/types/database";
@@ -150,7 +151,7 @@ export function MessageThread({
             >
               <div
                 className={cn(
-                  "max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap",
+                  "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
                   mine
                     ? "bg-emerald-600 text-white"
                     : m.type === "ai"
@@ -171,7 +172,11 @@ export function MessageThread({
                     className="mb-1 max-h-56 rounded-lg object-cover"
                   />
                 )}
-                {m.content}
+                {m.type === "ai" ? (
+                  <Markdown>{m.content}</Markdown>
+                ) : (
+                  <span className="whitespace-pre-wrap">{m.content}</span>
+                )}
               </div>
             </div>
           );

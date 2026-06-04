@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Markdown } from "@/components/ui/markdown";
 import { cn } from "@/lib/utils";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -87,13 +88,21 @@ export function AssistantChat() {
           >
             <div
               className={cn(
-                "max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap",
+                "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
                 m.role === "user"
                   ? "bg-emerald-600 text-white"
                   : "bg-gray-100 dark:bg-gray-800",
               )}
             >
-              {m.content || (loading ? "…" : "")}
+              {m.role === "assistant" ? (
+                m.content ? (
+                  <Markdown>{m.content}</Markdown>
+                ) : (
+                  loading && "…"
+                )
+              ) : (
+                <span className="whitespace-pre-wrap">{m.content}</span>
+              )}
             </div>
           </div>
         ))}
