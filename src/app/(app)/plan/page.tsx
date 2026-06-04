@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { openAssistant } from "@/app/(app)/sohbet/actions";
-import { MealList } from "@/components/plan/meal-list";
+import { EditableMeals } from "@/components/plan/editable-meals";
 import { Button } from "@/components/ui/button";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -76,7 +76,11 @@ export default async function PlanPage() {
         </Button>
       </form>
 
-      <MealList meals={meals ?? []} />
+      <p className="text-xs text-gray-400">
+        Bir öğeyi değiştirmek için “Düzenle”ye dokun (örn. 5 zeytin → 6, beyaz
+        peynir → kaşar). Kalori toplamı buna göre güncellenir.
+      </p>
+      <EditableMeals initial={meals ?? []} />
     </div>
   );
 }
