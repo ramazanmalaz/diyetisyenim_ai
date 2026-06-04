@@ -62,6 +62,58 @@ export async function updateMeal(values: unknown): Promise<ActionResult> {
   return { success: true };
 }
 
+const addSchema = z.object({
+  planId: z.string().uuid(),
+  dayOfWeek: z.coerce.number().int().min(0).max(6),
+  mealType: z.enum([
+    "breakfast",
+    "snack_morning",
+    "lunch",
+    "snack_afternoon",
+    "dinner",
+  ]),
+  content: z.string().min(1, "İçerik boş olamaz.").max(200),
+  calories: z.coerce.number().int().min(0).max(3000),
+});
+
+export type AddResult = { error: string } | { id: string };
+
+export async function addMealItem(values: unknown): Promise<AddResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const parsed = addSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Geçersiz veri." };
+  }
+
+  const admin = createAdminClient();
+  const { data: plan } = await admin
+    .from("diet_plans")
+    .select("client_id")
+    .eq("id", parsed.data.planId)
+    .single();
+  if (plan?.client_id !== user.id) {
+    return { error: "Bu plana öğe ekleme yetkin yok." };
+  }
+
+  const { data, error } = await admin
+    .from("meals")
+    .insert({
+      plan_id: parsed.data.planId,
+      day_of_week: parsed.data.dayOfWeek,
+      meal_type: parsed.data.mealType,
+      content: parsed.data.content,
+      calories: parsed.data.calories,
+    })
+    .select("id")
+    .single();
+  if (error || !data) return { error: "Öğe eklenemedi." };
+
+  revalidatePath("/plan");
+  return { id: data.id };
+}
+
 export async function deleteMealItem(values: unknown): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { error: "Oturum bulunamadı." };

@@ -69,18 +69,23 @@ export default async function PlanPage() {
         </div>
       </div>
 
-      {/* Asistana sor */}
-      <form action={openAssistant}>
-        <Button type="submit" variant="outline" className="w-full">
-          💬 Asistana soru sor (ikame, sağlık, fotoğraf…)
+      {/* Hızlı erişim */}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <form action={openAssistant}>
+          <Button type="submit" variant="outline" className="w-full">
+            💬 Asistana soru sor
+          </Button>
+        </form>
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/ilerleme">📊 Kilo & ilerleme takibi</Link>
         </Button>
-      </form>
+      </div>
 
       <p className="text-xs text-gray-400">
         Bir öğeyi değiştirmek için “Düzenle”ye dokun (örn. 5 zeytin → 6, beyaz
         peynir → kaşar). Kalori toplamı buna göre güncellenir.
       </p>
-      <EditableMeals initial={meals ?? []} />
+      <EditableMeals initial={meals ?? []} planId={plan.id} />
     </div>
   );
 }

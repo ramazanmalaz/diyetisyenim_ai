@@ -207,7 +207,25 @@ async function buildPlanContext(
         }`,
     );
 
-  return `Günlük kalori hedefi: ${plan.daily_calorie_target ?? "?"} kcal\n${lines.join("\n")}`;
+  // Son kilo kayıtları (ilerleme takibinden) — AI ilerlemeyi yorumlayabilsin.
+  const { data: progress } = await admin
+    .from("progress_entries")
+    .select("entry_date, weight_kg")
+    .eq("client_id", userId)
+    .not("weight_kg", "is", null)
+    .order("entry_date", { ascending: false })
+    .limit(4);
+
+  let progressBlock = "";
+  if (progress && progress.length > 0) {
+    const pts = [...progress]
+      .reverse()
+      .map((p) => `${p.entry_date}: ${p.weight_kg} kg`)
+      .join(", ");
+    progressBlock = `\n\nSon kilo kayıtları: ${pts}`;
+  }
+
+  return `Günlük kalori hedefi: ${plan.daily_calorie_target ?? "?"} kcal\n${lines.join("\n")}${progressBlock}`;
 }
 
 /**

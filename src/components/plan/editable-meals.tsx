@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 
-import { deleteMealItem, updateMeal } from "@/app/(app)/plan/actions";
+import {
+  addMealItem,
+  deleteMealItem,
+  updateMeal,
+} from "@/app/(app)/plan/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DAYS, mealTypeLabel, mealTypeOrder } from "@/lib/diet";
+import { DAYS, MEAL_TYPES, mealTypeLabel, mealTypeOrder } from "@/lib/diet";
 import type { MealType } from "@/types/database";
 
 type Meal = {
@@ -16,13 +20,66 @@ type Meal = {
   calories: number | null;
 };
 
-export function EditableMeals({ initial }: { initial: Meal[] }) {
+const selectClass =
+  "h-9 rounded-lg border border-gray-300 bg-white px-2 text-sm dark:border-gray-700 dark:bg-gray-950";
+
+export function EditableMeals({
+  initial,
+  planId,
+}: {
+  initial: Meal[];
+  planId: string;
+}) {
   const [meals, setMeals] = useState<Meal[]>(initial);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftContent, setDraftContent] = useState("");
   const [draftCalories, setDraftCalories] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // "Öğe ekle" durumu (hangi gün açık)
+  const [addingDay, setAddingDay] = useState<number | null>(null);
+  const [addType, setAddType] = useState<MealType>("breakfast");
+  const [addContent, setAddContent] = useState("");
+  const [addCalories, setAddCalories] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  function openAdd(day: number) {
+    setAddingDay(day);
+    setAddType("breakfast");
+    setAddContent("");
+    setAddCalories("");
+    setError(null);
+  }
+
+  async function addItem(day: number) {
+    const calories = Number(addCalories || 0);
+    setAdding(true);
+    setError(null);
+    const res = await addMealItem({
+      planId,
+      dayOfWeek: day,
+      mealType: addType,
+      content: addContent,
+      calories,
+    });
+    setAdding(false);
+    if ("error" in res) {
+      setError(res.error);
+      return;
+    }
+    setMeals((prev) => [
+      ...prev,
+      {
+        id: res.id,
+        day_of_week: day,
+        meal_type: addType,
+        content: addContent,
+        calories,
+      },
+    ]);
+    setAddingDay(null);
+  }
 
   function startEdit(m: Meal) {
     setEditingId(m.id);
@@ -161,6 +218,58 @@ export function EditableMeals({ initial }: { initial: Meal[] }) {
                 </li>
               ))}
             </ul>
+
+            {/* Öğe ekle */}
+            <div className="border-t border-gray-100 px-4 py-2 dark:border-gray-800">
+              {addingDay === i ? (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={addType}
+                      onChange={(e) => setAddType(e.target.value as MealType)}
+                      className={selectClass}
+                    >
+                      {MEAL_TYPES.map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                    <Input
+                      type="number"
+                      value={addCalories}
+                      onChange={(e) => setAddCalories(e.target.value)}
+                      placeholder="kcal"
+                      className="w-24"
+                    />
+                  </div>
+                  <Input
+                    value={addContent}
+                    onChange={(e) => setAddContent(e.target.value)}
+                    placeholder="Örn. 1 kase yoğurt"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => addItem(i)}
+                      disabled={adding || !addContent.trim()}
+                    >
+                      Ekle
+                    </Button>
+                    <Button variant="ghost" onClick={() => setAddingDay(null)}>
+                      İptal
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openAdd(i)}
+                  className="text-xs text-emerald-600 hover:underline"
+                >
+                  + Öğe ekle
+                </button>
+              )}
+            </div>
           </div>
         );
       })}
