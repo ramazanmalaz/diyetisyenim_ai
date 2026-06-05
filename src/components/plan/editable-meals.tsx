@@ -9,18 +9,15 @@ import {
   scanPlatePhoto,
   setMealQuantity,
   swapMealFood,
-  updateMeal,
 } from "@/app/(app)/plan/actions";
 import { FoodPicker } from "@/components/plan/food-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  DAYS,
   DAYS_SHORT,
   MEAL_ICON,
   MEAL_TYPES,
   mealTypeLabel,
-  mealTypeOrder,
 } from "@/lib/diet";
 import type { Food } from "@/lib/foods";
 import { cn } from "@/lib/utils";
@@ -36,8 +33,13 @@ type Meal = {
   quantity: number | null;
 };
 
-const selectClass =
-  "h-9 rounded-lg border border-gray-300 bg-white px-2 text-sm dark:border-gray-700 dark:bg-gray-950";
+const DOT: Record<MealType, string> = {
+  breakfast: "bg-amber-400",
+  snack_morning: "bg-lime-400",
+  lunch: "bg-emerald-400",
+  snack_afternoon: "bg-yellow-400",
+  dinner: "bg-rose-400",
+};
 
 export function EditableMeals({
   initial,
@@ -53,25 +55,20 @@ export function EditableMeals({
     () => (new Date().getDay() + 6) % 7,
   );
   const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState<Partial<Record<MealType, boolean>>>({
+    breakfast: true,
+  });
+  const [editing, setEditing] = useState<Meal | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  // Besin değiştirme (hangi öğe için picker açık)
-  const [swapId, setSwapId] = useState<string | null>(null);
-
-  // Serbest metin düzenleme (yapılandırılmamış öğeler)
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [draftContent, setDraftContent] = useState("");
-  const [draftCalories, setDraftCalories] = useState("");
-
-  // Besin ekleme paneli
-  const [addingDay, setAddingDay] = useState<number | null>(null);
-  const [addType, setAddType] = useState<MealType>("breakfast");
-  const [addQty, setAddQty] = useState("1");
+  // Öğün bazlı "besin ekle"
+  const [addType, setAddType] = useState<MealType | null>(null);
   const [addFood, setAddFood] = useState<Food | null>(null);
+  const [addQty, setAddQty] = useState("1");
 
-  // "Tabağını paylaş" — foto ile gerçekleşen öğün
-  const [photoOpen, setPhotoOpen] = useState(false);
-  const [photoType, setPhotoType] = useState<MealType>("breakfast");
+  // Öğün bazlı fotoğraf
+  const [scanType, setScanType] = useState<MealType | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanItems, setScanItems] = useState<
     { name: string; calories: number }[] | null
@@ -79,83 +76,32 @@ export function EditableMeals({
   const [applying, setApplying] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function onScanFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setScanning(true);
-    setScanItems(null);
-    setError(null);
-    const fd = new FormData();
-    fd.set("photo", file);
-    const res = await scanPlatePhoto(fd);
-    setScanning(false);
-    if ("error" in res) {
-      setError(res.error);
-      return;
-    }
-    setScanItems(res.items);
-  }
-
-  async function applyPhoto() {
-    if (!scanItems || scanItems.length === 0) return;
-    setApplying(true);
-    setError(null);
-    const res = await applyMealFromItems({
-      planId,
-      dayOfWeek: selectedDay,
-      mealType: photoType,
-      items: scanItems,
-    });
-    setApplying(false);
-    if ("error" in res) {
-      setError(res.error);
-      return;
-    }
-    setMeals((prev) => [
-      ...prev.filter(
-        (m) =>
-          !(m.day_of_week === res.dayOfWeek && m.meal_type === res.mealType),
-      ),
-      ...res.meals,
-    ]);
-    setPhotoOpen(false);
-    setScanItems(null);
-  }
-
   function patch(id: string, p: Partial<Meal>) {
     setMeals((prev) => prev.map((m) => (m.id === id ? { ...m, ...p } : m)));
+    setEditing((e) => (e && e.id === id ? { ...e, ...p } : e));
   }
 
-  async function changeQty(m: Meal, delta: number) {
-    const next = Math.max(1, Math.round((m.quantity ?? 1) + delta));
-    if (next === m.quantity) return;
-    setBusyId(m.id);
-    setError(null);
-    const res = await setMealQuantity({ mealId: m.id, quantity: next });
-    setBusyId(null);
-    if ("error" in res) {
-      setError(res.error);
-      return;
-    }
-    patch(m.id, {
+  async function changeQty(meal: Meal, delta: number) {
+    const next = Math.max(1, Math.round((meal.quantity ?? 1) + delta));
+    if (next === meal.quantity) return;
+    setBusy(true);
+    const res = await setMealQuantity({ mealId: meal.id, quantity: next });
+    setBusy(false);
+    if ("error" in res) return setError(res.error);
+    patch(meal.id, {
       quantity: res.quantity,
       calories: res.calories,
       content: res.content,
     });
   }
 
-  async function pickSwap(mealId: string, food: Food) {
-    setBusyId(mealId);
-    setError(null);
-    const res = await swapMealFood({ mealId, foodId: food.id });
-    setBusyId(null);
-    setSwapId(null);
-    if ("error" in res) {
-      setError(res.error);
-      return;
-    }
-    patch(mealId, {
+  async function doSwap(meal: Meal, food: Food) {
+    setBusy(true);
+    const res = await swapMealFood({ mealId: meal.id, foodId: food.id });
+    setBusy(false);
+    setPickerOpen(false);
+    if ("error" in res) return setError(res.error);
+    patch(meal.id, {
       food_id: res.foodId,
       quantity: res.quantity,
       calories: res.calories,
@@ -163,75 +109,93 @@ export function EditableMeals({
     });
   }
 
-  async function saveFree(id: string) {
-    const calories = Number(draftCalories);
-    setBusyId(id);
-    setError(null);
-    const res = await updateMeal({
-      mealId: id,
-      content: draftContent,
-      calories,
-    });
-    setBusyId(null);
-    if ("error" in res) {
-      setError(res.error);
-      return;
-    }
-    patch(id, { content: draftContent, calories });
-    setEditingId(null);
-  }
-
-  async function remove(id: string) {
-    setBusyId(id);
+  async function doDelete(id: string) {
+    setBusy(true);
     const res = await deleteMealItem({ mealId: id });
-    setBusyId(null);
-    if (!("error" in res)) setMeals((prev) => prev.filter((m) => m.id !== id));
+    setBusy(false);
+    if (!("error" in res)) {
+      setMeals((prev) => prev.filter((m) => m.id !== id));
+      setEditing(null);
+    }
   }
 
-  async function addItem(day: number) {
+  async function addItem(mealType: MealType) {
     if (!addFood) return;
-    const qty = Number(addQty) || 1;
-    setBusyId("add");
-    setError(null);
+    setBusy(true);
     const res = await addFoodMeal({
       planId,
-      dayOfWeek: day,
-      mealType: addType,
+      dayOfWeek: selectedDay,
+      mealType,
       foodId: addFood.id,
-      quantity: qty,
+      quantity: Number(addQty) || 1,
     });
-    setBusyId(null);
-    if ("error" in res) {
-      setError(res.error);
-      return;
-    }
+    setBusy(false);
+    if ("error" in res) return setError(res.error);
     setMeals((prev) => [...prev, res.meal]);
-    setAddingDay(null);
+    setAddType(null);
     setAddFood(null);
     setAddQty("1");
   }
 
-  if (meals.length === 0) {
-    return <p className="text-sm text-gray-500">Plan öğesi bulunamadı.</p>;
+  function openPhoto(mealType: MealType) {
+    setScanType(mealType);
+    setScanItems(null);
+    setError(null);
+    fileRef.current?.click();
   }
 
-  const byDay = new Map<number, Meal[]>();
-  for (const m of meals) {
-    const arr = byDay.get(m.day_of_week) ?? [];
-    arr.push(m);
-    byDay.set(m.day_of_week, arr);
+  async function onScanFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !scanType) return;
+    setScanning(true);
+    setScanItems(null);
+    const fd = new FormData();
+    fd.set("photo", file);
+    const res = await scanPlatePhoto(fd);
+    setScanning(false);
+    if ("error" in res) return setError(res.error);
+    setScanItems(res.items);
   }
 
-  const list = (byDay.get(selectedDay) ?? []).sort(
-    (a, b) => mealTypeOrder(a.meal_type) - mealTypeOrder(b.meal_type),
-  );
-  const dayTotal = list.reduce((s, m) => s + (m.calories ?? 0), 0);
+  async function applyScan() {
+    if (!scanType || !scanItems || scanItems.length === 0) return;
+    setApplying(true);
+    const res = await applyMealFromItems({
+      planId,
+      dayOfWeek: selectedDay,
+      mealType: scanType,
+      items: scanItems,
+    });
+    setApplying(false);
+    if ("error" in res) return setError(res.error);
+    setMeals((prev) => [
+      ...prev.filter(
+        (m) =>
+          !(m.day_of_week === res.dayOfWeek && m.meal_type === res.mealType),
+      ),
+      ...res.meals,
+    ]);
+    setScanType(null);
+    setScanItems(null);
+  }
+
+  const dayMeals = meals.filter((m) => m.day_of_week === selectedDay);
 
   return (
     <div className="space-y-4">
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {/* Gün çipleri — varsayılan bugün */}
+      {/* Gizli dosya girişi (öğün fotoğrafı) */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={onScanFile}
+      />
+
+      {/* Gün çipleri */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {DAYS_SHORT.map((d, i) => (
           <button
@@ -239,9 +203,9 @@ export function EditableMeals({
             type="button"
             onClick={() => {
               setSelectedDay(i);
-              setAddingDay(null);
-              setEditingId(null);
-              setSwapId(null);
+              setAddType(null);
+              setScanType(null);
+              setScanItems(null);
             }}
             className={cn(
               "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-[background-color,box-shadow] duration-200",
@@ -255,331 +219,320 @@ export function EditableMeals({
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-950">
-        <h3 className="flex items-center justify-between border-b border-gray-200 px-4 py-2 font-semibold dark:border-gray-800">
-          <span>{DAYS[selectedDay]}</span>
-          <span className="text-xs font-normal text-gray-500">
-            ~{dayTotal} kcal
-          </span>
-        </h3>
-
-        <ul className="divide-y divide-gray-100 dark:divide-gray-800">
-          {list.length === 0 && (
-            <li className="px-4 py-6 text-center text-sm text-gray-400">
-              Bu gün için öğe yok.
-            </li>
-          )}
-          {list.map((m) => (
-            <li key={m.id} className="px-4 py-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="text-sm">
-                  <span className="font-medium text-emerald-700 dark:text-emerald-400">
-                    <span aria-hidden>{MEAL_ICON[m.meal_type]}</span>{" "}
-                    {mealTypeLabel(m.meal_type)}:
-                  </span>{" "}
-                  <span className="whitespace-pre-wrap">{m.content}</span>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {m.calories != null && (
-                    <span className="text-xs font-medium tabular-nums text-gray-500">
-                      {m.calories} kcal
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => remove(m.id)}
-                    disabled={busyId === m.id}
-                    className="text-xs text-red-600 hover:underline disabled:opacity-50"
-                  >
-                    Sil
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {m.food_id && m.quantity != null && (
-                  <div className="inline-flex items-center overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                    <button
-                      type="button"
-                      onClick={() => changeQty(m, -1)}
-                      disabled={busyId === m.id}
-                      className="px-2.5 py-1 text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
-                    >
-                      −
-                    </button>
-                    <span className="min-w-9 px-1 text-center text-sm tabular-nums">
-                      {m.quantity}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => changeQty(m, 1)}
-                      disabled={busyId === m.id}
-                      className="px-2.5 py-1 text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
-                    >
-                      +
-                    </button>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSwapId(swapId === m.id ? null : m.id);
-                    setEditingId(null);
-                  }}
-                  className="text-xs text-emerald-600 hover:underline"
-                >
-                  Besin değiştir
-                </button>
-
-                {!m.food_id && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingId(m.id);
-                      setDraftContent(m.content);
-                      setDraftCalories(String(m.calories ?? 0));
-                      setSwapId(null);
-                    }}
-                    className="text-xs text-gray-500 hover:underline"
-                  >
-                    Serbest düzenle
-                  </button>
-                )}
-              </div>
-
-              {swapId === m.id && (
-                <div className="mt-2">
-                  <FoodPicker
-                    foods={foods}
-                    onPick={(food) => pickSwap(m.id, food)}
-                    onCancel={() => setSwapId(null)}
-                  />
-                </div>
-              )}
-
-              {editingId === m.id && (
-                <div className="mt-2 space-y-2">
-                  <Input
-                    value={draftContent}
-                    onChange={(e) => setDraftContent(e.target.value)}
-                    placeholder="İçerik"
-                  />
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      value={draftCalories}
-                      onChange={(e) => setDraftCalories(e.target.value)}
-                      className="w-28"
-                    />
-                    <span className="text-sm text-gray-400">kcal</span>
-                    <div className="ml-auto flex gap-2">
-                      <Button
-                        onClick={() => saveFree(m.id)}
-                        disabled={busyId === m.id || !draftContent.trim()}
-                      >
-                        Kaydet
-                      </Button>
-                      <Button variant="ghost" onClick={() => setEditingId(null)}>
-                        İptal
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-
-        {/* Besin ekle */}
-        <div className="border-t border-gray-100 px-4 py-3 dark:border-gray-800">
-          {addingDay === selectedDay ? (
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={addType}
-                  onChange={(e) => setAddType(e.target.value as MealType)}
-                  className={selectClass}
-                >
-                  {MEAL_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="inline-flex items-center gap-1">
-                  <span className="text-xs text-gray-500">adet</span>
-                  <Input
-                    type="number"
-                    step="0.5"
-                    value={addQty}
-                    onChange={(e) => setAddQty(e.target.value)}
-                    className="w-20"
-                  />
-                </div>
-              </div>
-
-              {addFood ? (
-                <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-sm dark:bg-emerald-950/40">
-                  <span>
-                    {addFood.name}{" "}
-                    <span className="text-xs text-gray-500">
-                      ({addFood.kcal_per_unit} kcal / {addFood.unit_label})
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setAddFood(null)}
-                    className="text-xs text-emerald-700 hover:underline dark:text-emerald-400"
-                  >
-                    Değiştir
-                  </button>
-                </div>
-              ) : (
-                <FoodPicker foods={foods} onPick={(f) => setAddFood(f)} />
-              )}
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => addItem(selectedDay)}
-                  disabled={busyId === "add" || !addFood}
-                >
-                  Ekle
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setAddingDay(null);
-                    setAddFood(null);
-                  }}
-                >
-                  İptal
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setAddingDay(selectedDay);
-                setAddFood(null);
-                setAddType("breakfast");
-                setAddQty("1");
-              }}
-              className="text-xs font-medium text-emerald-600 hover:underline"
+      {/* Öğün accordion'ları */}
+      <div className="space-y-2.5">
+        {MEAL_TYPES.map((mt) => {
+          const items = dayMeals.filter((m) => m.meal_type === mt.value);
+          const total = items.reduce((s, m) => s + (m.calories ?? 0), 0);
+          const open = !!expanded[mt.value];
+          const scanHere = scanType === mt.value;
+          return (
+            <div
+              key={mt.value}
+              className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-950"
             >
-              + Besin ekle (listeden)
-            </button>
-          )}
-        </div>
-
-        {/* Tabağını paylaş — foto ile gerçekleşen öğün */}
-        <div className="border-t border-gray-100 px-4 py-3 dark:border-gray-800">
-          {photoOpen ? (
-            <div className="space-y-3">
-              <p className="text-sm font-medium">📷 Tabağını paylaş</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={photoType}
-                  onChange={(e) => setPhotoType(e.target.value as MealType)}
-                  className={selectClass}
-                >
-                  {MEAL_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={onScanFile}
+              {/* Başlık */}
+              <button
+                type="button"
+                onClick={() =>
+                  setExpanded((e) => ({ ...e, [mt.value]: !e[mt.value] }))
+                }
+                className="flex w-full items-center gap-3 px-4 py-3 text-left"
+              >
+                <span
+                  className={cn("h-2.5 w-2.5 rounded-full", DOT[mt.value])}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={scanning}
+                <span className="font-semibold">
+                  {MEAL_ICON[mt.value]} {mt.label}
+                </span>
+                <span className="ml-auto text-sm tabular-nums text-gray-500">
+                  {total} kcal
+                </span>
+                <span
+                  className={cn(
+                    "text-gray-400 transition-transform",
+                    open && "rotate-180",
+                  )}
                 >
-                  {scanning ? "Okunuyor…" : "Fotoğraf seç / çek"}
-                </Button>
-              </div>
+                  ▾
+                </span>
+              </button>
 
-              {scanItems && (
-                <div className="space-y-2 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
-                  <p className="text-xs text-gray-500">
-                    Tanınan öğeler (yanlışları çıkarabilirsin):
-                  </p>
-                  <ul className="space-y-1">
-                    {scanItems.map((it, i) => (
-                      <li
-                        key={i}
-                        className="flex items-center justify-between text-sm"
-                      >
-                        <span>{it.name}</span>
-                        <span className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400">
-                            {it.calories} kcal
+              {/* Gövde */}
+              {open && (
+                <div className="border-t border-gray-100 dark:border-gray-800">
+                  <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {items.length === 0 && (
+                      <li className="px-4 py-3 text-sm text-gray-400">
+                        Henüz öğe yok.
+                      </li>
+                    )}
+                    {items.map((m) => (
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditing(m);
+                            setPickerOpen(false);
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-gray-900"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">
+                              {m.food_id
+                                ? m.content.replace(/\s*\(.*\)$/, "")
+                                : m.content}
+                            </p>
+                            {m.food_id && m.quantity != null && (
+                              <p className="text-xs text-gray-400">
+                                {m.quantity} ×
+                              </p>
+                            )}
+                          </div>
+                          <span className="shrink-0 text-xs tabular-nums text-gray-500">
+                            {m.calories ?? 0} kcal
                           </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setScanItems(
-                                (items) =>
-                                  items?.filter((_, j) => j !== i) ?? null,
-                              )
-                            }
-                            className="text-xs text-red-600"
+                          <span
+                            aria-hidden
+                            className="shrink-0 text-gray-400"
+                            title="Düzenle"
                           >
-                            ✕
-                          </button>
-                        </span>
+                            ✏️
+                          </span>
+                        </button>
                       </li>
                     ))}
                   </ul>
-                  <p className="text-xs font-medium">
-                    Toplam ~
-                    {scanItems.reduce((s, it) => s + it.calories, 0)} kcal
-                  </p>
-                  <Button
-                    onClick={applyPhoto}
-                    disabled={applying || scanItems.length === 0}
-                  >
-                    {applying
-                      ? "Uygulanıyor…"
-                      : "Gerçekleşen öğün olarak uygula"}
-                  </Button>
+
+                  {/* Aksiyonlar: besin ekle + tabak çek */}
+                  <div className="space-y-2 border-t border-gray-100 px-4 py-3 dark:border-gray-800">
+                    {addType === mt.value ? (
+                      <div className="space-y-2">
+                        {addFood ? (
+                          <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-sm dark:bg-emerald-950/40">
+                            <span>
+                              {addFood.name}{" "}
+                              <span className="text-xs text-gray-500">
+                                ({addFood.kcal_per_unit} kcal /{" "}
+                                {addFood.unit_label})
+                              </span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setAddFood(null)}
+                              className="text-xs text-emerald-700 hover:underline dark:text-emerald-400"
+                            >
+                              Değiştir
+                            </button>
+                          </div>
+                        ) : (
+                          <FoodPicker
+                            foods={foods}
+                            onPick={(f) => setAddFood(f)}
+                          />
+                        )}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">adet</span>
+                          <Input
+                            type="number"
+                            step="0.5"
+                            value={addQty}
+                            onChange={(e) => setAddQty(e.target.value)}
+                            className="w-20"
+                          />
+                          <div className="ml-auto flex gap-2">
+                            <Button
+                              onClick={() => addItem(mt.value)}
+                              disabled={busy || !addFood}
+                            >
+                              Ekle
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() => {
+                                setAddType(null);
+                                setAddFood(null);
+                              }}
+                            >
+                              İptal
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : scanHere ? (
+                      <div className="space-y-2 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                        {scanning && (
+                          <p className="text-sm text-gray-500">
+                            Fotoğraf okunuyor…
+                          </p>
+                        )}
+                        {scanItems && (
+                          <>
+                            <p className="text-xs text-gray-500">
+                              Tanınanlar (yanlışı çıkar):
+                            </p>
+                            <ul className="space-y-1">
+                              {scanItems.map((it, i) => (
+                                <li
+                                  key={i}
+                                  className="flex items-center justify-between text-sm"
+                                >
+                                  <span>{it.name}</span>
+                                  <span className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-400">
+                                      {it.calories} kcal
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setScanItems(
+                                          (x) =>
+                                            x?.filter((_, j) => j !== i) ?? null,
+                                        )
+                                      }
+                                      className="text-xs text-red-600"
+                                    >
+                                      ✕
+                                    </button>
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={applyScan}
+                                disabled={applying || scanItems.length === 0}
+                              >
+                                {applying ? "Uygulanıyor…" : "Bu öğün olarak uygula"}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                onClick={() => {
+                                  setScanType(null);
+                                  setScanItems(null);
+                                }}
+                              >
+                                İptal
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddType(mt.value);
+                            setAddFood(null);
+                            setAddQty("1");
+                          }}
+                          className="text-xs font-medium text-emerald-600 hover:underline"
+                        >
+                          + Besin ekle
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openPhoto(mt.value)}
+                          className="text-xs font-medium text-emerald-600 hover:underline"
+                        >
+                          📷 {mt.label} tabağı çek
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
+            </div>
+          );
+        })}
+      </div>
 
+      {/* Düzenleme popup'ı */}
+      {editing && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          onClick={() => setEditing(null)}
+        >
+          <div
+            className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-[var(--shadow-float)] dark:bg-gray-950"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <p className="font-semibold">
+                {MEAL_ICON[editing.meal_type]}{" "}
+                {mealTypeLabel(editing.meal_type)}
+              </p>
               <button
                 type="button"
-                onClick={() => {
-                  setPhotoOpen(false);
-                  setScanItems(null);
-                }}
-                className="text-xs text-gray-400 hover:underline"
+                onClick={() => setEditing(null)}
+                className="text-sm text-gray-400 hover:text-gray-600"
               >
-                Kapat
+                ✕
               </button>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setPhotoOpen(true);
-                setScanItems(null);
-                setPhotoType("breakfast");
-              }}
-              className="text-xs font-medium text-emerald-600 hover:underline"
+
+            <p className="text-sm">
+              {editing.content}{" "}
+              <span className="text-gray-400">· {editing.calories ?? 0} kcal</span>
+            </p>
+
+            {/* Yapılandırılmış: adet stepper */}
+            {editing.food_id && editing.quantity != null && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500">Adet</span>
+                <div className="inline-flex items-center overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => changeQty(editing, -1)}
+                    disabled={busy}
+                    className="px-3 py-1.5 hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+                  >
+                    −
+                  </button>
+                  <span className="min-w-10 px-1 text-center tabular-nums">
+                    {editing.quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => changeQty(editing, 1)}
+                    disabled={busy}
+                    className="px-3 py-1.5 hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Besin değiştir / seç */}
+            {pickerOpen ? (
+              <FoodPicker
+                foods={foods}
+                onPick={(f) => doSwap(editing, f)}
+                onCancel={() => setPickerOpen(false)}
+              />
+            ) : (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setPickerOpen(true)}
+              >
+                {editing.food_id ? "Besini değiştir" : "Besinden seç"}
+              </Button>
+            )}
+
+            <Button
+              variant="ghost"
+              className="w-full text-red-600"
+              onClick={() => doDelete(editing.id)}
+              disabled={busy}
             >
-              📷 Tabağını paylaş (gerçekleşen öğün)
-            </button>
-          )}
+              Sil
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -82,8 +82,9 @@ export default async function PlanPage() {
       </div>
 
       <p className="text-xs text-gray-400">
-        Bir öğeyi değiştirmek için “Düzenle”ye dokun (örn. 5 zeytin → 6, beyaz
-        peynir → kaşar). Kalori toplamı buna göre güncellenir.
+        Öğünü açmak için başlığa dokun. Bir besine dokununca miktarını/içeriğini
+        değiştirebilir, her öğünün tabağını fotoğrafla paylaşabilirsin. Kalori
+        otomatik güncellenir.
       </p>
       <EditableMeals
         initial={meals ?? []}
