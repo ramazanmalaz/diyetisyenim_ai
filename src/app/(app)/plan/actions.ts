@@ -171,6 +171,31 @@ async function fetchFood(
   return data;
 }
 
+export async function toggleMealChecked(
+  values: unknown,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const parsed = z
+    .object({ mealId: z.string().uuid(), checked: z.boolean() })
+    .safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz veri." };
+
+  const admin = createAdminClient();
+  if (!(await assertOwnership(admin, parsed.data.mealId, user.id))) {
+    return { error: "Yetkin yok." };
+  }
+  const { error } = await admin
+    .from("meals")
+    .update({ checked: parsed.data.checked })
+    .eq("id", parsed.data.mealId);
+  if (error) return { error: "Güncellenemedi." };
+
+  revalidatePath("/plan");
+  return { success: true };
+}
+
 export type FoodMealResult =
   | { error: string }
   | { meal: StructuredMeal };

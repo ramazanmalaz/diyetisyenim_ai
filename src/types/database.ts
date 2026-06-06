@@ -209,6 +209,7 @@ export type Database = {
           calories: number | null;
           food_id: string | null;
           quantity: number | null;
+          checked: boolean;
           sort_order: number;
           created_at: string;
         };
@@ -221,6 +222,7 @@ export type Database = {
           calories?: number | null;
           food_id?: string | null;
           quantity?: number | null;
+          checked?: boolean;
           sort_order?: number;
           created_at?: string;
         };
@@ -233,6 +235,7 @@ export type Database = {
           calories?: number | null;
           food_id?: string | null;
           quantity?: number | null;
+          checked?: boolean;
           sort_order?: number;
           created_at?: string;
         };

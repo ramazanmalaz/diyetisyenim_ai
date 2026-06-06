@@ -9,6 +9,7 @@ import {
   scanPlatePhoto,
   setMealQuantity,
   swapMealFood,
+  toggleMealChecked,
 } from "@/app/(app)/plan/actions";
 import { FoodPicker } from "@/components/plan/food-picker";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ type Meal = {
   calories: number | null;
   food_id: string | null;
   quantity: number | null;
+  checked: boolean;
 };
 
 const DOT: Record<MealType, string> = {
@@ -109,6 +111,16 @@ export function EditableMeals({
     });
   }
 
+  async function toggleChecked(meal: Meal) {
+    const next = !meal.checked;
+    patch(meal.id, { checked: next }); // iyimser
+    const res = await toggleMealChecked({ mealId: meal.id, checked: next });
+    if ("error" in res) {
+      patch(meal.id, { checked: meal.checked }); // geri al
+      setError(res.error);
+    }
+  }
+
   async function doDelete(id: string) {
     setBusy(true);
     const res = await deleteMealItem({ mealId: id });
@@ -131,7 +143,7 @@ export function EditableMeals({
     });
     setBusy(false);
     if ("error" in res) return setError(res.error);
-    setMeals((prev) => [...prev, res.meal]);
+    setMeals((prev) => [...prev, { ...res.meal, checked: false }]);
     setAddType(null);
     setAddFood(null);
     setAddQty("1");
@@ -174,7 +186,7 @@ export function EditableMeals({
         (m) =>
           !(m.day_of_week === res.dayOfWeek && m.meal_type === res.mealType),
       ),
-      ...res.meals,
+      ...res.meals.map((m) => ({ ...m, checked: false })),
     ]);
     setScanType(null);
     setScanItems(null);
@@ -229,7 +241,7 @@ export function EditableMeals({
           return (
             <div
               key={mt.value}
-              className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-950"
+              className="glass overflow-hidden rounded-3xl shadow-[var(--shadow-soft)]"
             >
               {/* Başlık */}
               <button
@@ -267,41 +279,96 @@ export function EditableMeals({
                         Henüz öğe yok.
                       </li>
                     )}
-                    {items.map((m) => (
-                      <li key={m.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditing(m);
-                            setPickerOpen(false);
-                          }}
-                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-gray-900"
+                    {items.map((m) => {
+                      const name = m.food_id
+                        ? m.content.replace(/\s*\(.*\)$/, "")
+                        : m.content;
+                      return (
+                        <li
+                          key={m.id}
+                          className="flex items-center gap-3 px-4 py-2.5"
                         >
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">
-                              {m.food_id
-                                ? m.content.replace(/\s*\(.*\)$/, "")
-                                : m.content}
+                          {/* Tikle (yapıldı) */}
+                          <button
+                            type="button"
+                            onClick={() => toggleChecked(m)}
+                            aria-pressed={m.checked}
+                            aria-label={
+                              m.checked
+                                ? "İşareti kaldır"
+                                : "Yapıldı olarak işaretle"
+                            }
+                            className={cn(
+                              "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition",
+                              m.checked
+                                ? "border-emerald-600 bg-emerald-600 text-white"
+                                : "border-gray-300 hover:border-emerald-400 dark:border-gray-600",
+                            )}
+                          >
+                            {m.checked && (
+                              <svg
+                                width="11"
+                                height="11"
+                                viewBox="0 0 12 12"
+                                fill="none"
+                              >
+                                <path
+                                  d="M2.5 6.5l2.5 2.5 4.5-5.5"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            )}
+                          </button>
+
+                          {/* İçerik (tıkla → düzenle) */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditing(m);
+                              setPickerOpen(false);
+                            }}
+                            className="min-w-0 flex-1 text-left"
+                          >
+                            <p
+                              className={cn(
+                                "truncate text-sm font-medium transition",
+                                m.checked && "text-gray-400 line-through",
+                              )}
+                            >
+                              {name}
                             </p>
                             {m.food_id && m.quantity != null && (
                               <p className="text-xs text-gray-400">
                                 {m.quantity} ×
                               </p>
                             )}
-                          </div>
-                          <span className="shrink-0 text-xs tabular-nums text-gray-500">
+                          </button>
+
+                          <span
+                            className={cn(
+                              "shrink-0 text-xs tabular-nums text-gray-500",
+                              m.checked && "text-gray-300 line-through",
+                            )}
+                          >
                             {m.calories ?? 0} kcal
                           </span>
-                          <span
-                            aria-hidden
-                            className="shrink-0 text-gray-400"
-                            title="Düzenle"
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditing(m);
+                              setPickerOpen(false);
+                            }}
+                            aria-label="Düzenle"
+                            className="shrink-0 text-gray-400 transition hover:text-emerald-600"
                           >
                             ✏️
-                          </span>
-                        </button>
-                      </li>
-                    ))}
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
 
                   {/* Aksiyonlar: besin ekle + tabak çek */}
@@ -455,7 +522,7 @@ export function EditableMeals({
           onClick={() => setEditing(null)}
         >
           <div
-            className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-[var(--shadow-float)] dark:bg-gray-950"
+            className="glass reveal w-full max-w-sm space-y-4 rounded-3xl p-5 shadow-[var(--shadow-float)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">

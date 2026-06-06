@@ -46,7 +46,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="space-y-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-950">
+    <div className="space-y-5 glass rounded-3xl p-6 shadow-[var(--shadow-float)]">
       <div>
         <h1 className="text-xl font-semibold">Hesap oluştur</h1>
         <p className="text-sm text-gray-500">Birkaç saniyede başlayalım.</p>

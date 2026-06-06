@@ -20,7 +20,7 @@ export function FoodScanCard({ data }: { data: FoodScanData }) {
       : null;
 
   return (
-    <div className="w-full max-w-[92%] space-y-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-950">
+    <div className="glass w-full max-w-[92%] space-y-3 rounded-2xl p-4 shadow-[var(--shadow-soft)]">
       {/* Başlık + toplam */}
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">🍽️ Tabak analizi</p>

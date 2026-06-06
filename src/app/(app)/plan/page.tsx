@@ -26,7 +26,7 @@ export default async function PlanPage() {
     ? await supabase
         .from("meals")
         .select(
-          "id, day_of_week, meal_type, content, calories, food_id, quantity",
+          "id, day_of_week, meal_type, content, calories, food_id, quantity, checked",
         )
         .eq("plan_id", plan.id)
     : { data: [] };

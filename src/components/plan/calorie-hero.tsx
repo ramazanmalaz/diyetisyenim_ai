@@ -25,7 +25,7 @@ export function CalorieHero({
   const dash = circ * ratio;
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white p-5 shadow-[var(--shadow-float)] dark:border-gray-800 dark:bg-gray-950">
+    <section className="glass reveal relative overflow-hidden rounded-3xl p-5 shadow-[var(--shadow-float)]">
       <div
         aria-hidden
         className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full bg-emerald-100/60 blur-2xl dark:bg-emerald-900/20"
