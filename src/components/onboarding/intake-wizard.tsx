@@ -1,5 +1,6 @@
 "use client";
 
+import { Pencil } from "lucide-react";
 import { useState } from "react";
 
 import { generatePlan } from "@/app/(app)/baslangic/actions";
@@ -264,13 +265,13 @@ export function IntakeWizard() {
             ) : (
               <Button
                 variant="ghost"
-                className="justify-start text-emerald-600"
+                className="justify-start gap-1.5 text-emerald-600"
                 onClick={() => {
                   setCustom(true);
                   setError(null);
                 }}
               >
-                ✏️ Kendim belirleyeyim (tarih + kilo)
+                <Pencil className="h-4 w-4" /> Kendim belirleyeyim (tarih + kilo)
               </Button>
             )}
 

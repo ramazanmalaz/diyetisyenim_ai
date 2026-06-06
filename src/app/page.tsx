@@ -1,3 +1,4 @@
+import { Bot, Camera, Flame, LineChart, Salad } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ export default function Home() {
   return (
     <main className="relative flex flex-1 flex-col items-center px-6 pt-14 pb-20 text-center">
       <span className="reveal inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/70 px-3.5 py-1.5 text-sm font-bold text-emerald-700 backdrop-blur dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-        🥗 DiyetChat
+        <Salad className="h-4 w-4" /> DiyetChat
       </span>
 
       <h1 className="reveal mt-6 max-w-2xl text-4xl font-extrabold text-balance sm:text-6xl">
@@ -31,10 +32,18 @@ export default function Home() {
           alt="Sağlıklı kase"
           className="relative h-full w-full rounded-full object-cover shadow-[var(--shadow-float)] ring-8 ring-white/70"
         />
-        <Badge className="-top-2 left-2">🔥 Günlük kalori</Badge>
-        <Badge className="top-10 -right-4">🤖 AI diyetisyen</Badge>
-        <Badge className="-bottom-1 left-0">📷 Tabak analizi</Badge>
-        <Badge className="right-2 bottom-12">📊 İlerleme</Badge>
+        <Badge className="-top-2 left-2">
+          <Flame className="h-3.5 w-3.5 text-orange-500" /> Günlük kalori
+        </Badge>
+        <Badge className="top-10 -right-4">
+          <Bot className="h-3.5 w-3.5 text-emerald-600" /> AI diyetisyen
+        </Badge>
+        <Badge className="-bottom-1 left-0">
+          <Camera className="h-3.5 w-3.5 text-sky-600" /> Tabak analizi
+        </Badge>
+        <Badge className="right-2 bottom-12">
+          <LineChart className="h-3.5 w-3.5 text-emerald-600" /> İlerleme
+        </Badge>
       </div>
 
       <div className="reveal mt-8 flex flex-col gap-3 sm:flex-row">

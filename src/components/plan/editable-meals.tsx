@@ -1,5 +1,15 @@
 "use client";
 
+import {
+  Camera,
+  Check,
+  ChevronDown,
+  Minus,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useRef, useState } from "react";
 
 import {
@@ -14,12 +24,8 @@ import {
 import { FoodPicker } from "@/components/plan/food-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  DAYS_SHORT,
-  MEAL_ICON,
-  MEAL_TYPES,
-  mealTypeLabel,
-} from "@/lib/diet";
+import { MealIcon } from "@/components/ui/meal-icon";
+import { DAYS_SHORT, MEAL_TYPES, mealTypeLabel } from "@/lib/diet";
 import type { Food } from "@/lib/foods";
 import { cn } from "@/lib/utils";
 import type { MealType } from "@/types/database";
@@ -43,6 +49,9 @@ const DOT: Record<MealType, string> = {
   dinner: "bg-rose-400",
 };
 
+const cleanName = (m: Meal) =>
+  m.food_id ? m.content.replace(/\s*\(.*\)$/, "") : m.content;
+
 export function EditableMeals({
   initial,
   planId,
@@ -64,12 +73,10 @@ export function EditableMeals({
   const [editing, setEditing] = useState<Meal | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  // Öğün bazlı "besin ekle"
   const [addType, setAddType] = useState<MealType | null>(null);
   const [addFood, setAddFood] = useState<Food | null>(null);
   const [addQty, setAddQty] = useState("1");
 
-  // Öğün bazlı fotoğraf
   const [scanType, setScanType] = useState<MealType | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanItems, setScanItems] = useState<
@@ -113,10 +120,10 @@ export function EditableMeals({
 
   async function toggleChecked(meal: Meal) {
     const next = !meal.checked;
-    patch(meal.id, { checked: next }); // iyimser
+    patch(meal.id, { checked: next });
     const res = await toggleMealChecked({ mealId: meal.id, checked: next });
     if ("error" in res) {
-      patch(meal.id, { checked: meal.checked }); // geri al
+      patch(meal.id, { checked: meal.checked });
       setError(res.error);
     }
   }
@@ -192,13 +199,17 @@ export function EditableMeals({
     setScanItems(null);
   }
 
+  function openEdit(m: Meal) {
+    setEditing(m);
+    setPickerOpen(false);
+  }
+
   const dayMeals = meals.filter((m) => m.day_of_week === selectedDay);
 
   return (
     <div className="space-y-4">
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {/* Gizli dosya girişi (öğün fotoğrafı) */}
       <input
         ref={fileRef}
         type="file"
@@ -243,7 +254,6 @@ export function EditableMeals({
               key={mt.value}
               className="glass overflow-hidden rounded-3xl shadow-[var(--shadow-soft)]"
             >
-              {/* Başlık */}
               <button
                 type="button"
                 onClick={() =>
@@ -254,125 +264,92 @@ export function EditableMeals({
                 <span
                   className={cn("h-2.5 w-2.5 rounded-full", DOT[mt.value])}
                 />
-                <span className="font-semibold">
-                  {MEAL_ICON[mt.value]} {mt.label}
-                </span>
+                <MealIcon type={mt.value} className="h-4 w-4 text-emerald-600" />
+                <span className="font-semibold">{mt.label}</span>
                 <span className="ml-auto text-sm tabular-nums text-gray-500">
                   {total} kcal
                 </span>
-                <span
+                <ChevronDown
                   className={cn(
-                    "text-gray-400 transition-transform",
+                    "h-4 w-4 text-gray-400 transition-transform",
                     open && "rotate-180",
                   )}
-                >
-                  ▾
-                </span>
+                />
               </button>
 
-              {/* Gövde */}
               {open && (
-                <div className="border-t border-gray-100 dark:border-gray-800">
-                  <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+                <div className="border-t border-gray-100/70 dark:border-gray-800/70">
+                  <ul className="divide-y divide-gray-100/70 dark:divide-gray-800/70">
                     {items.length === 0 && (
                       <li className="px-4 py-3 text-sm text-gray-400">
                         Henüz öğe yok.
                       </li>
                     )}
-                    {items.map((m) => {
-                      const name = m.food_id
-                        ? m.content.replace(/\s*\(.*\)$/, "")
-                        : m.content;
-                      return (
-                        <li
-                          key={m.id}
-                          className="flex items-center gap-3 px-4 py-2.5"
+                    {items.map((m) => (
+                      <li
+                        key={m.id}
+                        className="flex items-center gap-3 px-4 py-2.5"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleChecked(m)}
+                          aria-pressed={m.checked}
+                          aria-label={
+                            m.checked
+                              ? "İşareti kaldır"
+                              : "Yapıldı olarak işaretle"
+                          }
+                          className={cn(
+                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition",
+                            m.checked
+                              ? "border-emerald-600 bg-emerald-600 text-white"
+                              : "border-gray-300 hover:border-emerald-400 dark:border-gray-600",
+                          )}
                         >
-                          {/* Tikle (yapıldı) */}
-                          <button
-                            type="button"
-                            onClick={() => toggleChecked(m)}
-                            aria-pressed={m.checked}
-                            aria-label={
-                              m.checked
-                                ? "İşareti kaldır"
-                                : "Yapıldı olarak işaretle"
-                            }
-                            className={cn(
-                              "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition",
-                              m.checked
-                                ? "border-emerald-600 bg-emerald-600 text-white"
-                                : "border-gray-300 hover:border-emerald-400 dark:border-gray-600",
-                            )}
-                          >
-                            {m.checked && (
-                              <svg
-                                width="11"
-                                height="11"
-                                viewBox="0 0 12 12"
-                                fill="none"
-                              >
-                                <path
-                                  d="M2.5 6.5l2.5 2.5 4.5-5.5"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            )}
-                          </button>
+                          {m.checked && <Check className="h-3 w-3" />}
+                        </button>
 
-                          {/* İçerik (tıkla → düzenle) */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditing(m);
-                              setPickerOpen(false);
-                            }}
-                            className="min-w-0 flex-1 text-left"
+                        <button
+                          type="button"
+                          onClick={() => openEdit(m)}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <p
+                            className={cn(
+                              "truncate text-sm font-medium transition",
+                              m.checked && "text-gray-400 line-through",
+                            )}
                           >
-                            <p
-                              className={cn(
-                                "truncate text-sm font-medium transition",
-                                m.checked && "text-gray-400 line-through",
-                              )}
-                            >
-                              {name}
+                            {cleanName(m)}
+                          </p>
+                          {m.food_id && m.quantity != null && (
+                            <p className="text-xs text-gray-400">
+                              {m.quantity} ×
                             </p>
-                            {m.food_id && m.quantity != null && (
-                              <p className="text-xs text-gray-400">
-                                {m.quantity} ×
-                              </p>
-                            )}
-                          </button>
+                          )}
+                        </button>
 
-                          <span
-                            className={cn(
-                              "shrink-0 text-xs tabular-nums text-gray-500",
-                              m.checked && "text-gray-300 line-through",
-                            )}
-                          >
-                            {m.calories ?? 0} kcal
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditing(m);
-                              setPickerOpen(false);
-                            }}
-                            aria-label="Düzenle"
-                            className="shrink-0 text-gray-400 transition hover:text-emerald-600"
-                          >
-                            ✏️
-                          </button>
-                        </li>
-                      );
-                    })}
+                        <span
+                          className={cn(
+                            "shrink-0 text-xs tabular-nums text-gray-500",
+                            m.checked && "text-gray-300 line-through",
+                          )}
+                        >
+                          {m.calories ?? 0} kcal
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(m)}
+                          aria-label="Düzenle"
+                          className="shrink-0 text-gray-400 transition hover:text-emerald-600"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                      </li>
+                    ))}
                   </ul>
 
-                  {/* Aksiyonlar: besin ekle + tabak çek */}
-                  <div className="space-y-2 border-t border-gray-100 px-4 py-3 dark:border-gray-800">
+                  <div className="space-y-2 border-t border-gray-100/70 px-4 py-3 dark:border-gray-800/70">
                     {addType === mt.value ? (
                       <div className="space-y-2">
                         {addFood ? (
@@ -457,9 +434,9 @@ export function EditableMeals({
                                             x?.filter((_, j) => j !== i) ?? null,
                                         )
                                       }
-                                      className="text-xs text-red-600"
+                                      className="text-red-500"
                                     >
-                                      ✕
+                                      <X className="h-3.5 w-3.5" />
                                     </button>
                                   </span>
                                 </li>
@@ -470,7 +447,9 @@ export function EditableMeals({
                                 onClick={applyScan}
                                 disabled={applying || scanItems.length === 0}
                               >
-                                {applying ? "Uygulanıyor…" : "Bu öğün olarak uygula"}
+                                {applying
+                                  ? "Uygulanıyor…"
+                                  : "Bu öğün olarak uygula"}
                               </Button>
                               <Button
                                 variant="ghost"
@@ -486,7 +465,7 @@ export function EditableMeals({
                         )}
                       </div>
                     ) : (
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-4">
                         <button
                           type="button"
                           onClick={() => {
@@ -494,16 +473,16 @@ export function EditableMeals({
                             setAddFood(null);
                             setAddQty("1");
                           }}
-                          className="text-xs font-medium text-emerald-600 hover:underline"
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:underline"
                         >
-                          + Besin ekle
+                          <Plus className="h-4 w-4" /> Besin ekle
                         </button>
                         <button
                           type="button"
                           onClick={() => openPhoto(mt.value)}
-                          className="text-xs font-medium text-emerald-600 hover:underline"
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:underline"
                         >
-                          📷 {mt.label} tabağı çek
+                          <Camera className="h-4 w-4" /> {mt.label} tabağı çek
                         </button>
                       </div>
                     )}
@@ -526,77 +505,100 @@ export function EditableMeals({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <p className="font-semibold">
-                {MEAL_ICON[editing.meal_type]}{" "}
+              <p className="flex items-center gap-2 font-semibold">
+                <MealIcon
+                  type={editing.meal_type}
+                  className="h-4 w-4 text-emerald-600"
+                />
                 {mealTypeLabel(editing.meal_type)}
               </p>
               <button
                 type="button"
                 onClick={() => setEditing(null)}
-                className="text-sm text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600"
               >
-                ✕
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <p className="text-sm">
-              {editing.content}{" "}
-              <span className="text-gray-400">· {editing.calories ?? 0} kcal</span>
-            </p>
+            {/* Kalori önizleme */}
+            <div className="rounded-2xl bg-emerald-50 py-3 text-center dark:bg-emerald-950/40">
+              <p className="text-3xl font-bold tabular-nums">
+                {editing.calories ?? 0}
+                <span className="text-sm font-normal text-gray-500"> kcal</span>
+              </p>
+              <p className="truncate px-3 text-xs text-gray-500">
+                {cleanName(editing)}
+              </p>
+            </div>
 
-            {/* Yapılandırılmış: adet stepper */}
-            {editing.food_id && editing.quantity != null && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-500">Adet</span>
-                <div className="inline-flex items-center overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+            {/* Besin seçimi */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-gray-500">Besin</p>
+              {pickerOpen ? (
+                <FoodPicker
+                  foods={foods}
+                  onPick={(f) => doSwap(editing, f)}
+                  onCancel={() => setPickerOpen(false)}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setPickerOpen(true)}
+                  className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white/60 px-3.5 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900/60"
+                >
+                  <span>
+                    {editing.food_id
+                      ? cleanName(editing)
+                      : "Listeden besin seç"}
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                </button>
+              )}
+            </div>
+
+            {/* Adet seçimi */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-gray-500">Adet / miktar</p>
+              {editing.food_id && editing.quantity != null ? (
+                <div className="flex items-center justify-between rounded-xl border border-gray-200 px-2 py-1.5 dark:border-gray-700">
                   <button
                     type="button"
                     onClick={() => changeQty(editing, -1)}
                     disabled={busy}
-                    className="px-3 py-1.5 hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+                    aria-label="Azalt"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
                   >
-                    −
+                    <Minus className="h-4 w-4" />
                   </button>
-                  <span className="min-w-10 px-1 text-center tabular-nums">
+                  <span className="text-lg font-semibold tabular-nums">
                     {editing.quantity}
                   </span>
                   <button
                     type="button"
                     onClick={() => changeQty(editing, 1)}
                     disabled={busy}
-                    className="px-3 py-1.5 hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+                    aria-label="Artır"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
                   >
-                    +
+                    <Plus className="h-4 w-4" />
                   </button>
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="rounded-xl border border-dashed border-gray-200 px-3 py-2.5 text-xs text-gray-400 dark:border-gray-700">
+                  Adet ayarı için önce listeden bir besin seç.
+                </p>
+              )}
+            </div>
 
-            {/* Besin değiştir / seç */}
-            {pickerOpen ? (
-              <FoodPicker
-                foods={foods}
-                onPick={(f) => doSwap(editing, f)}
-                onCancel={() => setPickerOpen(false)}
-              />
-            ) : (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setPickerOpen(true)}
-              >
-                {editing.food_id ? "Besini değiştir" : "Besinden seç"}
-              </Button>
-            )}
-
-            <Button
-              variant="ghost"
-              className="w-full text-red-600"
+            <button
+              type="button"
               onClick={() => doDelete(editing.id)}
               disabled={busy}
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950/30"
             >
-              Sil
-            </Button>
+              <Trash2 className="h-4 w-4" /> Öğeyi sil
+            </button>
           </div>
         </div>
       )}

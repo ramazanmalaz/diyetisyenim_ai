@@ -1,5 +1,6 @@
 "use client";
 
+import { Camera, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { sendMessage, sendPhotoMessage } from "@/app/(app)/sohbet/actions";
@@ -111,7 +112,7 @@ export function MessageThread({
       id: `temp-${Date.now()}`,
       sender_id: currentUserId,
       type: "user",
-      content: "📷 Tabağımın fotoğrafını paylaştım",
+      content: "Tabağımın fotoğrafını paylaştım",
       image_path: null,
       created_at: new Date().toISOString(),
     };
@@ -232,7 +233,7 @@ export function MessageThread({
           aria-label="Fotoğraf ekle"
           className="px-3"
         >
-          📷
+          <Camera className="h-4 w-4" />
         </Button>
         <Input
           value={input}
@@ -240,8 +241,12 @@ export function MessageThread({
           placeholder="Mesaj yaz…"
           disabled={sending}
         />
-        <Button type="submit" disabled={sending || !input.trim()}>
-          Gönder
+        <Button
+          type="submit"
+          disabled={sending || !input.trim()}
+          className="gap-1.5"
+        >
+          <Send className="h-4 w-4" /> Gönder
         </Button>
       </form>
     </div>

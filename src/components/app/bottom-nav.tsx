@@ -1,16 +1,20 @@
 "use client";
 
+import { Home, LineChart, MessageCircle, UtensilsCrossed } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ComponentType } from "react";
+import type { LucideProps } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const ITEMS = [
-  { href: "/panel", label: "Ana", icon: "🏠" },
-  { href: "/plan", label: "Plan", icon: "🍽️" },
-  { href: "/sohbet", label: "Sohbet", icon: "💬" },
-  { href: "/ilerleme", label: "İlerleme", icon: "📊" },
-];
+const ITEMS: { href: string; label: string; icon: ComponentType<LucideProps> }[] =
+  [
+    { href: "/panel", label: "Ana", icon: Home },
+    { href: "/plan", label: "Plan", icon: UtensilsCrossed },
+    { href: "/sohbet", label: "Sohbet", icon: MessageCircle },
+    { href: "/ilerleme", label: "İlerleme", icon: LineChart },
+  ];
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -21,6 +25,7 @@ export function BottomNav() {
         {ITEMS.map((it) => {
           const active =
             pathname === it.href || pathname.startsWith(it.href + "/");
+          const Icon = it.icon;
           return (
             <Link
               key={it.href}
@@ -34,11 +39,11 @@ export function BottomNav() {
             >
               <span
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-base transition",
+                  "flex h-8 w-8 items-center justify-center rounded-full transition",
                   active && "bg-emerald-100 dark:bg-emerald-900/50",
                 )}
               >
-                {it.icon}
+                <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
               </span>
               {it.label}
             </Link>

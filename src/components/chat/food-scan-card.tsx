@@ -1,3 +1,5 @@
+import { AlertTriangle, CheckCircle2, UtensilsCrossed } from "lucide-react";
+
 type ScanItem = {
   name: string;
   calories: number;
@@ -23,7 +25,9 @@ export function FoodScanCard({ data }: { data: FoodScanData }) {
     <div className="glass w-full max-w-[92%] space-y-3 rounded-2xl p-4 shadow-[var(--shadow-soft)]">
       {/* Başlık + toplam */}
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">🍽️ Tabak analizi</p>
+        <p className="flex items-center gap-1.5 text-sm font-semibold">
+          <UtensilsCrossed className="h-4 w-4 text-emerald-600" /> Tabak analizi
+        </p>
         <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium tabular-nums dark:bg-gray-800">
           ~{data.total_calories} kcal
         </span>
@@ -98,8 +102,12 @@ function Section({
       <p
         className={`flex items-center gap-1.5 text-xs font-semibold ${styles.label}`}
       >
-        <span className={`h-2 w-2 rounded-full ${styles.dot}`} />
-        {tone === "positive" ? "✅" : "⚠️"} {title}
+        {tone === "positive" ? (
+          <CheckCircle2 className="h-3.5 w-3.5" />
+        ) : (
+          <AlertTriangle className="h-3.5 w-3.5" />
+        )}
+        {title}
       </p>
       <ul className="flex flex-wrap gap-1.5">
         {items.map((it, i) => (
