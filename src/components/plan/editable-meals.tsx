@@ -10,6 +10,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import type { Dispatch, SetStateAction } from "react";
 import { useRef, useState } from "react";
 
 import {
@@ -30,7 +31,7 @@ import type { Food } from "@/lib/foods";
 import { cn } from "@/lib/utils";
 import type { MealType } from "@/types/database";
 
-type Meal = {
+export type Meal = {
   id: string;
   day_of_week: number;
   meal_type: MealType;
@@ -53,15 +54,16 @@ const cleanName = (m: Meal) =>
   m.food_id ? m.content.replace(/\s*\(.*\)$/, "") : m.content;
 
 export function EditableMeals({
-  initial,
+  meals,
+  setMeals,
   planId,
   foods,
 }: {
-  initial: Meal[];
+  meals: Meal[];
+  setMeals: Dispatch<SetStateAction<Meal[]>>;
   planId: string;
   foods: Food[];
 }) {
-  const [meals, setMeals] = useState<Meal[]>(initial);
   const [selectedDay, setSelectedDay] = useState<number>(
     () => (new Date().getDay() + 6) % 7,
   );

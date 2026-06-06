@@ -1,9 +1,6 @@
-import { LineChart, MessageCircle } from "lucide-react";
 import Link from "next/link";
 
-import { openAssistant } from "@/app/(app)/sohbet/actions";
-import { CalorieHero } from "@/components/plan/calorie-hero";
-import { EditableMeals } from "@/components/plan/editable-meals";
+import { PlanBoard } from "@/components/plan/plan-board";
 import { Button } from "@/components/ui/button";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -37,14 +34,7 @@ export default async function PlanPage() {
     .select("id, name, unit_label, kcal_per_unit")
     .order("name");
 
-  // Bugünün özeti: planlanan + tiklenen (alınan) kalori.
-  const rows = meals ?? [];
   const todayIdx = (new Date().getDay() + 6) % 7; // 0=Pzt ... 6=Paz
-  const todayRows = rows.filter((m) => m.day_of_week === todayIdx);
-  const plannedToday = todayRows.reduce((s, m) => s + (m.calories ?? 0), 0);
-  const consumedToday = todayRows
-    .filter((m) => m.checked)
-    .reduce((s, m) => s + (m.calories ?? 0), 0);
 
   if (!plan) {
     return (
@@ -65,37 +55,14 @@ export default async function PlanPage() {
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
       <h1 className="text-2xl font-bold">Diyet Planım</h1>
 
-      <CalorieHero
+      <PlanBoard
+        planId={plan.id}
+        foods={foods ?? []}
+        initialMeals={meals ?? []}
         dailyTarget={plan.daily_calorie_target}
         goalLossKg={plan.goal_loss_kg}
         estimatedWeeks={plan.estimated_weeks}
-        plannedToday={plannedToday}
-        consumedToday={consumedToday}
-      />
-
-      {/* Hızlı erişim */}
-      <div className="grid gap-2 sm:grid-cols-2">
-        <form action={openAssistant}>
-          <Button type="submit" variant="outline" className="w-full gap-2">
-            <MessageCircle className="h-4 w-4" /> Asistana soru sor
-          </Button>
-        </form>
-        <Button asChild variant="outline" className="w-full gap-2">
-          <Link href="/ilerleme">
-            <LineChart className="h-4 w-4" /> Kilo & ilerleme takibi
-          </Link>
-        </Button>
-      </div>
-
-      <p className="text-xs text-gray-400">
-        Öğünü açmak için başlığa dokun. Bir besine dokununca miktarını/içeriğini
-        değiştirebilir, her öğünün tabağını fotoğrafla paylaşabilirsin. Kalori
-        otomatik güncellenir.
-      </p>
-      <EditableMeals
-        initial={meals ?? []}
-        planId={plan.id}
-        foods={foods ?? []}
+        todayIdx={todayIdx}
       />
     </div>
   );
