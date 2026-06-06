@@ -16,6 +16,7 @@
 /playwright-report
 /playwright/.cache
 /.screenshots
+/.frames
 /hatalar
 /Hatalar
 
