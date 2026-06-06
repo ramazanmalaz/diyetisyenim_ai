@@ -20,7 +20,7 @@ export function FoodPicker({
     const list = term
       ? foods.filter((f) => f.name.toLocaleLowerCase("tr").includes(term))
       : foods;
-    return list.slice(0, 50);
+    return list.slice(0, 100);
   }, [q, foods]);
 
   return (
