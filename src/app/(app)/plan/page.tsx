@@ -36,12 +36,14 @@ export default async function PlanPage() {
     .select("id, name, unit_label, kcal_per_unit")
     .order("name");
 
-  // Planlanan ortalama günlük kalori (ring için).
+  // Bugünün özeti: planlanan + tiklenen (alınan) kalori.
   const rows = meals ?? [];
-  const days = new Set(rows.map((m) => m.day_of_week)).size || 1;
-  const plannedTotal = Math.round(
-    rows.reduce((s, m) => s + (m.calories ?? 0), 0) / days,
-  );
+  const todayIdx = (new Date().getDay() + 6) % 7; // 0=Pzt ... 6=Paz
+  const todayRows = rows.filter((m) => m.day_of_week === todayIdx);
+  const plannedToday = todayRows.reduce((s, m) => s + (m.calories ?? 0), 0);
+  const consumedToday = todayRows
+    .filter((m) => m.checked)
+    .reduce((s, m) => s + (m.calories ?? 0), 0);
 
   if (!plan) {
     return (
@@ -66,7 +68,8 @@ export default async function PlanPage() {
         dailyTarget={plan.daily_calorie_target}
         goalLossKg={plan.goal_loss_kg}
         estimatedWeeks={plan.estimated_weeks}
-        plannedTotal={plannedTotal}
+        plannedToday={plannedToday}
+        consumedToday={consumedToday}
       />
 
       {/* Hızlı erişim */}

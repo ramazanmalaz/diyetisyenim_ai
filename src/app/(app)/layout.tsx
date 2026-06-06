@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { logout } from "@/app/(auth)/actions";
+import { BottomNav } from "@/components/app/bottom-nav";
 import { requireProfile } from "@/lib/auth";
 
 export default async function AppLayout({
@@ -14,7 +15,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white/80 px-4 py-3 backdrop-blur dark:border-gray-800 dark:bg-gray-950/80">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/40 bg-[var(--background)]/70 px-4 py-3 backdrop-blur-xl dark:border-white/10">
         <Link href="/panel" className="font-bold text-emerald-600">
           DiyetChat
         </Link>
@@ -38,12 +39,9 @@ export default async function AppLayout({
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col">{children}</main>
+      <main className="flex flex-1 flex-col pb-28">{children}</main>
 
-      <footer className="border-t border-gray-100 px-4 py-3 text-center text-xs text-gray-400 dark:border-gray-800">
-        DiyetChat · Yapay zekâ destekli öneriler bilgilendirme amaçlıdır, tıbbi
-        tavsiye yerine geçmez.
-      </footer>
+      <BottomNav />
     </div>
   );
 }

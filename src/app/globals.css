@@ -14,18 +14,21 @@
 }
 
 @theme {
-  /* Özel marka yeşili — bespoke emerald ramp */
-  --color-emerald-50: #ecfdf3;
-  --color-emerald-100: #d2f7e0;
-  --color-emerald-200: #a8efc4;
-  --color-emerald-300: #6fe1a3;
-  --color-emerald-400: #36c980;
-  --color-emerald-500: #14a866;
-  --color-emerald-600: #0e8b58;
-  --color-emerald-700: #0b6d48;
-  --color-emerald-800: #0a573b;
-  --color-emerald-900: #084632;
-  --color-emerald-950: #03281d;
+  /* NUTRIFLOW çizgisi — canlı elma-yeşili marka rampası (emerald override) */
+  --color-emerald-50: #f4faea;
+  --color-emerald-100: #e6f4cd;
+  --color-emerald-200: #d0ea9f;
+  --color-emerald-300: #b4dd6a;
+  --color-emerald-400: #97cd41;
+  --color-emerald-500: #7fbb2c;
+  --color-emerald-600: #6aa621;
+  --color-emerald-700: #51811d;
+  --color-emerald-800: #41661c;
+  --color-emerald-900: #38551c;
+  --color-emerald-950: #1c2e0b;
+
+  /* Parlak lime aksan (rozetler, vurgular) */
+  --color-lime-accent: #a3e635;
 
   /* Yumuşak, yeşil-tonlu gölgeler (wellness) */
   --shadow-soft:
@@ -51,11 +54,11 @@ body {
   background-image:
     radial-gradient(
       55% 45% at 12% -5%,
-      rgb(20 168 102 / 0.14),
+      rgb(151 205 65 / 0.18),
       transparent 60%
     ),
-    radial-gradient(50% 45% at 105% 8%, rgb(54 201 128 / 0.12), transparent 60%),
-    radial-gradient(60% 50% at 50% 108%, rgb(14 139 88 / 0.1), transparent 60%);
+    radial-gradient(50% 45% at 105% 8%, rgb(163 230 53 / 0.14), transparent 60%),
+    radial-gradient(60% 50% at 50% 108%, rgb(106 166 33 / 0.1), transparent 60%);
   background-attachment: fixed;
 }
 
