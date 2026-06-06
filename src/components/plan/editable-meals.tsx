@@ -501,7 +501,7 @@ export function EditableMeals({
           onClick={() => setEditing(null)}
         >
           <div
-            className="glass reveal w-full max-w-sm space-y-4 rounded-3xl p-5 shadow-[var(--shadow-float)]"
+            className="reveal w-full max-w-sm space-y-5 rounded-3xl border border-gray-200 bg-white p-5 shadow-[var(--shadow-float)] dark:border-gray-700 dark:bg-gray-900"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -545,7 +545,7 @@ export function EditableMeals({
                 <button
                   type="button"
                   onClick={() => setPickerOpen(true)}
-                  className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white/60 px-3.5 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900/60"
+                  className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm transition hover:border-emerald-300 dark:border-gray-700 dark:bg-gray-800"
                 >
                   <span>
                     {editing.food_id
@@ -591,14 +591,24 @@ export function EditableMeals({
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={() => doDelete(editing.id)}
-              disabled={busy}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950/30"
-            >
-              <Trash2 className="h-4 w-4" /> Öğeyi sil
-            </button>
+            <div className="flex items-center gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => doDelete(editing.id)}
+                disabled={busy}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-200 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-900/50 dark:hover:bg-red-950/30"
+              >
+                <Trash2 className="h-4 w-4" /> Öğeyi sil
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                disabled={busy}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              >
+                <Check className="h-4 w-4" /> Tamam
+              </button>
+            </div>
           </div>
         </div>
       )}
