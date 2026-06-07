@@ -8,6 +8,7 @@ import { openAssistant } from "@/app/(app)/sohbet/actions";
 import { CalorieHero } from "@/components/plan/calorie-hero";
 import { EditableMeals, type Meal } from "@/components/plan/editable-meals";
 import { Button } from "@/components/ui/button";
+import { DAYS } from "@/lib/diet";
 import type { Food } from "@/lib/foods";
 
 type Props = {
@@ -30,26 +31,31 @@ export function PlanBoard({
   todayIdx,
 }: Props) {
   const [meals, setMeals] = useState<Meal[]>(initialMeals);
+  const [selectedDay, setSelectedDay] = useState<number>(todayIdx);
 
-  // Bugünün özeti, canlı öğün state'inden hesaplanır → her değişiklikte güncellenir.
-  const { plannedToday, consumedToday } = useMemo(() => {
-    const todayRows = meals.filter((m) => m.day_of_week === todayIdx);
+  // Özet, SEÇİLİ günün canlı öğün state'inden hesaplanır → gün/öğün değiştikçe güncellenir.
+  const { plannedDay, consumedDay } = useMemo(() => {
+    const dayRows = meals.filter((m) => m.day_of_week === selectedDay);
     return {
-      plannedToday: todayRows.reduce((s, m) => s + (m.calories ?? 0), 0),
-      consumedToday: todayRows
+      plannedDay: dayRows.reduce((s, m) => s + (m.calories ?? 0), 0),
+      consumedDay: dayRows
         .filter((m) => m.checked)
         .reduce((s, m) => s + (m.calories ?? 0), 0),
     };
-  }, [meals, todayIdx]);
+  }, [meals, selectedDay]);
+
+  const heroTitle =
+    selectedDay === todayIdx ? "Bugünün özeti" : `${DAYS[selectedDay]} özeti`;
 
   return (
     <div className="space-y-6">
       <CalorieHero
+        title={heroTitle}
         dailyTarget={dailyTarget}
         goalLossKg={goalLossKg}
         estimatedWeeks={estimatedWeeks}
-        plannedToday={plannedToday}
-        consumedToday={consumedToday}
+        plannedToday={plannedDay}
+        consumedToday={consumedDay}
       />
 
       {/* Hızlı erişim */}
@@ -77,6 +83,8 @@ export function PlanBoard({
         setMeals={setMeals}
         planId={planId}
         foods={foods}
+        selectedDay={selectedDay}
+        setSelectedDay={setSelectedDay}
       />
     </div>
   );

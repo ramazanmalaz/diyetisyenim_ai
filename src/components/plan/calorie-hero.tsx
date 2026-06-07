@@ -4,6 +4,7 @@ type Props = {
   estimatedWeeks: number | null;
   plannedToday: number;
   consumedToday: number;
+  title?: string;
 };
 
 /**
@@ -16,6 +17,7 @@ export function CalorieHero({
   estimatedWeeks,
   plannedToday,
   consumedToday,
+  title = "Bugünün özeti",
 }: Props) {
   const target = dailyTarget ?? 0;
   const ratio = target > 0 ? Math.min(consumedToday / target, 1) : 0;
@@ -35,7 +37,7 @@ export function CalorieHero({
       />
 
       <div className="relative flex items-center justify-between">
-        <p className="text-sm font-semibold">Bugünün özeti</p>
+        <p className="text-sm font-semibold">{title}</p>
         <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
           {goalLossKg ?? "—"} kg · ~{estimatedWeeks ?? "—"} hf
         </span>

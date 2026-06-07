@@ -7,6 +7,7 @@ import {
   Minus,
   Pencil,
   Plus,
+  RotateCcw,
   Trash2,
   X,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import {
   addFoodMeal,
   applyMealFromItems,
   deleteMealItem,
+  resetMealChecks,
   scanPlatePhoto,
   setMealQuantity,
   swapMealFood,
@@ -58,15 +60,16 @@ export function EditableMeals({
   setMeals,
   planId,
   foods,
+  selectedDay,
+  setSelectedDay,
 }: {
   meals: Meal[];
   setMeals: Dispatch<SetStateAction<Meal[]>>;
   planId: string;
   foods: Food[];
+  selectedDay: number;
+  setSelectedDay: Dispatch<SetStateAction<number>>;
 }) {
-  const [selectedDay, setSelectedDay] = useState<number>(
-    () => (new Date().getDay() + 6) % 7,
-  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState<Partial<Record<MealType, boolean>>>({
@@ -137,6 +140,22 @@ export function EditableMeals({
     if (!("error" in res)) {
       setMeals((prev) => prev.filter((m) => m.id !== id));
       setEditing(null);
+    }
+  }
+
+  async function doReset() {
+    if (
+      !window.confirm(
+        "Tüm günlerdeki işaretlemeler (ilerleme) sıfırlanacak. Devam edilsin mi?",
+      )
+    )
+      return;
+    const before = meals;
+    setMeals((prev) => prev.map((m) => ({ ...m, checked: false })));
+    const res = await resetMealChecks({ planId });
+    if ("error" in res) {
+      setMeals(before);
+      setError(res.error);
     }
   }
 
@@ -242,6 +261,17 @@ export function EditableMeals({
             {d}
           </button>
         ))}
+      </div>
+
+      {/* İlerlemeyi sıfırla */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={doReset}
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-gray-500 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
+        >
+          <RotateCcw className="h-3.5 w-3.5" /> İlerlemeyi sıfırla
+        </button>
       </div>
 
       {/* Öğün accordion'ları */}

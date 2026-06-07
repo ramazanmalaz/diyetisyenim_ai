@@ -196,6 +196,35 @@ export async function toggleMealChecked(
   return { success: true };
 }
 
+/** Bir plandaki TÜM öğelerin "yapıldı" işaretini kaldırır (ilerlemeyi sıfırlar). */
+export async function resetMealChecks(values: unknown): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const parsed = z
+    .object({ planId: z.string().uuid() })
+    .safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz plan." };
+
+  const admin = createAdminClient();
+  const { data: plan } = await admin
+    .from("diet_plans")
+    .select("client_id")
+    .eq("id", parsed.data.planId)
+    .single();
+  if (plan?.client_id !== user.id) return { error: "Yetkin yok." };
+
+  const { error } = await admin
+    .from("meals")
+    .update({ checked: false })
+    .eq("plan_id", parsed.data.planId)
+    .eq("checked", true);
+  if (error) return { error: "Sıfırlanamadı." };
+
+  revalidatePath("/plan");
+  return { success: true };
+}
+
 export type FoodMealResult =
   | { error: string }
   | { meal: StructuredMeal };
