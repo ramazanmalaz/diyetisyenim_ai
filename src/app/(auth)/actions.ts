@@ -46,17 +46,30 @@ export async function register(values: unknown): Promise<ActionResult> {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
       data: { full_name: parsed.data.fullName },
-      emailRedirectTo: `${APP_URL}/auth/confirm`,
     },
   });
 
   if (error) {
     return { error: "Kayıt başarısız. Bu e-posta zaten kayıtlı olabilir." };
+  }
+
+  // E-posta onayı kapalıysa signUp doğrudan oturum açar → panele al.
+  if (data.session) {
+    redirect("/panel");
+  }
+
+  // Onay açıksa (ör. ayar henüz değişmediyse) yine de hemen oturum açmayı dene.
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: parsed.data.email,
+    password: parsed.data.password,
+  });
+  if (!signInError) {
+    redirect("/panel");
   }
 
   return { success: true };

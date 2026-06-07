@@ -33,13 +33,12 @@ export default function RegisterPage() {
   if (done) {
     return (
       <div className="space-y-3 rounded-2xl border border-gray-200 p-6 text-center dark:border-gray-800">
-        <h1 className="text-xl font-semibold">E-postanı kontrol et</h1>
+        <h1 className="text-xl font-semibold">Hesabın oluşturuldu</h1>
         <p className="text-sm text-gray-500">
-          Hesabını doğrulamak için sana bir bağlantı gönderdik. Bağlantıya
-          tıkladıktan sonra giriş yapabilirsin.
+          Artık giriş yapıp diyetine başlayabilirsin.
         </p>
         <Link href="/giris" className="text-sm text-emerald-600 hover:underline">
-          Giriş sayfasına dön
+          Giriş yap
         </Link>
       </div>
     );
