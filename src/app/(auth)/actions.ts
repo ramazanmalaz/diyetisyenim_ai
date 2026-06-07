@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   loginSchema,
+  newPasswordSchema,
   registerSchema,
   resetRequestSchema,
 } from "@/lib/validations/auth";
@@ -77,6 +78,36 @@ export async function requestPasswordReset(
 
   if (error) {
     return { error: "İşlem başarısız. Lütfen tekrar deneyin." };
+  }
+
+  return { success: true };
+}
+
+export async function updatePassword(
+  values: unknown,
+): Promise<ActionResult> {
+  const parsed = newPasswordSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Geçersiz şifre." };
+  }
+
+  const supabase = await createClient();
+  // Sıfırlama bağlantısı doğrulandığında geçici (recovery) oturum açılmış olur.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return {
+      error:
+        "Oturum bulunamadı. Sıfırlama bağlantısının süresi dolmuş olabilir, tekrar deneyin.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+  if (error) {
+    return { error: "Şifre güncellenemedi. Lütfen tekrar deneyin." };
   }
 
   return { success: true };

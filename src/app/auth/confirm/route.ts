@@ -11,11 +11,25 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
+  const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/panel";
 
+  const supabase = await createClient();
+
+  // PKCE akışı: e-posta bağlantısı `?code=...` ile gelir.
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      return NextResponse.redirect(new URL(next, request.url));
+    }
+  }
+
+  // OTP akışı: özelleştirilmiş şablonda `token_hash` + `type` gelir.
   if (tokenHash && type) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+    const { error } = await supabase.auth.verifyOtp({
+      type,
+      token_hash: tokenHash,
+    });
     if (!error) {
       return NextResponse.redirect(new URL(next, request.url));
     }
