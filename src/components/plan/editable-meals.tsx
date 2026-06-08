@@ -23,6 +23,7 @@ import {
   setMealQuantity,
   swapMealFood,
   toggleMealChecked,
+  updateMeal,
 } from "@/app/(app)/plan/actions";
 import { FoodPicker } from "@/components/plan/food-picker";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,41 @@ const DOT: Record<MealType, string> = {
 const cleanName = (m: Meal) =>
   m.food_id ? m.content.replace(/\s*\(.*\)$/, "") : m.content;
 
+// Serbest metin öğünde miktar (baştaki sayı + birim) ile besin adını ayırır.
+const UNIT_WORDS = new Set([
+  "yemek", "kaşığı", "tatlı", "çay", "su", "bardağı", "bardak", "adet",
+  "dilim", "kase", "porsiyon", "gram", "g", "ml", "avuç", "top", "fincan",
+  "kutu", "paket", "salkım", "orta", "boy", "küçük", "büyük", "yarım",
+  "dal", "kepçe", "tane",
+]);
+
+function parseFree(content: string): { amount: string; name: string } {
+  const toks = content.trim().split(/\s+/);
+  if (toks.length === 0 || !/^[\d.,]+$/.test(toks[0])) {
+    return { amount: "", name: content.trim() };
+  }
+  let i = 1;
+  while (i < toks.length && UNIT_WORDS.has(toks[i].toLocaleLowerCase("tr"))) i++;
+  return { amount: toks.slice(0, i).join(" "), name: toks.slice(i).join(" ") };
+}
+
+// "3 çay kaşığı" -> { qty: 3, unit: "çay kaşığı" }; "2" -> { qty: 2, unit: "adet" }
+function parseAmount(amount: string): { qty: number; unit: string } | null {
+  const a = amount.trim();
+  let m = a.match(/^([\d.,]+)\s+(.+)$/);
+  if (m) {
+    const qty = Number(m[1].replace(",", "."));
+    const unit = m[2].trim();
+    if (qty > 0 && unit) return { qty, unit };
+  }
+  m = a.match(/^([\d.,]+)$/);
+  if (m) {
+    const qty = Number(m[1].replace(",", "."));
+    if (qty > 0) return { qty, unit: "adet" };
+  }
+  return null;
+}
+
 export function EditableMeals({
   meals,
   setMeals,
@@ -77,6 +113,12 @@ export function EditableMeals({
   });
   const [editing, setEditing] = useState<Meal | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Serbest metin öğün düzenleme alanları (miktar / besin adı / kalori ayrı).
+  const [fAmount, setFAmount] = useState("");
+  const [fName, setFName] = useState("");
+  const [fKcal, setFKcal] = useState("");
+  const [fUnit, setFUnit] = useState(""); // ayrıştırılabilen birim ("çay kaşığı")
+  const [fPerUnit, setFPerUnit] = useState(0); // birim başına kalori
 
   const [addType, setAddType] = useState<MealType | null>(null);
   const [addFood, setAddFood] = useState<Food | null>(null);
@@ -223,6 +265,42 @@ export function EditableMeals({
   function openEdit(m: Meal) {
     setEditing(m);
     setPickerOpen(false);
+    if (!m.food_id) {
+      const p = parseFree(m.content);
+      setFAmount(p.amount);
+      setFName(p.name);
+      setFKcal(String(m.calories ?? 0));
+      // Miktar ayrıştırılabiliyorsa birim başına kaloriyi türet (otomatik hesap).
+      const pa = parseAmount(p.amount);
+      if (pa && (m.calories ?? 0) > 0) {
+        setFUnit(pa.unit);
+        setFPerUnit((m.calories ?? 0) / pa.qty);
+      } else {
+        setFUnit("");
+        setFPerUnit(0);
+      }
+    }
+  }
+
+  // Serbest öğünde adet seçimi → kaloriyi otomatik hesapla.
+  function pickFreeQty(n: number) {
+    setFAmount(`${n} ${fUnit}`);
+    setFKcal(String(Math.round(fPerUnit * n)));
+  }
+
+  // Serbest metin öğünü kaydet (miktar + besin adı + kalori ayrı alanlardan).
+  async function saveFreeText() {
+    if (!editing) return;
+    const name = fName.trim();
+    const content = `${fAmount.trim()} ${name}`.trim();
+    const calories = Math.max(0, Math.round(Number(fKcal) || 0));
+    if (!content) return setError("Besin adı boş olamaz.");
+    setBusy(true);
+    const res = await updateMeal({ mealId: editing.id, content, calories });
+    setBusy(false);
+    if ("error" in res) return setError(res.error);
+    patch(editing.id, { content, calories });
+    setEditing(null);
   }
 
   const dayMeals = meals.filter((m) => m.day_of_week === selectedDay);
@@ -341,25 +419,41 @@ export function EditableMeals({
                           {m.checked && <Check className="h-3 w-3" />}
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => openEdit(m)}
-                          className="min-w-0 flex-1 text-left"
-                        >
-                          <p
-                            className={cn(
-                              "truncate text-sm font-medium transition",
-                              m.checked && "text-gray-400 line-through",
-                            )}
-                          >
-                            {cleanName(m)}
-                          </p>
-                          {m.quantity != null && m.quantity !== 1 && (
-                            <p className="text-xs text-gray-400">
-                              {m.quantity} ×
-                            </p>
-                          )}
-                        </button>
+                        {(() => {
+                          const p = m.food_id ? null : parseFree(m.content);
+                          const nameLine = p ? p.name || m.content : cleanName(m);
+                          const amountLine = p
+                            ? p.amount || null
+                            : m.quantity != null && m.quantity !== 1
+                              ? `${m.quantity} ×`
+                              : null;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => openEdit(m)}
+                              className="min-w-0 flex-1 text-left"
+                            >
+                              <p
+                                className={cn(
+                                  "truncate text-sm font-medium transition",
+                                  m.checked && "text-gray-400 line-through",
+                                )}
+                              >
+                                {nameLine}
+                              </p>
+                              {amountLine && (
+                                <p
+                                  className={cn(
+                                    "text-xs text-gray-400",
+                                    m.checked && "line-through",
+                                  )}
+                                >
+                                  {amountLine}
+                                </p>
+                              )}
+                            </button>
+                          );
+                        })()}
 
                         <span
                           className={cn(
@@ -556,71 +650,142 @@ export function EditableMeals({
             {/* Kalori önizleme */}
             <div className="rounded-2xl bg-emerald-50 py-3 text-center dark:bg-emerald-950/40">
               <p className="text-3xl font-bold tabular-nums">
-                {editing.calories ?? 0}
+                {editing.food_id
+                  ? (editing.calories ?? 0)
+                  : Math.max(0, Math.round(Number(fKcal) || 0))}
                 <span className="text-sm font-normal text-gray-500"> kcal</span>
               </p>
               <p className="truncate px-3 text-xs text-gray-500">
-                {cleanName(editing)}
+                {editing.food_id ? cleanName(editing) : fName || editing.content}
               </p>
             </div>
 
-            {/* Besin seçimi */}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-gray-500">Besin</p>
-              {pickerOpen ? (
+            {editing.food_id ? (
+              <>
+                {/* Listeden seçili besin: ad + adet (kalori otomatik) */}
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-gray-500">Besin</p>
+                  {pickerOpen ? (
+                    <FoodPicker
+                      foods={foods}
+                      onPick={(f) => doSwap(editing, f)}
+                      onCancel={() => setPickerOpen(false)}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setPickerOpen(true)}
+                      className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm transition hover:border-emerald-300 dark:border-gray-700 dark:bg-gray-800"
+                    >
+                      <span>{cleanName(editing)}</span>
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-gray-500">
+                    Adet / miktar
+                  </p>
+                  <div className="flex items-center justify-between rounded-xl border border-gray-200 px-2 py-1.5 dark:border-gray-700">
+                    <button
+                      type="button"
+                      onClick={() => changeQty(editing, -1)}
+                      disabled={busy}
+                      aria-label="Azalt"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="text-lg font-semibold tabular-nums">
+                      {editing.quantity ?? 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => changeQty(editing, 1)}
+                      disabled={busy}
+                      aria-label="Artır"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : pickerOpen ? (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-gray-500">
+                  Listeden besin seç
+                </p>
                 <FoodPicker
                   foods={foods}
                   onPick={(f) => doSwap(editing, f)}
                   onCancel={() => setPickerOpen(false)}
                 />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setPickerOpen(true)}
-                  className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm transition hover:border-emerald-300 dark:border-gray-700 dark:bg-gray-800"
-                >
-                  <span>
-                    {editing.food_id
-                      ? cleanName(editing)
-                      : "Listeden besin seç"}
-                  </span>
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
-                </button>
-              )}
-            </div>
-
-            {/* Adet seçimi — besini değiştirmeden porsiyon/adet ayarı */}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-gray-500">Adet / miktar</p>
-              <div className="flex items-center justify-between rounded-xl border border-gray-200 px-2 py-1.5 dark:border-gray-700">
-                <button
-                  type="button"
-                  onClick={() => changeQty(editing, -1)}
-                  disabled={busy}
-                  aria-label="Azalt"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="text-lg font-semibold tabular-nums">
-                  {editing.quantity ?? 1}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => changeQty(editing, 1)}
-                  disabled={busy}
-                  aria-label="Artır"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
               </div>
-              {!editing.food_id && (
-                <p className="text-[11px] text-gray-400">
-                  Porsiyon çarpanı — besini değiştirmeden miktarı ayarlar.
-                </p>
-              )}
-            </div>
+            ) : (
+              <>
+                {/* Serbest öğün: miktar, besin adı ve kalori AYRI alanlar */}
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-gray-500">
+                    Adet / miktar
+                  </p>
+                  {fUnit ? (
+                    <select
+                      value={parseAmount(fAmount)?.qty ?? 1}
+                      onChange={(e) => pickFreeQty(Number(e.target.value))}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                        <option key={n} value={n}>
+                          {n} {fUnit} · {Math.round(fPerUnit * n)} kcal
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      value={fAmount}
+                      onChange={(e) => setFAmount(e.target.value)}
+                      placeholder="örn. 4 yemek kaşığı"
+                    />
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-gray-500">
+                      Besin adı
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setPickerOpen(true)}
+                      className="text-xs text-emerald-600 hover:underline"
+                    >
+                      Listeden seç
+                    </button>
+                  </div>
+                  <Input
+                    value={fName}
+                    onChange={(e) => setFName(e.target.value)}
+                    placeholder="örn. yulaf ezmesi"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-gray-500">Kalori</p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      value={fKcal}
+                      onChange={(e) => setFKcal(e.target.value)}
+                      className="w-28"
+                    />
+                    <span className="text-sm text-gray-400">kcal</span>
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="flex items-center gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
               <button
@@ -631,14 +796,25 @@ export function EditableMeals({
               >
                 <Trash2 className="h-4 w-4" /> Öğeyi sil
               </button>
-              <button
-                type="button"
-                onClick={() => setEditing(null)}
-                disabled={busy}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-              >
-                <Check className="h-4 w-4" /> Tamam
-              </button>
+              {editing.food_id ? (
+                <button
+                  type="button"
+                  onClick={() => setEditing(null)}
+                  disabled={busy}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  <Check className="h-4 w-4" /> Tamam
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={saveFreeText}
+                  disabled={busy}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  <Check className="h-4 w-4" /> Kaydet
+                </button>
+              )}
             </div>
           </div>
         </div>
