@@ -21,7 +21,10 @@ export default async function DietitiansPage() {
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
       <div>
-        <Link href="/baslangic" className="text-sm text-gray-400 hover:underline">
+        <Link
+          href="/diyetisyen-bul"
+          className="text-sm text-gray-400 hover:underline"
+        >
           ← Geri
         </Link>
         <h1 className="mt-2 text-2xl font-bold">Diyetisyenler</h1>

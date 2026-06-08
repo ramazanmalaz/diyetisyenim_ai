@@ -16,7 +16,7 @@ export default async function AdminLayout({
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white/80 px-4 py-3 backdrop-blur dark:border-gray-800 dark:bg-gray-950/80">
         <Link href="/yonetim" className="font-bold text-emerald-600">
-          DiyetChat · Yönetim
+          UzmanDiyet · Yönetim
         </Link>
         <div className="flex items-center gap-3 text-sm">
           <span className="flex items-center gap-2">

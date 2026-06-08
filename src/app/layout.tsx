@@ -20,7 +20,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "DiyetChat — Diyet Danışmanlık",
+  title: "UzmanDiyet — Diyet Danışmanlık",
   description:
     "Diyetisyen yönetiminde, yapay zekâ destekli sohbet ve kişiye özel diyet takip platformu.",
 };

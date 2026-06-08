@@ -17,7 +17,7 @@ export default async function AppLayout({
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/40 bg-[var(--background)]/70 px-4 py-3 backdrop-blur-xl dark:border-white/10">
         <Link href="/panel" className="font-bold text-emerald-600">
-          DiyetChat
+          UzmanDiyet
         </Link>
         <div className="flex items-center gap-3 text-sm">
           <span className="flex items-center gap-2">

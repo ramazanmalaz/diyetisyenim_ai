@@ -1,4 +1,4 @@
-import { CheckCircle2 } from "lucide-react";
+import { CalendarPlus, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 import { cancelAppointment } from "@/app/(app)/randevu/actions";
@@ -6,6 +6,7 @@ import { DietitianAvatar } from "@/components/dietitians/dietitian-avatar";
 import {
   APPOINTMENT_STATUS_LABEL,
   formatDateTime,
+  googleCalendarUrl,
 } from "@/lib/appointments";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -87,6 +88,20 @@ export default async function RandevuPage({
                   {APPOINTMENT_STATUS_LABEL[a.status]}
                   {a.notes ? ` · ${a.notes}` : ""}
                 </p>
+                {(a.status === "requested" || a.status === "confirmed") && (
+                  <a
+                    href={googleCalendarUrl(
+                      `UzmanDiyet — ${a.dietitians?.full_name ?? "Diyetisyen"} randevusu`,
+                      a.scheduled_at,
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:underline"
+                  >
+                    <CalendarPlus className="h-3.5 w-3.5" /> Google Takvim&apos;e
+                    ekle
+                  </a>
+                )}
               </div>
               {(a.status === "requested" || a.status === "confirmed") && (
                 <form action={cancelAppointment}>

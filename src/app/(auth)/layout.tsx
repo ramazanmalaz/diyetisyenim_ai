@@ -16,7 +16,7 @@ export default function AuthLayout({
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <p className="text-lg font-bold tracking-tight text-emerald-600">
-            DiyetChat
+            UzmanDiyet
           </p>
         </div>
         {children}

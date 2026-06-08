@@ -10,7 +10,7 @@ export default function Home() {
   return (
     <main className="relative flex flex-1 flex-col items-center px-6 pt-14 pb-20 text-center">
       <span className="reveal inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/70 px-3.5 py-1.5 text-sm font-bold text-emerald-700 backdrop-blur dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-        <Salad className="h-4 w-4" /> DiyetChat
+        <Salad className="h-4 w-4" /> UzmanDiyet
       </span>
 
       <h1 className="reveal mt-6 max-w-2xl text-4xl font-extrabold text-balance sm:text-6xl">
