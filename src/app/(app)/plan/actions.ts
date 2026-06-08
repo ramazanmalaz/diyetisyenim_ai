@@ -333,9 +333,19 @@ export async function addFoodMeal(values: unknown): Promise<FoodMealResult> {
 
 export type RecalcResult =
   | { error: string }
-  | { calories: number; content: string; quantity: number; foodId: string };
+  | {
+      calories: number;
+      content: string;
+      quantity: number;
+      foodId: string | null;
+    };
 
-/** Adet değiştir → kaloriyi öğenin besinine göre yeniden hesapla. */
+/**
+ * Adet/miktar değiştir.
+ * - Listeden seçili besin (food_id var): kalori birim başına yeniden hesaplanır.
+ * - Serbest metin öğün (food_id yok): besin/metin DEĞİŞMEZ; "adet" porsiyon
+ *   çarpanı gibi davranır ve kalori orantılı ölçeklenir.
+ */
 export async function setMealQuantity(values: unknown): Promise<RecalcResult> {
   const user = await getUser();
   if (!user) return { error: "Oturum bulunamadı." };
@@ -354,25 +364,43 @@ export async function setMealQuantity(values: unknown): Promise<RecalcResult> {
   }
   const { data: meal } = await admin
     .from("meals")
-    .select("food_id")
+    .select("food_id, quantity, calories, content")
     .eq("id", parsed.data.mealId)
     .single();
-  if (!meal?.food_id) return { error: "Bu öğe besinden seçilmemiş." };
+  if (!meal) return { error: "Öğe bulunamadı." };
 
-  const food = await fetchFood(admin, meal.food_id);
-  if (!food) return { error: "Besin bulunamadı." };
+  // Listeden seçili besin: birim kalorisiyle yeniden hesapla.
+  if (meal.food_id) {
+    const food = await fetchFood(admin, meal.food_id);
+    if (!food) return { error: "Besin bulunamadı." };
+    const { calories, content } = foodMealFields(food, parsed.data.quantity);
+    await admin
+      .from("meals")
+      .update({ quantity: parsed.data.quantity, calories, content })
+      .eq("id", parsed.data.mealId);
+    revalidatePath("/plan");
+    return {
+      calories,
+      content,
+      quantity: parsed.data.quantity,
+      foodId: meal.food_id,
+    };
+  }
 
-  const { calories, content } = foodMealFields(food, parsed.data.quantity);
+  // Serbest metin öğün: kaloriyi porsiyon çarpanına göre ölçekle (içerik değişmez).
+  const prevQty = meal.quantity && meal.quantity > 0 ? meal.quantity : 1;
+  const perUnit = (meal.calories ?? 0) / prevQty;
+  const calories = Math.round(perUnit * parsed.data.quantity);
   await admin
     .from("meals")
-    .update({ quantity: parsed.data.quantity, calories, content })
+    .update({ quantity: parsed.data.quantity, calories })
     .eq("id", parsed.data.mealId);
   revalidatePath("/plan");
   return {
     calories,
-    content,
+    content: meal.content,
     quantity: parsed.data.quantity,
-    foodId: meal.food_id,
+    foodId: null,
   };
 }
 

@@ -354,7 +354,7 @@ export function EditableMeals({
                           >
                             {cleanName(m)}
                           </p>
-                          {m.food_id && m.quantity != null && (
+                          {m.quantity != null && m.quantity !== 1 && (
                             <p className="text-xs text-gray-400">
                               {m.quantity} ×
                             </p>
@@ -589,36 +589,35 @@ export function EditableMeals({
               )}
             </div>
 
-            {/* Adet seçimi */}
+            {/* Adet seçimi — besini değiştirmeden porsiyon/adet ayarı */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-gray-500">Adet / miktar</p>
-              {editing.food_id && editing.quantity != null ? (
-                <div className="flex items-center justify-between rounded-xl border border-gray-200 px-2 py-1.5 dark:border-gray-700">
-                  <button
-                    type="button"
-                    onClick={() => changeQty(editing, -1)}
-                    disabled={busy}
-                    aria-label="Azalt"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                  <span className="text-lg font-semibold tabular-nums">
-                    {editing.quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => changeQty(editing, 1)}
-                    disabled={busy}
-                    aria-label="Artır"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : (
-                <p className="rounded-xl border border-dashed border-gray-200 px-3 py-2.5 text-xs text-gray-400 dark:border-gray-700">
-                  Adet ayarı için önce listeden bir besin seç.
+              <div className="flex items-center justify-between rounded-xl border border-gray-200 px-2 py-1.5 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => changeQty(editing, -1)}
+                  disabled={busy}
+                  aria-label="Azalt"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="text-lg font-semibold tabular-nums">
+                  {editing.quantity ?? 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => changeQty(editing, 1)}
+                  disabled={busy}
+                  aria-label="Artır"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              {!editing.food_id && (
+                <p className="text-[11px] text-gray-400">
+                  Porsiyon çarpanı — besini değiştirmeden miktarı ayarlar.
                 </p>
               )}
             </div>
