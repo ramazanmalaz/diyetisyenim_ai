@@ -34,6 +34,14 @@ export default async function PlanPage() {
     .select("id, name, unit_label, kcal_per_unit")
     .order("name");
 
+  // Bugünün su tüketimi (RLS: yalnızca kendi kaydı).
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const { data: water } = await supabase
+    .from("water_intake")
+    .select("total_ml")
+    .eq("day", todayKey)
+    .maybeSingle();
+
   const todayIdx = (new Date().getDay() + 6) % 7; // 0=Pzt ... 6=Paz
 
   if (!plan) {
@@ -63,6 +71,7 @@ export default async function PlanPage() {
         goalLossKg={plan.goal_loss_kg}
         estimatedWeeks={plan.estimated_weeks}
         todayIdx={todayIdx}
+        initialWaterMl={water?.total_ml ?? 0}
       />
     </div>
   );

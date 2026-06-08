@@ -8,6 +8,7 @@ import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
 import { foodMealFields } from "@/lib/foods";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import {
   ALLOWED_PHOTO_TYPES,
   MAX_PHOTO_BYTES,
@@ -223,6 +224,51 @@ export async function resetMealChecks(values: unknown): Promise<ActionResult> {
 
   revalidatePath("/plan");
   return { success: true };
+}
+
+export type WaterResult = { error: string } | { total: number };
+
+/** Bugünün su tüketimini günceller (delta ekler veya sıfırlar) ve yeni toplamı döndürür. */
+export async function updateWater(values: unknown): Promise<WaterResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const parsed = z
+    .object({
+      deltaMl: z.coerce.number().int().min(-5000).max(5000).optional(),
+      reset: z.boolean().optional(),
+    })
+    .safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz miktar." };
+
+  const supabase = await createClient();
+  const day = new Date().toISOString().slice(0, 10);
+
+  const { data: existing } = await supabase
+    .from("water_intake")
+    .select("total_ml")
+    .eq("client_id", user.id)
+    .eq("day", day)
+    .maybeSingle();
+
+  const current = existing?.total_ml ?? 0;
+  const next = parsed.data.reset
+    ? 0
+    : Math.max(0, Math.min(20000, current + (parsed.data.deltaMl ?? 0)));
+
+  const { error } = await supabase.from("water_intake").upsert(
+    {
+      client_id: user.id,
+      day,
+      total_ml: next,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "client_id,day" },
+  );
+  if (error) return { error: "Su kaydı güncellenemedi." };
+
+  revalidatePath("/plan");
+  return { total: next };
 }
 
 export type FoodMealResult =

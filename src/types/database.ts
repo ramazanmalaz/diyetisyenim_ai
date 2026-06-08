@@ -440,6 +440,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      water_intake: {
+        Row: {
+          client_id: string;
+          day: string;
+          total_ml: number;
+          updated_at: string;
+        };
+        Insert: {
+          client_id: string;
+          day: string;
+          total_ml?: number;
+          updated_at?: string;
+        };
+        Update: {
+          client_id?: string;
+          day?: string;
+          total_ml?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       dietitian_slots: {
         Row: {
           id: string;

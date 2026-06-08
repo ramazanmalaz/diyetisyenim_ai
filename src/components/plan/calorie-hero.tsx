@@ -43,9 +43,17 @@ export function CalorieHero({
         </span>
       </div>
 
-      {/* Üst stat: Toplam / Kalan */}
-      <div className="relative mt-3 flex items-center justify-between text-center">
-        <Stat label="Toplam" value={`${target}`} />
+      {/* Üst stat: Hedef · Harcanan (vurgulu) · Kalan */}
+      <div className="relative mt-4 grid grid-cols-3 items-end gap-2 text-center">
+        <Stat label="Hedef" value={`${target}`} />
+        <div className="rounded-2xl bg-emerald-50 px-2 py-2 dark:bg-emerald-950/40">
+          <p className="text-3xl leading-none font-extrabold text-emerald-600 tabular-nums">
+            {consumedToday}
+          </p>
+          <p className="mt-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+            Harcanan
+          </p>
+        </div>
         <Stat label="Kalan" value={`${left}`} accent />
       </div>
 
@@ -82,10 +90,7 @@ export function CalorieHero({
 
       {/* Alt bilgi */}
       <p className="relative mt-1 text-center text-xs text-gray-500">
-        Alınan <b className="text-emerald-700 dark:text-emerald-300">
-          {consumedToday}
-        </b>{" "}
-        / planlanan {plannedToday} kcal · hedef {target} kcal
+        Planlanan {plannedToday} kcal · günlük hedef {target} kcal
       </p>
     </section>
   );

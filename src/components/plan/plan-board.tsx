@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { openAssistant } from "@/app/(app)/sohbet/actions";
 import { CalorieFigure } from "@/components/plan/calorie-figure";
 import { CalorieHero } from "@/components/plan/calorie-hero";
+import { WaterTracker } from "@/components/plan/water-tracker";
 import { EditableMeals, type Meal } from "@/components/plan/editable-meals";
 import { Button } from "@/components/ui/button";
 import { DAYS } from "@/lib/diet";
@@ -20,6 +21,7 @@ type Props = {
   goalLossKg: number | null;
   estimatedWeeks: number | null;
   todayIdx: number;
+  initialWaterMl: number;
 };
 
 export function PlanBoard({
@@ -30,6 +32,7 @@ export function PlanBoard({
   goalLossKg,
   estimatedWeeks,
   todayIdx,
+  initialWaterMl,
 }: Props) {
   const [meals, setMeals] = useState<Meal[]>(initialMeals);
   const [selectedDay, setSelectedDay] = useState<number>(todayIdx);
@@ -65,6 +68,8 @@ export function PlanBoard({
         meals={meals}
         selectedDay={selectedDay}
       />
+
+      <WaterTracker initialMl={initialWaterMl} />
 
       {/* Hızlı erişim */}
       <div className="grid gap-2 sm:grid-cols-2">
