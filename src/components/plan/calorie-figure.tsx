@@ -53,6 +53,17 @@ function isSweet(name: string): boolean {
 
 type FigureState = "idle" | "happy" | "sweet" | "over" | "full";
 
+// Normal (formda) durumda dönüşümlü motive edici sözler.
+const MOTIVATION = [
+  "Formdasın yavrum, böyle devam! 💪",
+  "Sağlık her şeyden önce gelir 🌿",
+  "Su içmeyi unutma canım 💧",
+  "Azimle her şey güzel olacak ✨",
+  "Bir adım daha, sen yaparsın! 🌟",
+  "Dengeli beslen, keyfine de bak 😊",
+  "Bugün dünden daha iyisin 👏",
+];
+
 // Eklemede dönüşümlü söylenen şekerli/diyet dışı repliği.
 const SWEET_LINES = [
   "Aman canımmm nolacak sanki 😋",
@@ -77,7 +88,9 @@ function TeyzeSvg({
   const SCARF_DARK = "#9c5536";
   const SKIN = "#f4dcc4";
   const INK = "#5b3b2e";
-  const strongBlush = state === "full" || state === "sweet";
+  const over = state === "over";
+  const strongBlush = state === "full" || state === "sweet" || over;
+  const faceFill = over ? "#eaa07f" : SKIN; // aşımda kızarık ten
 
   return (
     <svg
@@ -86,24 +99,29 @@ function TeyzeSvg({
       role="img"
       aria-label="Ümüş Teyze"
     >
-      {/* Gövde / örtü elbisesi (arkada) */}
-      <path
-        d="M70 80 C40 80 22 106 18 150 L122 150 C118 106 100 80 70 80 Z"
-        fill={SCARF}
-      />
-      {/* Önlük (krem) + küçük kalp motifi */}
-      <path
-        d="M70 96 C52 96 44 116 46 150 L94 150 C96 116 88 96 70 96 Z"
-        fill="#f4ead9"
-      />
-      <path
-        d="M70 124 c-4 -7 -14 -5 -14 3 c0 6 8 10 14 15 c6 -5 14 -9 14 -15 c0 -8 -10 -10 -14 -3 z"
-        fill={SCARF}
-      />
+      {/* Gövde / örtü elbisesi — aşımda şişman (yatay genişler) */}
+      <g
+        transform={
+          over ? "translate(70 150) scale(1.22 1.06) translate(-70 -150)" : undefined
+        }
+      >
+        <path
+          d="M70 80 C40 80 22 106 18 150 L122 150 C118 106 100 80 70 80 Z"
+          fill={SCARF}
+        />
+        {/* Önlük (krem) + küçük kalp motifi */}
+        <path
+          d="M70 96 C52 96 44 116 46 150 L94 150 C96 116 88 96 70 96 Z"
+          fill="#f4ead9"
+        />
+        <path
+          d="M70 124 c-4 -7 -14 -5 -14 3 c0 6 8 10 14 15 c6 -5 14 -9 14 -15 c0 -8 -10 -10 -14 -3 z"
+          fill={SCARF}
+        />
+      </g>
 
-      {/* Başörtü (yüzün ARKASINDA, biraz yukarı kaydık → çevre çerçevesi) */}
-      <circle cx="70" cy="50" r="41" fill={SCARF} />
-      {/* Örtü ön kenarı (saç hizası, yüzün üstünde değil çevresinde) */}
+      {/* Başörtü (yüzün ARKASINDA → çevre çerçevesi) */}
+      <circle cx="70" cy="50" r={over ? 45 : 41} fill={SCARF} />
       <path
         d="M33 56 A 37 37 0 0 1 107 56"
         fill="none"
@@ -112,18 +130,57 @@ function TeyzeSvg({
         strokeLinecap="round"
       />
 
-      {/* YÜZ (tam görünür, en üstte) */}
-      <circle cx="70" cy="60" r="32" fill={SKIN} />
+      {/* YÜZ (tam görünür) — aşımda tombul (geniş elips) */}
+      <ellipse
+        cx="70"
+        cy="61"
+        rx={over ? 39 : 32}
+        ry={over ? 35 : 32}
+        fill={faceFill}
+      />
+      {/* Aşımda kızarıklık tonu + çift gıdık */}
+      {over && (
+        <>
+          <ellipse cx="70" cy="63" rx="39" ry="35" fill="#e8553e" opacity="0.14" />
+          <path
+            d="M52 88 q18 12 36 0"
+            fill="none"
+            stroke="#d98a63"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </>
+      )}
 
-      {/* Yanak allığı */}
-      <circle cx="50" cy="68" r="5" fill="#e79477" opacity={strongBlush ? 0.75 : 0.5} />
-      <circle cx="90" cy="68" r="5" fill="#e79477" opacity={strongBlush ? 0.75 : 0.5} />
+      {/* Yanak allığı (aşımda büyük & kırmızı) */}
+      <circle
+        cx={over ? 47 : 50}
+        cy="69"
+        r={over ? 7 : 5}
+        fill={over ? "#e8553e" : "#e79477"}
+        opacity={strongBlush ? 0.8 : 0.5}
+      />
+      <circle
+        cx={over ? 93 : 90}
+        cy="69"
+        r={over ? 7 : 5}
+        fill={over ? "#e8553e" : "#e79477"}
+        opacity={strongBlush ? 0.8 : 0.5}
+      />
+
+      {/* Kızgın kaşlar (yalnızca aşım) */}
+      {over && (
+        <>
+          <path d="M55 51 L67 57" stroke={INK} strokeWidth="2.8" strokeLinecap="round" />
+          <path d="M85 51 L73 57" stroke={INK} strokeWidth="2.8" strokeLinecap="round" />
+        </>
+      )}
 
       {/* Gözler — naif */}
-      {state === "over" ? (
+      {over ? (
         <>
-          <circle cx="60" cy="58" r="3" fill={INK} />
-          <circle cx="80" cy="58" r="3" fill={INK} />
+          <circle cx="61" cy="62" r="3" fill={INK} />
+          <circle cx="79" cy="62" r="3" fill={INK} />
         </>
       ) : state === "sweet" ? (
         <>
@@ -140,26 +197,32 @@ function TeyzeSvg({
       )}
 
       {/* Burun (minik) */}
-      <path d="M69 64 q1 3 2 0" fill="none" stroke={INK} strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M69 66 q1 3 2 0" fill="none" stroke={INK} strokeWidth="1.6" strokeLinecap="round" />
 
       {/* Ağız */}
       {state === "full" ? (
         <path d="M60 70 q10 9 20 0 q-10 4 -20 0 z" fill="#c8554f" />
-      ) : state === "over" ? (
-        <ellipse cx="70" cy="72" rx="4" ry="5" fill="#c8554f" />
+      ) : over ? (
+        // kızgın asık ağız
+        <path d="M61 76 q9 -6 18 0" fill="none" stroke="#8d3340" strokeWidth="2.8" strokeLinecap="round" />
       ) : state === "sweet" ? (
         <path d="M61 70 q10 6 18 -1" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round" />
       ) : (
         <path d="M61 70 q9 7 18 0" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round" />
       )}
 
-      {/* Ter damlası (aşım) */}
-      {state === "over" && (
-        <path
-          className="teyze-drop"
-          d="M100 44 q4 6 0 9 a4.5 4.5 0 1 1 0 -9 z"
-          fill="#38bdf8"
-        />
+      {/* Öfke buharı (aşım) */}
+      {over && (
+        <>
+          <path
+            className="teyze-drop"
+            d="M104 40 q5 -6 10 -2 q-3 5 1 9 q-7 1 -11 -7 z"
+            fill="#e8553e"
+            opacity="0.85"
+          />
+          <circle cx="30" cy="44" r="2" fill="#e8553e" opacity="0.7" />
+          <circle cx="26" cy="50" r="1.4" fill="#e8553e" opacity="0.6" />
+        </>
       )}
     </svg>
   );
@@ -185,12 +248,13 @@ export function CalorieFigure({
   const allChecked = dayItems.length > 0 && dayItems.every((m) => m.checked);
   const hasSweet = dayItems.some((m) => isSweet(m.content));
 
-  const state: FigureState = allChecked
-    ? "full"
-    : hasSweet
-      ? "sweet"
-      : over
-        ? "over"
+  // Öncelik: kalori aşımı (şişman+kızgın) her şeyin önünde → sonra doyduk → şekerli.
+  const state: FigureState = over
+    ? "over"
+    : allChecked
+      ? "full"
+      : hasSweet
+        ? "sweet"
         : consumed <= 0
           ? "idle"
           : "happy";
@@ -199,10 +263,28 @@ export function CalorieFigure({
     idle: "Hadi başlayalım yavrum 🤲",
     happy: "Aferin sana, böyle devam 😊",
     sweet: "Aman canımmm nolacak sanki 😋",
-    over: `Yavaş ye yavrum, ${overBy} kcal kaçtı 😮`,
+    over: `Hooop! ${overBy} kcal fazla kaçtı, olmadı yavrum 😠`,
     full: "Bu günde doyduk 🎉",
   };
+  const status: Record<FigureState, string> = {
+    idle: "Hazırız 🤲",
+    happy: "Formda 💪",
+    sweet: "Eh işte 😋",
+    over: "Şişmanlıyoruz! 😠",
+    full: "Doyduk 🎉",
+  };
   const rose = state === "over";
+
+  // Normal (formda) durumda dönüşümlü motive edici sözler.
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((x) => x + 1), 5000);
+    return () => clearInterval(id);
+  }, []);
+  const cardLine =
+    state === "happy"
+      ? MOTIVATION[tick % MOTIVATION.length]
+      : cardMsg[state];
 
   // Ortadaki büyük tepki + baloncuk.
   const [big, setBig] = useState<{ state: FigureState; msg: string } | null>(
@@ -243,7 +325,7 @@ export function CalorieFigure({
     const added = meals.filter((m) => !prevIds.current!.has(m.id));
     const newSweet = added.find((m) => isSweet(m.content));
 
-    if (newSweet) {
+    if (newSweet && state === "sweet") {
       const line = SWEET_LINES[sweetTurn.current % SWEET_LINES.length];
       sweetTurn.current += 1;
       trigger({ state: "sweet", msg: line });
@@ -285,12 +367,23 @@ export function CalorieFigure({
         <div className={`shrink-0 ${spin ? "teyze-spin" : "teyze-bob"}`}>
           <TeyzeSvg state={state} className="h-24 w-24" />
         </div>
-        <div>
-          <p className="text-sm font-bold text-gray-800 dark:text-gray-100">
-            Ümüş Teyze
-          </p>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-bold text-gray-800 dark:text-gray-100">
+              Ümüş Teyze
+            </p>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                rose
+                  ? "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
+                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+              }`}
+            >
+              {status[state]}
+            </span>
+          </div>
           <p className="mt-0.5 text-sm text-gray-700 dark:text-gray-200">
-            {cardMsg[state]}
+            {cardLine}
           </p>
         </div>
       </div>
