@@ -21,6 +21,7 @@ export type AppointmentStatus =
 export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
 export type ActivityLevel = "sedentary" | "light" | "moderate" | "active";
 export type Sex = "female" | "male";
+export type SlotStatus = "open" | "booked" | "closed";
 
 export type Database = {
   public: {
@@ -360,6 +361,8 @@ export type Database = {
           id: string;
           client_id: string;
           dietitian_id: string | null;
+          dietitian_ref: string | null;
+          slot_id: string | null;
           scheduled_at: string;
           status: AppointmentStatus;
           notes: string | null;
@@ -369,6 +372,8 @@ export type Database = {
           id?: string;
           client_id: string;
           dietitian_id?: string | null;
+          dietitian_ref?: string | null;
+          slot_id?: string | null;
           scheduled_at: string;
           status?: AppointmentStatus;
           notes?: string | null;
@@ -378,9 +383,86 @@ export type Database = {
           id?: string;
           client_id?: string;
           dietitian_id?: string | null;
+          dietitian_ref?: string | null;
+          slot_id?: string | null;
           scheduled_at?: string;
           status?: AppointmentStatus;
           notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      dietitians: {
+        Row: {
+          id: string;
+          full_name: string;
+          title: string;
+          bio: string | null;
+          specialties: string[];
+          city: string | null;
+          photo_url: string | null;
+          years_experience: number | null;
+          is_active: boolean;
+          sort_order: number;
+          contact_phone: string | null;
+          contact_email: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          full_name: string;
+          title?: string;
+          bio?: string | null;
+          specialties?: string[];
+          city?: string | null;
+          photo_url?: string | null;
+          years_experience?: number | null;
+          is_active?: boolean;
+          sort_order?: number;
+          contact_phone?: string | null;
+          contact_email?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          full_name?: string;
+          title?: string;
+          bio?: string | null;
+          specialties?: string[];
+          city?: string | null;
+          photo_url?: string | null;
+          years_experience?: number | null;
+          is_active?: boolean;
+          sort_order?: number;
+          contact_phone?: string | null;
+          contact_email?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      dietitian_slots: {
+        Row: {
+          id: string;
+          dietitian_id: string;
+          start_at: string;
+          duration_min: number;
+          status: SlotStatus;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          dietitian_id: string;
+          start_at: string;
+          duration_min?: number;
+          status?: SlotStatus;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          dietitian_id?: string;
+          start_at?: string;
+          duration_min?: number;
+          status?: SlotStatus;
           created_at?: string;
         };
         Relationships: [];

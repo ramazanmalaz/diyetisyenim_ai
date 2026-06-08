@@ -10,6 +10,11 @@ const cards: { title: string; desc: string; href?: string }[] = [
     desc: "Yapay zekâ diyetisyenin davranışını ayarla.",
     href: "/yonetim/ai-kurallari",
   },
+  {
+    title: "Diyetisyenler",
+    desc: "Diyetisyen profillerini ve randevu saatlerini yönet.",
+    href: "/yonetim/diyetisyenler",
+  },
 ];
 
 export default async function YonetimPage() {

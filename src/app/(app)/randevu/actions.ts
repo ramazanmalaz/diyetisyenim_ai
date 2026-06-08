@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getUser } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { appointmentSchema } from "@/lib/validations/appointment";
 
@@ -41,8 +42,21 @@ export async function cancelAppointment(formData: FormData): Promise<void> {
   const id = z.string().uuid().safeParse(formData.get("id"));
   if (!id.success) return;
 
-  const supabase = await createClient();
-  // RLS: yalnızca kendi randevusunu silebilir.
-  await supabase.from("appointments").delete().eq("id", id.data);
+  const admin = createAdminClient();
+  // Sahiplik denetimi + ilişkili slotu serbest bırak.
+  const { data: appt } = await admin
+    .from("appointments")
+    .select("id, client_id, slot_id")
+    .eq("id", id.data)
+    .single();
+  if (!appt || appt.client_id !== user.id) return;
+
+  if (appt.slot_id) {
+    await admin
+      .from("dietitian_slots")
+      .update({ status: "open" })
+      .eq("id", appt.slot_id);
+  }
+  await admin.from("appointments").delete().eq("id", id.data);
   revalidatePath("/randevu");
 }

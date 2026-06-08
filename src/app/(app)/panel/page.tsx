@@ -23,6 +23,16 @@ export default async function PanelPage() {
         <Link href="/baslangic">Diyete Başla →</Link>
       </Button>
 
+      <div className="flex items-center gap-4 text-sm">
+        <Link href="/diyetisyenler" className="text-emerald-600 hover:underline">
+          Diyetisyenler
+        </Link>
+        <span className="text-gray-300">·</span>
+        <Link href="/randevu" className="text-emerald-600 hover:underline">
+          Randevularım
+        </Link>
+      </div>
+
       <p className="text-xs text-gray-400">
         İstediğin zaman öğünlerini değiştirebilir, sağlık sorularını sorabilir ve
         tabağının fotoğrafını paylaşabilirsin.
