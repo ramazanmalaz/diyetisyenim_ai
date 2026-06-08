@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { openAssistant } from "@/app/(app)/sohbet/actions";
-import { CalorieCat } from "@/components/plan/calorie-cat";
+import { CalorieFigure } from "@/components/plan/calorie-figure";
 import { CalorieHero } from "@/components/plan/calorie-hero";
 import { EditableMeals, type Meal } from "@/components/plan/editable-meals";
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,12 @@ export function PlanBoard({
         consumedToday={consumedDay}
       />
 
-      <CalorieCat consumed={consumedDay} target={dailyTarget} />
+      <CalorieFigure
+        consumed={consumedDay}
+        target={dailyTarget}
+        meals={meals}
+        selectedDay={selectedDay}
+      />
 
       {/* Hızlı erişim */}
       <div className="grid gap-2 sm:grid-cols-2">
