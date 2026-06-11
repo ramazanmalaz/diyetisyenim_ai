@@ -135,14 +135,18 @@ export function MessageThread({
       >
         {messages.length === 0 && (
           <p className="pt-10 text-center text-sm text-gray-500">
-            Henüz mesaj yok. İlk mesajını yaz ya da tabağının fotoğrafını paylaş.
+            Henüz mesaj yok. İlk mesajını yaz ya da tabağının fotoğrafını
+            paylaş.
           </p>
         )}
 
         {messages.map((m) => {
           if (m.type === "system") {
             return (
-              <p key={m.id} className="text-center text-xs text-gray-400">
+              <p
+                key={m.id}
+                className="msg-in text-center text-xs text-gray-400"
+              >
                 {m.content}
               </p>
             );
@@ -158,7 +162,7 @@ export function MessageThread({
             }
             if (scan) {
               return (
-                <div key={m.id} className="flex justify-start">
+                <div key={m.id} className="msg-in flex justify-start">
                   <FoodScanCard data={scan} />
                 </div>
               );
@@ -170,7 +174,10 @@ export function MessageThread({
           return (
             <div
               key={m.id}
-              className={cn("flex", mine ? "justify-end" : "justify-start")}
+              className={cn(
+                "msg-in flex",
+                mine ? "justify-end" : "justify-start",
+              )}
             >
               <div
                 className={cn(
@@ -205,9 +212,14 @@ export function MessageThread({
           );
         })}
         {sending && (
-          <div className="flex justify-start">
-            <div className="rounded-2xl bg-gray-100 px-4 py-2 text-sm text-gray-500 dark:bg-gray-800">
-              Asistan yazıyor…
+          <div className="msg-in flex justify-start">
+            <div className="flex items-center gap-2 rounded-2xl bg-gray-100 px-4 py-3 dark:bg-gray-800">
+              <span className="sr-only">Asistan yazıyor…</span>
+              <span aria-hidden className="flex items-center gap-1">
+                <span className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-400" />
+                <span className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-400" />
+                <span className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-400" />
+              </span>
             </div>
           </div>
         )}

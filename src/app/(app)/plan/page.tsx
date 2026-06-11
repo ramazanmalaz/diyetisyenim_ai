@@ -1,7 +1,7 @@
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 import { PlanBoard } from "@/components/plan/plan-board";
-import { Button } from "@/components/ui/button";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -47,21 +47,34 @@ export default async function PlanPage() {
   if (!plan) {
     return (
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold">Henüz planın yok</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="reveal text-2xl font-bold">Henüz planın yok</h1>
+        <p className="reveal text-sm text-gray-500 dark:text-gray-400">
           Yapay zekâ diyetisyeninle birkaç soruyu yanıtla, sana özel programını
           hazırlasın.
         </p>
-        <Button asChild>
-          <Link href="/baslangic">Diyete Başla →</Link>
-        </Button>
+        <Link
+          href="/baslangic"
+          className="group reveal mt-1 inline-flex items-center gap-3 rounded-full bg-emerald-600 py-2.5 pr-2.5 pl-6 text-sm font-semibold text-white shadow-[0_1px_2px_rgb(7_40_29/0.2),0_12px_28px_-10px_rgb(11_109_72/0.6)] transition-[transform,box-shadow] duration-[400ms] ease-[var(--ease-drawer)] active:scale-[0.98]"
+        >
+          Diyete Başla
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 transition-transform duration-[400ms] ease-[var(--ease-drawer)] group-hover:translate-x-0.5 group-hover:-translate-y-px group-hover:scale-105">
+            <ArrowUpRight className="h-4 w-4" strokeWidth={1.75} />
+          </span>
+        </Link>
       </div>
     );
   }
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
-      <h1 className="text-2xl font-bold">Diyet Planım</h1>
+      <div>
+        <span className="inline-flex items-center rounded-full bg-white/70 px-3 py-1 text-[10px] font-semibold tracking-[0.18em] text-emerald-700 uppercase ring-1 ring-black/5 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-white/10">
+          Program
+        </span>
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight">
+          Diyet Planım
+        </h1>
+      </div>
 
       <PlanBoard
         planId={plan.id}

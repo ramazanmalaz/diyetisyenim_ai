@@ -30,68 +30,75 @@ export function CalorieHero({
   const dash = len * ratio;
 
   return (
-    <section className="glass reveal relative overflow-hidden rounded-3xl p-5 shadow-[var(--shadow-float)]">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-20 -right-16 h-52 w-52 rounded-full bg-emerald-200/50 blur-3xl"
-      />
+    // Double-Bezel: dış kabuk + iç çekirdek (eş merkezli yarıçaplar)
+    <section className="reveal rounded-[1.75rem] bg-white/40 p-1.5 shadow-[var(--shadow-float)] ring-1 ring-black/5 dark:bg-white/5 dark:ring-white/10">
+      <div className="glass relative overflow-hidden rounded-[calc(1.75rem-0.375rem)] p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.5)]">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-20 -right-16 h-52 w-52 rounded-full bg-emerald-200/50 blur-3xl"
+        />
 
-      <div className="relative flex items-center justify-between">
-        <p className="text-sm font-semibold">{title}</p>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-          {goalLossKg ?? "—"} kg · ~{estimatedWeeks ?? "—"} hf
-        </span>
-      </div>
-
-      {/* Üst stat: Hedef · Harcanan (vurgulu) · Kalan */}
-      <div className="relative mt-4 grid grid-cols-3 items-end gap-2 text-center">
-        <Stat label="Hedef" value={`${target}`} />
-        <div className="rounded-2xl bg-emerald-50 px-2 py-2 dark:bg-emerald-950/40">
-          <p className="text-3xl leading-none font-extrabold text-emerald-600 tabular-nums">
-            {consumedToday}
+        <div className="relative flex items-center justify-between">
+          <p className="text-[10px] font-semibold tracking-[0.18em] text-gray-500 uppercase dark:text-gray-400">
+            {title}
           </p>
-          <p className="mt-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-            Harcanan
-          </p>
+          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+            {goalLossKg ?? "—"} kg · ~{estimatedWeeks ?? "—"} hf
+          </span>
         </div>
-        <Stat label="Kalan" value={`${left}`} accent />
-      </div>
 
-      {/* Yarım daire gösterge */}
-      <div className="relative mx-auto mt-1 w-full max-w-[280px]">
-        <svg viewBox="0 0 220 124" className="w-full">
-          <defs>
-            <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#a3e635" />
-              <stop offset="100%" stopColor="#6aa621" />
-            </linearGradient>
-          </defs>
-          <path
-            d="M 20 112 A 90 90 0 0 1 200 112"
-            fill="none"
-            strokeWidth={16}
-            strokeLinecap="round"
-            className="stroke-gray-100 dark:stroke-gray-800"
-          />
-          <path
-            d="M 20 112 A 90 90 0 0 1 200 112"
-            fill="none"
-            strokeWidth={16}
-            strokeLinecap="round"
-            stroke="url(#gaugeGrad)"
-            strokeDasharray={`${dash} ${len}`}
-          />
-        </svg>
-        <div className="absolute inset-x-0 bottom-1 flex flex-col items-center">
-          <span className="text-3xl font-bold tabular-nums">%{pct}</span>
-          <span className="text-xs text-gray-500">tamamlandı</span>
+        {/* Üst stat: Hedef · Harcanan (vurgulu) · Kalan */}
+        <div className="relative mt-4 grid grid-cols-3 items-end gap-2 text-center">
+          <Stat label="Hedef" value={`${target}`} />
+          <div className="rounded-2xl bg-emerald-50 px-2 py-2 dark:bg-emerald-950/40">
+            <p className="text-3xl leading-none font-extrabold text-emerald-600 tabular-nums">
+              {consumedToday}
+            </p>
+            <p className="mt-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+              Harcanan
+            </p>
+          </div>
+          <Stat label="Kalan" value={`${left}`} accent />
         </div>
-      </div>
 
-      {/* Alt bilgi */}
-      <p className="relative mt-1 text-center text-xs text-gray-500">
-        Planlanan {plannedToday} kcal · günlük hedef {target} kcal
-      </p>
+        {/* Yarım daire gösterge */}
+        <div className="relative mx-auto mt-1 w-full max-w-[280px]">
+          <svg viewBox="0 0 220 124" className="w-full">
+            <defs>
+              <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#a3e635" />
+                <stop offset="100%" stopColor="#6aa621" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M 20 112 A 90 90 0 0 1 200 112"
+              fill="none"
+              strokeWidth={16}
+              strokeLinecap="round"
+              className="stroke-gray-100 dark:stroke-gray-800"
+            />
+            <path
+              className="gauge-arc"
+              d="M 20 112 A 90 90 0 0 1 200 112"
+              fill="none"
+              strokeWidth={16}
+              strokeLinecap="round"
+              stroke="url(#gaugeGrad)"
+              strokeDasharray={len}
+              strokeDashoffset={len - dash}
+            />
+          </svg>
+          <div className="absolute inset-x-0 bottom-1 flex flex-col items-center">
+            <span className="text-3xl font-bold tabular-nums">%{pct}</span>
+            <span className="text-xs text-gray-500">tamamlandı</span>
+          </div>
+        </div>
+
+        {/* Alt bilgi */}
+        <p className="relative mt-1 text-center text-xs text-gray-500">
+          Planlanan {plannedToday} kcal · günlük hedef {target} kcal
+        </p>
+      </div>
     </section>
   );
 }
@@ -109,9 +116,7 @@ function Stat({
     <div className="flex-1">
       <p
         className={
-          accent
-            ? "text-xl font-bold text-emerald-600"
-            : "text-xl font-bold"
+          accent ? "text-xl font-bold text-emerald-600" : "text-xl font-bold"
         }
       >
         {value}

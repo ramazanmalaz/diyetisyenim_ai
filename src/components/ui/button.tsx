@@ -26,8 +26,8 @@ export function Button({
   return (
     <Comp
       className={cn(
-        // Yalnızca color/box-shadow/transform animasyonu; spring benzeri easing.
-        "inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-medium transition-[background-color,box-shadow,transform,border-color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none select-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-1 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50",
+        // Yalnızca color/box-shadow/transform animasyonu; güçlü ease-out.
+        "inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-medium transition-[background-color,box-shadow,transform,border-color] duration-200 ease-[var(--ease-out)] outline-none select-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-1 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50",
         variants[variant],
         className,
       )}

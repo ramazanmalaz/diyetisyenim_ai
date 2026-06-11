@@ -35,6 +35,12 @@
     0 1px 2px rgb(7 40 29 / 0.04), 0 14px 34px -16px rgb(7 40 29 / 0.16);
   --shadow-float:
     0 2px 8px rgb(7 40 29 / 0.05), 0 30px 64px -24px rgb(7 40 29 / 0.22);
+
+  /* Güçlü özel easing eğrileri — yerleşik CSS easing'leri fazla zayıf.
+     (Emil Kowalski / animations.dev) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* giriş/çıkış — anında tepki */
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1); /* ekran üstü hareket */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); /* iOS benzeri çekmece */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -57,7 +63,11 @@ body {
       rgb(151 205 65 / 0.18),
       transparent 60%
     ),
-    radial-gradient(50% 45% at 105% 8%, rgb(163 230 53 / 0.14), transparent 60%),
+    radial-gradient(
+      50% 45% at 105% 8%,
+      rgb(163 230 53 / 0.14),
+      transparent 60%
+    ),
     radial-gradient(60% 50% at 50% 108%, rgb(106 166 33 / 0.1), transparent 60%);
   background-attachment: fixed;
 }
@@ -95,22 +105,212 @@ h3 {
   }
 }
 
-/* Sayfa girişinde yumuşak yükselme */
+/* Sayfa girişinde yumuşak yükselme. Hiçbir şey gerçek dünyada yoktan var
+   olmaz; bu yüzden hafif bir scale + blur ile birlikte yükseliyoruz. */
 @keyframes reveal-up {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px) scale(0.985);
+    filter: blur(4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 .reveal {
-  animation: reveal-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: reveal-up 0.55s var(--ease-out) both;
+}
+
+/* Kademeli giriş (stagger): kardeş .reveal öğeleri sırayla belirir.
+   Aynı anda hepsinin gelmesi yerine 60ms'lik küçük gecikmeler doğal hissettirir. */
+.reveal:nth-child(1) {
+  animation-delay: 0ms;
+}
+.reveal:nth-child(2) {
+  animation-delay: 60ms;
+}
+.reveal:nth-child(3) {
+  animation-delay: 120ms;
+}
+.reveal:nth-child(4) {
+  animation-delay: 180ms;
+}
+.reveal:nth-child(5) {
+  animation-delay: 240ms;
+}
+.reveal:nth-child(6) {
+  animation-delay: 300ms;
+}
+
+/* Rozetlerin "canlı" durması için ince, sürekli yüzme hareketi.
+   Yalnızca dekoratif (nadir görülen açılış ekranı) — delight ekler. */
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+.float {
+  animation: float-y 5s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Sohbet mesajı girişi — keyframe değil @starting-style/transition (kesintisiz).
+   Mesajlar hızla eklenir; transition retarget edilebilir, keyframe sıfırdan başlar. */
+.msg-in {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 0.26s var(--ease-out),
+    transform 0.26s var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+
+/* "Asistan yazıyor…" — zıplayan üç nokta. Hızlı döngü daha canlı hissettirir. */
+@keyframes typing-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+.typing-dot {
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* Onboarding adım geçişi — her adımda yumuşak yükselme (stagger'sız). */
+.step-in {
+  animation: reveal-up 0.4s var(--ease-out) both;
+}
+
+/* Ana panel seçim kartları — agency-tier interaktif "portal" kartlar.
+   3D eğilme fareyle (JS, --rx/--ry) sürülür; geçiş yumuşatır. */
+.tilt-card {
+  transform: perspective(900px) rotateX(var(--ry, 0deg))
+    rotateY(var(--rx, 0deg)) translateZ(0);
+  transition:
+    transform 0.4s var(--ease-out),
+    box-shadow 0.4s var(--ease-out);
+  transform-style: preserve-3d;
+}
+.tilt-card:hover {
+  transform: perspective(900px) rotateX(var(--ry, 0deg))
+    rotateY(var(--rx, 0deg)) scale(1.015);
+}
+.tilt-card:active {
+  transform: perspective(900px) rotateX(var(--ry, 0deg))
+    rotateY(var(--rx, 0deg)) scale(0.99);
+}
+
+/* Süzülen gradyan orblar — iki farklı yörünge, senkron değil */
+@keyframes orb-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(14px, -12px) scale(1.12);
+  }
+  66% {
+    transform: translate(-10px, 10px) scale(0.94);
+  }
+}
+@keyframes orb-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-16px, -14px) scale(1.1);
+  }
+}
+.orb-a {
+  animation: orb-a 9s ease-in-out infinite;
+}
+.orb-b {
+  animation: orb-b 11s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tilt-card,
+  .tilt-card:hover,
+  .tilt-card:active {
+    transform: none;
+  }
+  .orb-a,
+  .orb-b {
+    animation: none;
+  }
+}
+
+/* Kalori göstergesi: yüklenince yarım daire arkı soldan doldur.
+   Ark uzunluğu ≈ π·90 ≈ 283; başlangıçta tümü gizli (offset = uzunluk). */
+.gauge-arc {
+  transition: stroke-dashoffset 0.8s var(--ease-out);
+
+  @starting-style {
+    stroke-dashoffset: 283px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gauge-arc {
+    transition: none;
+    @starting-style {
+      stroke-dashoffset: 0;
+    }
+  }
 }
 
 :focus-visible {
   outline: 2px solid var(--color-emerald-500);
   outline-offset: 2px;
+}
+
+/* Erişilebilirlik: hareket azaltma tercihi. Konum/scale hareketlerini kaldır,
+   anlamı koruyan opacity geçişlerini bırak. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .step-in {
+    animation: reveal-fade 0.3s ease both;
+  }
+  .float,
+  .typing-dot {
+    animation: none;
+  }
+  /* Mesajlar yalnızca soluklanır; konum/scale hareketi yok. */
+  .msg-in {
+    transition: opacity 0.26s ease;
+    @starting-style {
+      opacity: 0;
+      transform: none;
+    }
+  }
+  @keyframes reveal-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }

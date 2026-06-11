@@ -47,20 +47,25 @@ export function WaterTracker({ initialMl }: { initialMl: number }) {
       <style>{`
         @keyframes water-wave { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
         .water-wave { animation: water-wave 3.5s linear infinite; }
+        @media (prefers-reduced-motion: reduce) { .water-wave { animation: none; } }
       `}</style>
 
       <div className="flex items-center gap-4">
         {/* Animasyonlu bardak */}
         <div className="relative h-28 w-20 shrink-0">
-          <div className="absolute inset-0 overflow-hidden rounded-b-2xl rounded-t-md border-2 border-sky-300 bg-white/70 dark:border-sky-800 dark:bg-gray-900/40">
-            {/* Su seviyesi */}
+          <div className="absolute inset-0 overflow-hidden rounded-t-md rounded-b-2xl border-2 border-sky-300 bg-white/70 dark:border-sky-800 dark:bg-gray-900/40">
+            {/* Su seviyesi — yükseklik yerine transform (GPU; layout tetiklemez) */}
             <div
-              className="absolute inset-x-0 bottom-0 bg-gradient-to-b from-sky-400 to-sky-500 transition-[height] duration-700 ease-out"
-              style={{ height: `${pct}%` }}
+              className="absolute inset-0 bg-gradient-to-b from-sky-400 to-sky-500 transition-transform duration-700 ease-[var(--ease-out)] will-change-transform"
+              style={{ transform: `translateY(${100 - pct}%)` }}
             >
               {/* Dalga */}
               <div className="water-wave absolute -top-2 left-0 h-3 w-[200%] opacity-70">
-                <svg viewBox="0 0 120 12" preserveAspectRatio="none" className="h-full w-full">
+                <svg
+                  viewBox="0 0 120 12"
+                  preserveAspectRatio="none"
+                  className="h-full w-full"
+                >
                   <path
                     d="M0 6 Q 15 0 30 6 T 60 6 T 90 6 T 120 6 V12 H0 Z"
                     fill="#38bdf8"
@@ -116,7 +121,7 @@ export function WaterTracker({ initialMl }: { initialMl: number }) {
           disabled={busy || total === 0}
           onClick={() => change(-GLASS_ML)}
           aria-label="Bir bardak geri al"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-100 disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-800"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-gray-100 active:scale-[0.94] disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-800"
         >
           <Minus className="h-4 w-4" />
         </button>
@@ -140,7 +145,7 @@ export function WaterTracker({ initialMl }: { initialMl: number }) {
             type="button"
             disabled={busy}
             onClick={reset}
-            className="ml-auto text-xs text-gray-400 hover:text-gray-600 hover:underline"
+            className="ml-auto text-xs text-gray-400 transition-colors duration-200 ease-[var(--ease-out)] hover:text-gray-600 hover:underline"
           >
             Sıfırla
           </button>

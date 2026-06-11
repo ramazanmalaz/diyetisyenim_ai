@@ -8,13 +8,16 @@ import type { LucideProps } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const ITEMS: { href: string; label: string; icon: ComponentType<LucideProps> }[] =
-  [
-    { href: "/panel", label: "Ana", icon: Home },
-    { href: "/plan", label: "Plan", icon: UtensilsCrossed },
-    { href: "/sohbet", label: "Sohbet", icon: MessageCircle },
-    { href: "/ilerleme", label: "İlerleme", icon: LineChart },
-  ];
+const ITEMS: {
+  href: string;
+  label: string;
+  icon: ComponentType<LucideProps>;
+}[] = [
+  { href: "/panel", label: "Ana", icon: Home },
+  { href: "/plan", label: "Plan", icon: UtensilsCrossed },
+  { href: "/sohbet", label: "Sohbet", icon: MessageCircle },
+  { href: "/ilerleme", label: "İlerleme", icon: LineChart },
+];
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -30,8 +33,9 @@ export function BottomNav() {
             <Link
               key={it.href}
               href={it.href}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[11px] font-medium transition",
+                "flex flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[11px] font-medium transition-[color,transform] duration-200 ease-[var(--ease-out)] active:scale-[0.94]",
                 active
                   ? "text-emerald-700 dark:text-emerald-300"
                   : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",
@@ -39,11 +43,13 @@ export function BottomNav() {
             >
               <span
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full transition",
-                  active && "bg-emerald-100 dark:bg-emerald-900/50",
+                  "flex h-8 w-8 items-center justify-center rounded-full transition-[background-color,transform] duration-200 ease-[var(--ease-out)]",
+                  active
+                    ? "scale-105 bg-emerald-100 dark:bg-emerald-900/50"
+                    : "scale-100",
                 )}
               >
-                <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
               </span>
               {it.label}
             </Link>

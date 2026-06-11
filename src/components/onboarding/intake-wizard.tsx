@@ -124,8 +124,10 @@ export function IntakeWizard() {
   if (submitting) {
     return (
       <div className="flex flex-col items-center gap-3 py-16 text-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
-        <p className="font-medium">Yapay zekâ diyetisyenin planını hazırlıyor…</p>
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent [animation-duration:0.7s]" />
+        <p className="font-medium">
+          Yapay zekâ diyetisyenin planını hazırlıyor…
+        </p>
         <p className="text-sm text-gray-500">Bu birkaç saniye sürebilir.</p>
       </div>
     );
@@ -136,180 +138,184 @@ export function IntakeWizard() {
       {/* İlerleme */}
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
         <div
-          className="h-full rounded-full bg-emerald-600 transition-all"
+          className="h-full rounded-full bg-emerald-600 transition-[width] duration-500 ease-[var(--ease-out)]"
           style={{ width: `${((step + 1) / TOTAL) * 100}%` }}
         />
       </div>
 
-      {/* Soru balonu */}
-      <div className="rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-3 text-sm dark:bg-gray-800">
-        {QUESTIONS[step]}
-      </div>
+      {/* Soru + cevap — adım değişiminde birlikte yumuşakça gelir (key=step) */}
+      <div key={step} className="step-in space-y-5">
+        {/* Soru balonu */}
+        <div className="rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-3 text-sm dark:bg-gray-800">
+          {QUESTIONS[step]}
+        </div>
 
-      {/* Cevap alanı */}
-      <div className="space-y-3">
-        {step === 0 && (
-          <div className="grid grid-cols-2 gap-2">
-            {(["female", "male"] as Sex[]).map((s) => (
-              <Button
-                key={s}
-                variant={a.sex === s ? "primary" : "outline"}
-                onClick={() => {
-                  setA({ ...a, sex: s });
-                  next();
-                }}
-              >
-                {s === "female" ? "Kadın" : "Erkek"}
-              </Button>
-            ))}
-          </div>
-        )}
+        {/* Cevap alanı */}
+        <div className="space-y-3">
+          {step === 0 && (
+            <div className="grid grid-cols-2 gap-2">
+              {(["female", "male"] as Sex[]).map((s) => (
+                <Button
+                  key={s}
+                  variant={a.sex === s ? "primary" : "outline"}
+                  onClick={() => {
+                    setA({ ...a, sex: s });
+                    next();
+                  }}
+                >
+                  {s === "female" ? "Kadın" : "Erkek"}
+                </Button>
+              ))}
+            </div>
+          )}
 
-        {step === 1 && (
-          <NumberStep
-            value={a.age}
-            onChange={(v) => setA({ ...a, age: v })}
-            placeholder="Örn. 30"
-            suffix="yaş"
-            canNext={numberValid(a.age)}
-            onNext={next}
-          />
-        )}
-        {step === 2 && (
-          <NumberStep
-            value={a.heightCm}
-            onChange={(v) => setA({ ...a, heightCm: v })}
-            placeholder="Örn. 170"
-            suffix="cm"
-            canNext={numberValid(a.heightCm)}
-            onNext={next}
-          />
-        )}
-        {step === 3 && (
-          <NumberStep
-            value={a.currentWeightKg}
-            onChange={(v) => setA({ ...a, currentWeightKg: v })}
-            placeholder="Örn. 78"
-            suffix="kg"
-            canNext={numberValid(a.currentWeightKg)}
-            onNext={next}
-          />
-        )}
-
-        {step === 4 && (
-          <div className="grid gap-2">
-            {ACTIVITIES.map((act) => (
-              <Button
-                key={act}
-                variant={a.activity === act ? "primary" : "outline"}
-                className="justify-start"
-                onClick={() => {
-                  setA({ ...a, activity: act });
-                  next();
-                }}
-              >
-                {ACTIVITY_LABEL[act]}
-              </Button>
-            ))}
-          </div>
-        )}
-
-        {step === 5 && (
-          <div className="grid gap-2">
-            {GOAL_OPTIONS.map((g) => (
-              <Button
-                key={g.label}
-                variant="outline"
-                className="justify-start"
-                onClick={() => {
-                  setCustom(false);
-                  pickGoal(g.goalLossKg, g.goalWeeks);
-                }}
-              >
-                {g.label}
-              </Button>
-            ))}
-
-            {/* Kendi tarih + kilo hedefini gir */}
-            {custom ? (
-              <div className="space-y-3 rounded-lg border border-emerald-200 p-3 dark:border-emerald-900">
-                <p className="text-sm font-medium">Kendi hedefini gir</p>
-                <div>
-                  <Label htmlFor="goalKg">Vermek istediğin kilo (kg)</Label>
-                  <Input
-                    id="goalKg"
-                    type="number"
-                    step="0.5"
-                    value={goalKg}
-                    onChange={(e) => setGoalKg(e.target.value)}
-                    placeholder="Örn. 6"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="goalDate">Hedef tarih</Label>
-                  <Input
-                    id="goalDate"
-                    type="date"
-                    min={minDate}
-                    value={goalDate}
-                    onChange={(e) => setGoalDate(e.target.value)}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={confirmCustomGoal}>Devam</Button>
-                  <Button variant="ghost" onClick={() => setCustom(false)}>
-                    Vazgeç
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button
-                variant="ghost"
-                className="justify-start gap-1.5 text-emerald-600"
-                onClick={() => {
-                  setCustom(true);
-                  setError(null);
-                }}
-              >
-                <Pencil className="h-4 w-4" /> Kendim belirleyeyim (tarih + kilo)
-              </Button>
-            )}
-
-            {error && <p className="text-sm text-red-600">{error}</p>}
-          </div>
-        )}
-
-        {step === 6 && (
-          <TextStep
-            value={a.healthNotes}
-            onChange={(v) => setA({ ...a, healthNotes: v })}
-            placeholder="Örn. Tip-2 diyabet, laktoz hassasiyeti…"
-            onNext={next}
-          />
-        )}
-
-        {step === 7 && (
-          <div className="space-y-3">
-            <textarea
-              value={a.dislikes}
-              onChange={(e) => setA({ ...a, dislikes: e.target.value })}
-              rows={2}
-              placeholder="Örn. balık sevmem, kabağı yemem…"
-              className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm dark:border-gray-700 dark:bg-gray-950"
+          {step === 1 && (
+            <NumberStep
+              value={a.age}
+              onChange={(v) => setA({ ...a, age: v })}
+              placeholder="Örn. 30"
+              suffix="yaş"
+              canNext={numberValid(a.age)}
+              onNext={next}
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button onClick={submit} className="w-full">
-              Planımı oluştur →
-            </Button>
-          </div>
-        )}
+          )}
+          {step === 2 && (
+            <NumberStep
+              value={a.heightCm}
+              onChange={(v) => setA({ ...a, heightCm: v })}
+              placeholder="Örn. 170"
+              suffix="cm"
+              canNext={numberValid(a.heightCm)}
+              onNext={next}
+            />
+          )}
+          {step === 3 && (
+            <NumberStep
+              value={a.currentWeightKg}
+              onChange={(v) => setA({ ...a, currentWeightKg: v })}
+              placeholder="Örn. 78"
+              suffix="kg"
+              canNext={numberValid(a.currentWeightKg)}
+              onNext={next}
+            />
+          )}
+
+          {step === 4 && (
+            <div className="grid gap-2">
+              {ACTIVITIES.map((act) => (
+                <Button
+                  key={act}
+                  variant={a.activity === act ? "primary" : "outline"}
+                  className="justify-start"
+                  onClick={() => {
+                    setA({ ...a, activity: act });
+                    next();
+                  }}
+                >
+                  {ACTIVITY_LABEL[act]}
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="grid gap-2">
+              {GOAL_OPTIONS.map((g) => (
+                <Button
+                  key={g.label}
+                  variant="outline"
+                  className="justify-start"
+                  onClick={() => {
+                    setCustom(false);
+                    pickGoal(g.goalLossKg, g.goalWeeks);
+                  }}
+                >
+                  {g.label}
+                </Button>
+              ))}
+
+              {/* Kendi tarih + kilo hedefini gir */}
+              {custom ? (
+                <div className="space-y-3 rounded-lg border border-emerald-200 p-3 dark:border-emerald-900">
+                  <p className="text-sm font-medium">Kendi hedefini gir</p>
+                  <div>
+                    <Label htmlFor="goalKg">Vermek istediğin kilo (kg)</Label>
+                    <Input
+                      id="goalKg"
+                      type="number"
+                      step="0.5"
+                      value={goalKg}
+                      onChange={(e) => setGoalKg(e.target.value)}
+                      placeholder="Örn. 6"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="goalDate">Hedef tarih</Label>
+                    <Input
+                      id="goalDate"
+                      type="date"
+                      min={minDate}
+                      value={goalDate}
+                      onChange={(e) => setGoalDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={confirmCustomGoal}>Devam</Button>
+                    <Button variant="ghost" onClick={() => setCustom(false)}>
+                      Vazgeç
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  className="justify-start gap-1.5 text-emerald-600"
+                  onClick={() => {
+                    setCustom(true);
+                    setError(null);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" /> Kendim belirleyeyim (tarih +
+                  kilo)
+                </Button>
+              )}
+
+              {error && <p className="text-sm text-red-600">{error}</p>}
+            </div>
+          )}
+
+          {step === 6 && (
+            <TextStep
+              value={a.healthNotes}
+              onChange={(v) => setA({ ...a, healthNotes: v })}
+              placeholder="Örn. Tip-2 diyabet, laktoz hassasiyeti…"
+              onNext={next}
+            />
+          )}
+
+          {step === 7 && (
+            <div className="space-y-3">
+              <textarea
+                value={a.dislikes}
+                onChange={(e) => setA({ ...a, dislikes: e.target.value })}
+                rows={2}
+                placeholder="Örn. balık sevmem, kabağı yemem…"
+                className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm dark:border-gray-700 dark:bg-gray-950"
+              />
+              {error && <p className="text-sm text-red-600">{error}</p>}
+              <Button onClick={submit} className="w-full">
+                Planımı oluştur →
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {step > 0 && step < 7 && (
         <button
           type="button"
           onClick={() => setStep((s) => Math.max(0, s - 1))}
-          className="text-xs text-gray-400 hover:underline"
+          className="text-xs text-gray-400 transition-colors duration-200 ease-[var(--ease-out)] hover:text-gray-600 hover:underline"
         >
           ← Geri
         </button>

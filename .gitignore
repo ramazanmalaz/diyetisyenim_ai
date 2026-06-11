@@ -44,6 +44,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# AI skills (skills.sh) — yerel araçlar, uygulamanın parçası değil
+/.agents/
+/.claude/skills/
+/.claude/settings.local.json
+/skills-lock.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
