@@ -203,6 +203,40 @@ h3 {
   animation: reveal-up 0.4s var(--ease-out) both;
 }
 
+/* Karpuz tarayıcı — analiz sırasında yukarı-aşağı süzülen tarama çizgisi. */
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(420%);
+  }
+}
+.scanline {
+  animation: scanline 1.5s ease-in-out infinite;
+}
+
+/* Alınacak karpuz işareti — nabız gibi atan halka. */
+@keyframes marker-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(151 205 65 / 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgb(151 205 65 / 0);
+  }
+}
+.marker-pulse {
+  animation: marker-pulse 1.7s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanline,
+  .marker-pulse {
+    animation: none;
+  }
+}
+
 /* Ana panel seçim kartları — agency-tier interaktif "portal" kartlar.
    3D eğilme fareyle (JS, --rx/--ry) sürülür; geçiş yumuşatır. */
 .tilt-card {

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import type { LucideProps } from "lucide-react";
 
+import { Watermelon } from "@/components/icons/watermelon";
 import { cn } from "@/lib/utils";
 
 const ITEMS: {
@@ -17,6 +18,7 @@ const ITEMS: {
   { href: "/plan", label: "Plan", icon: UtensilsCrossed },
   { href: "/sohbet", label: "Sohbet", icon: MessageCircle },
   { href: "/ilerleme", label: "İlerleme", icon: LineChart },
+  { href: "/karpuz", label: "Karpuz", icon: Watermelon },
 ];
 
 export function BottomNav() {
