@@ -113,14 +113,17 @@ export function PlanBoard({
             e.preventDefault();
           }
         }}
-        className="pt-2 text-center"
+        className="border-t border-gray-200 pt-5 dark:border-gray-800"
       >
         <button
           type="submit"
-          className="inline-flex items-center gap-1.5 text-xs text-gray-400 transition-colors duration-200 ease-[var(--ease-out)] hover:text-red-600 hover:underline"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50/60 px-4 py-2.5 text-sm font-medium text-red-600 transition-[background-color,border-color,transform] duration-200 ease-[var(--ease-out)] hover:border-red-300 hover:bg-red-50 active:scale-[0.98] dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/40"
         >
-          <RotateCcw className="h-3.5 w-3.5" /> Planı sıfırla ve en baştan başla
+          <RotateCcw className="h-4 w-4" /> Planı sıfırla ve en baştan başla
         </button>
+        <p className="mt-2 text-center text-xs text-gray-400">
+          Mevcut planın arşivlenir; istediğin zaman yeni plan oluşturabilirsin.
+        </p>
       </form>
     </div>
   );
