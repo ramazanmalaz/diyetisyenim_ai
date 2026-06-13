@@ -1,4 +1,5 @@
 @AGENTS.md
+@DESIGN.md
 
 # CLAUDE.md — DiyetChat (Diyet Danışmanlık Platformu)
 

@@ -1,6 +1,12 @@
 "use client";
 
-import { Home, LineChart, MessageCircle, UtensilsCrossed } from "lucide-react";
+import {
+  Home,
+  LineChart,
+  MessageCircle,
+  Timer,
+  UtensilsCrossed,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
@@ -18,6 +24,7 @@ const ITEMS: {
   { href: "/plan", label: "Plan", icon: UtensilsCrossed },
   { href: "/sohbet", label: "Sohbet", icon: MessageCircle },
   { href: "/ilerleme", label: "İlerleme", icon: LineChart },
+  { href: "/pomodoro", label: "Odak", icon: Timer },
   { href: "/karpuz", label: "Karpuz", icon: Watermelon },
 ];
 

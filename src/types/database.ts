@@ -461,6 +461,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      pomodoro_plans: {
+        Row: {
+          client_id: string;
+          plan_date: string;
+          start_min: number;
+          end_min: number;
+          work_min: number;
+          break_min: number;
+          muted: boolean;
+          completed_sessions: number;
+          updated_at: string;
+        };
+        Insert: {
+          client_id: string;
+          plan_date: string;
+          start_min: number;
+          end_min: number;
+          work_min: number;
+          break_min?: number;
+          muted?: boolean;
+          completed_sessions?: number;
+          updated_at?: string;
+        };
+        Update: {
+          client_id?: string;
+          plan_date?: string;
+          start_min?: number;
+          end_min?: number;
+          work_min?: number;
+          break_min?: number;
+          muted?: boolean;
+          completed_sessions?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       dietitian_slots: {
         Row: {
           id: string;
