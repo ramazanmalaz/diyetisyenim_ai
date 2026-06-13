@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 
 import type { Meal } from "@/components/plan/editable-meals";
 
@@ -341,6 +342,58 @@ export function CalorieFigure({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meals, state]);
 
+  // --- Sürüklenebilir yüzen konum (kullanıcı istediği yere taşıyabilir) ---
+  const SIZE = 72;
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [showBubble, setShowBubble] = useState(false);
+  const dragRef = useRef<{
+    dx: number;
+    dy: number;
+    sx: number;
+    sy: number;
+    moved: boolean;
+  } | null>(null);
+
+  // Baloncuğu açınca bir süre sonra kendiliğinden gizle.
+  useEffect(() => {
+    if (!showBubble) return;
+    const id = setTimeout(() => setShowBubble(false), 6000);
+    return () => clearTimeout(id);
+  }, [showBubble, cardLine]);
+
+  function onDragStart(e: ReactPointerEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
+    const r = el.getBoundingClientRect();
+    dragRef.current = {
+      dx: e.clientX - r.left,
+      dy: e.clientY - r.top,
+      sx: e.clientX,
+      sy: e.clientY,
+      moved: false,
+    };
+  }
+  function onDragMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const d = dragRef.current;
+    if (!d) return;
+    if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 4) d.moved = true;
+    const x = Math.max(
+      8,
+      Math.min(window.innerWidth - SIZE - 8, e.clientX - d.dx),
+    );
+    const y = Math.max(
+      8,
+      Math.min(window.innerHeight - SIZE - 8, e.clientY - d.dy),
+    );
+    setPos({ x, y });
+  }
+  function onDragEnd() {
+    const moved = dragRef.current?.moved;
+    dragRef.current = null;
+    // Sürüklenmediyse (dokunuş) → baloncuğu aç/kapat.
+    if (!moved) setShowBubble((v) => !v);
+  }
+
   return (
     <>
       <style>{`
@@ -356,35 +409,54 @@ export function CalorieFigure({
         .bubble-in { animation: bubble-in .4s ease-out .15s both; }
       `}</style>
 
-      {/* Yerindeki kart */}
+      {/* Yüzen, sürüklenebilir Ümüş Teyze — istediğin yere taşı, dokununca konuşur */}
       <div
-        className={`flex items-center gap-4 rounded-3xl border p-4 shadow-[var(--shadow-soft)] transition-colors ${
-          rose
-            ? "border-rose-200 bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/30"
-            : "border-emerald-200 bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/30"
-        }`}
+        onPointerDown={onDragStart}
+        onPointerMove={onDragMove}
+        onPointerUp={onDragEnd}
+        style={pos ? { left: pos.x, top: pos.y } : { right: 16, bottom: 96 }}
+        className="fixed z-40 cursor-grab touch-none select-none active:cursor-grabbing"
+        role="button"
+        aria-label="Ümüş Teyze — taşımak için sürükle, konuşması için dokun"
       >
-        <div className={`shrink-0 ${spin ? "teyze-spin" : "teyze-bob"}`}>
-          <TeyzeSvg state={state} className="h-24 w-24" />
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-bold text-gray-800 dark:text-gray-100">
-              Ümüş Teyze
+        {/* Konuşma baloncuğu */}
+        {showBubble && (
+          <div className="bubble-in absolute right-0 bottom-full mb-2 w-56 rounded-2xl bg-white px-4 py-3 shadow-[var(--shadow-float)] ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10">
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-bold text-gray-800 dark:text-gray-100">
+                Ümüş Teyze
+              </p>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  rose
+                    ? "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
+                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                }`}
+              >
+                {status[state]}
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
+              {cardLine}
             </p>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                rose
-                  ? "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
-                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-              }`}
-            >
-              {status[state]}
-            </span>
+            <span className="absolute right-6 -bottom-1.5 h-3 w-3 rotate-45 bg-white dark:bg-gray-900" />
           </div>
-          <p className="mt-0.5 text-sm text-gray-700 dark:text-gray-200">
-            {cardLine}
-          </p>
+        )}
+
+        {/* Figür rozeti */}
+        <div
+          className={`relative flex h-[72px] w-[72px] items-center justify-center rounded-full border shadow-[var(--shadow-float)] ${
+            rose
+              ? "border-rose-200 bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/40"
+              : "border-emerald-200 bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/40"
+          } ${spin ? "teyze-spin" : "teyze-bob"}`}
+        >
+          <TeyzeSvg state={state} className="h-14 w-14" />
+          <span
+            className={`absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-gray-900 ${
+              rose ? "bg-rose-500" : "bg-emerald-500"
+            }`}
+          />
         </div>
       </div>
 

@@ -63,13 +63,6 @@ export function PlanBoard({
         consumedToday={consumedDay}
       />
 
-      <CalorieFigure
-        consumed={consumedDay}
-        target={dailyTarget}
-        meals={meals}
-        selectedDay={selectedDay}
-      />
-
       <WaterTracker initialMl={initialWaterMl} />
 
       {/* Hızlı erişim */}
@@ -125,6 +118,14 @@ export function PlanBoard({
           Mevcut planın arşivlenir; istediğin zaman yeni plan oluşturabilirsin.
         </p>
       </form>
+
+      {/* Yüzen, sürüklenebilir Ümüş Teyze (sabit konumlu — akışta yer kaplamaz) */}
+      <CalorieFigure
+        consumed={consumedDay}
+        target={dailyTarget}
+        meals={meals}
+        selectedDay={selectedDay}
+      />
     </div>
   );
 }

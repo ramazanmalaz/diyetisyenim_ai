@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import {
   addFoodMeal,
@@ -26,6 +26,7 @@ import {
   updateMeal,
 } from "@/app/(app)/plan/actions";
 import { FoodPicker } from "@/components/plan/food-picker";
+import { PlateCamera } from "@/components/plan/plate-camera";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MealIcon } from "@/components/ui/meal-icon";
@@ -130,7 +131,7 @@ export function EditableMeals({
     { name: string; calories: number }[] | null
   >(null);
   const [applying, setApplying] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [cameraType, setCameraType] = useState<MealType | null>(null);
 
   function patch(id: string, p: Partial<Meal>) {
     setMeals((prev) => prev.map((m) => (m.id === id ? { ...m, ...p } : m)));
@@ -219,19 +220,19 @@ export function EditableMeals({
     setAddQty("1");
   }
 
-  function openPhoto(mealType: MealType) {
-    setScanType(mealType);
+  function openCamera(mealType: MealType) {
+    setCameraType(mealType);
     setScanItems(null);
     setError(null);
-    fileRef.current?.click();
   }
 
-  async function onScanFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !scanType) return;
-    setScanning(true);
+  async function handleCaptured(file: File) {
+    const mealType = cameraType;
+    setCameraType(null);
+    if (!mealType) return;
+    setScanType(mealType);
     setScanItems(null);
+    setScanning(true);
     const fd = new FormData();
     fd.set("photo", file);
     const res = await scanPlatePhoto(fd);
@@ -309,12 +310,11 @@ export function EditableMeals({
     <div className="space-y-4">
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={onScanFile}
+      <PlateCamera
+        open={cameraType !== null}
+        title={cameraType ? `${mealTypeLabel(cameraType)} tabağını çek` : ""}
+        onClose={() => setCameraType(null)}
+        onCapture={handleCaptured}
       />
 
       {/* Gün çipleri */}
@@ -591,7 +591,7 @@ export function EditableMeals({
                         )}
                       </div>
                     ) : (
-                      <div className="flex flex-wrap gap-4">
+                      <div className="flex flex-wrap items-center gap-2.5">
                         <button
                           type="button"
                           onClick={() => {
@@ -599,16 +599,17 @@ export function EditableMeals({
                             setAddFood(null);
                             setAddQty("1");
                           }}
-                          className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:underline"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-white/60 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-emerald-50 active:scale-[0.96] dark:border-emerald-900/50 dark:bg-white/5 dark:text-emerald-300"
                         >
-                          <Plus className="h-4 w-4" /> Besin ekle
+                          <Plus className="h-4 w-4" strokeWidth={2} /> Besin ekle
                         </button>
                         <button
                           type="button"
-                          onClick={() => openPhoto(mt.value)}
-                          className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:underline"
+                          onClick={() => openCamera(mt.value)}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-[0_6px_16px_-8px_rgb(11_109_72/0.7)] transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-emerald-700 active:scale-[0.96]"
                         >
-                          <Camera className="h-4 w-4" /> {mt.label} tabağı çek
+                          <Camera className="h-4 w-4" strokeWidth={1.75} />{" "}
+                          {mt.label} tabağı çek
                         </button>
                       </div>
                     )}
