@@ -345,6 +345,7 @@ function NumberStep({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
+          className="pr-12"
           onKeyDown={(e) => {
             if (e.key === "Enter" && canNext) onNext();
           }}
