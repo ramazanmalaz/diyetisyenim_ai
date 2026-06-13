@@ -125,9 +125,7 @@ export function IntakeWizard() {
     return (
       <div className="flex flex-col items-center gap-3 py-16 text-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent [animation-duration:0.7s]" />
-        <p className="font-medium">
-          Yapay zekâ diyetisyenin planını hazırlıyor…
-        </p>
+        <p className="font-medium">Diyet asistanın planını hazırlıyor…</p>
         <p className="text-sm text-gray-500">Bu birkaç saniye sürebilir.</p>
       </div>
     );

@@ -3,13 +3,27 @@
 import { redirect } from "next/navigation";
 
 import { generatePlanMeals } from "@/lib/ai/plan";
+import {
+  analyzePlanPhoto,
+  type ImageMediaType,
+  type PlanPhotoScan,
+} from "@/lib/ai/respond";
 import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
 import { computeCaloriePlan, ACTIVITY_LABEL } from "@/lib/diet/calories";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { intakeSchema } from "@/lib/validations/intake";
+import { manualPlanSchema } from "@/lib/validations/manual-plan";
+import {
+  ALLOWED_PHOTO_TYPES,
+  MAX_PHOTO_BYTES,
+} from "@/lib/validations/progress";
 
 export type GenerateResult = { error: string };
+
+const PLAN_BUCKET = "progress-photos";
+const MAX_PLAN_PHOTOS = 4;
 
 const SEX_LABEL = { female: "Kadın", male: "Erkek" } as const;
 
@@ -87,7 +101,7 @@ export async function generatePlan(values: unknown): Promise<GenerateResult> {
     .insert({
       client_id: user.id,
       created_by: user.id,
-      title: "Yapay Zekâ Diyet Programı",
+      title: "AI Asistan Diyet Planı",
       status: "active",
       source: "ai",
       daily_calorie_target: cal.dailyTarget,
@@ -109,6 +123,161 @@ export async function generatePlan(values: unknown): Promise<GenerateResult> {
     calories: m.calories,
     sort_order: i,
   }));
+  await admin.from("meals").insert(rows);
+
+  redirect("/plan");
+}
+
+// ---------------------------------------------------------------------------
+// "Hazır planım var" akışı — foto yükleme, AI ile okuma, manuel kaydetme
+// ---------------------------------------------------------------------------
+
+/** FormData'daki "photos" dosyalarını doğrular, Storage'a yükler, yolları döndürür. */
+async function uploadPlanFiles(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  files: File[],
+): Promise<{ error: string } | { paths: string[] }> {
+  const valid = files.filter((f) => f instanceof File && f.size > 0);
+  if (valid.length === 0) return { error: "Dosya seçilmedi." };
+  if (valid.length > MAX_PLAN_PHOTOS) {
+    return { error: `En fazla ${MAX_PLAN_PHOTOS} görsel yükleyebilirsin.` };
+  }
+
+  const paths: string[] = [];
+  for (const [i, file] of valid.entries()) {
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+      return { error: "Yalnızca JPEG, PNG veya WEBP yükleyebilirsin." };
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      return { error: "Her görsel en fazla 5 MB olabilir." };
+    }
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `${userId}/plans/${Date.now()}-${i}.${ext}`;
+    const { error } = await supabase.storage
+      .from(PLAN_BUCKET)
+      .upload(path, file, { contentType: file.type });
+    if (error) return { error: "Görsel yüklenemedi." };
+    paths.push(path);
+  }
+  return { paths };
+}
+
+export type UploadResult = { error: string } | { photoPaths: string[] };
+
+/** Plan görsellerini yalnızca referans olarak yükler (AI okuması yok). */
+export async function uploadPlanPhotos(
+  formData: FormData,
+): Promise<UploadResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const supabase = await createClient();
+  const files = formData.getAll("photos") as File[];
+  const res = await uploadPlanFiles(supabase, user.id, files);
+  if ("error" in res) return { error: res.error };
+  return { photoPaths: res.paths };
+}
+
+export type ExtractResult =
+  | { error: string }
+  | { photoPaths: string[]; meals: PlanPhotoScan["meals"]; note: string };
+
+/** Plan görsellerini yükler VE AI (vision) ile öğün şablonuna dönüştürür. */
+export async function extractPlanFromPhoto(
+  formData: FormData,
+): Promise<ExtractResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const supabase = await createClient();
+  const files = (formData.getAll("photos") as File[]).filter(
+    (f) => f instanceof File && f.size > 0,
+  );
+  if (files.length === 0) return { error: "Önce bir görsel seç." };
+
+  // Vision için base64 hazırla (yüklemeden önce; aynı File buffer'ları).
+  const images: { base64: string; mediaType: ImageMediaType }[] = [];
+  for (const file of files.slice(0, MAX_PLAN_PHOTOS)) {
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+      return { error: "Yalnızca JPEG, PNG veya WEBP." };
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      return { error: "Her görsel en fazla 5 MB olabilir." };
+    }
+    const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+    images.push({ base64, mediaType: file.type as ImageMediaType });
+  }
+
+  const res = await uploadPlanFiles(supabase, user.id, files);
+  if ("error" in res) return { error: res.error };
+
+  const rules = await getActiveDietitianRules();
+  try {
+    const scan = await analyzePlanPhoto({ images, dietitianRules: rules });
+    return { photoPaths: res.paths, meals: scan.meals, note: scan.note };
+  } catch {
+    // Yükleme yine de başarılı; kullanıcı elle doldurabilir.
+    return {
+      photoPaths: res.paths,
+      meals: [],
+      note: "Görsel okunamadı; öğünleri elle girebilirsin.",
+    };
+  }
+}
+
+/** Kullanıcının kendi (mevcut) planını kaydeder; tek günlük şablonu 7 güne uygular. */
+export async function saveManualPlan(values: unknown): Promise<GenerateResult> {
+  const user = await getUser();
+  if (!user) redirect("/giris");
+
+  const parsed = manualPlanSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Geçersiz plan." };
+  }
+  const v = parsed.data;
+
+  const dailyTarget =
+    v.dailyTarget && v.dailyTarget > 0
+      ? v.dailyTarget
+      : v.items.reduce((s, it) => s + it.calories, 0);
+
+  const admin = createAdminClient();
+
+  // Önceki aktif planları arşivle.
+  await admin
+    .from("diet_plans")
+    .update({ status: "archived" })
+    .eq("client_id", user.id)
+    .eq("status", "active");
+
+  const { data: plan, error: planError } = await admin
+    .from("diet_plans")
+    .insert({
+      client_id: user.id,
+      created_by: user.id,
+      title: v.title?.trim() || "Kendi Planım",
+      status: "active",
+      source: "manual",
+      daily_calorie_target: dailyTarget,
+      photo_paths: v.photoPaths && v.photoPaths.length ? v.photoPaths : null,
+    })
+    .select("id")
+    .single();
+
+  if (planError || !plan) return { error: "Plan kaydedilemedi." };
+
+  // Tek günlük şablonu 7 güne (0=Pzt ... 6=Paz) uygula.
+  const rows = Array.from({ length: 7 }, (_, day) =>
+    v.items.map((it, i) => ({
+      plan_id: plan.id,
+      day_of_week: day,
+      meal_type: it.mealType,
+      content: it.content,
+      calories: it.calories,
+      sort_order: i,
+    })),
+  ).flat();
   await admin.from("meals").insert(rows);
 
   redirect("/plan");

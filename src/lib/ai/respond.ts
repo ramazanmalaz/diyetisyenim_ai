@@ -217,3 +217,114 @@ export async function analyzePlatePhoto(params: {
   }
   return foodScanSchema.parse(toolUse.input);
 }
+
+// ---------------------------------------------------------------------------
+// Mevcut plan fotoğrafından öğün şablonu çıkarma (kullanıcının hazır planı)
+// ---------------------------------------------------------------------------
+const PLAN_MEAL_TYPES = [
+  "breakfast",
+  "snack_morning",
+  "lunch",
+  "snack_afternoon",
+  "dinner",
+] as const;
+
+const planPhotoSchema = z.object({
+  meals: z
+    .array(
+      z.object({
+        meal_type: z.enum(PLAN_MEAL_TYPES),
+        item: z.string().min(1).max(200),
+        calories: z.coerce.number().int().min(0).max(3000),
+      }),
+    )
+    .min(1)
+    .max(40),
+  note: z.string().max(1000).optional().default(""),
+});
+
+export type PlanPhotoScan = z.infer<typeof planPhotoSchema>;
+
+const PLANPHOTO_SCHEMA: AnthropicNS.Tool.InputSchema = {
+  type: "object",
+  properties: {
+    meals: {
+      type: "array",
+      description: "Plandaki bir günlük öğün şablonu (öğeler).",
+      items: {
+        type: "object",
+        properties: {
+          meal_type: { type: "string", enum: [...PLAN_MEAL_TYPES] },
+          item: {
+            type: "string",
+            description: "Tek bir yiyecek, miktarıyla. Örn: '2 haşlanmış yumurta'",
+          },
+          calories: { type: "integer", description: "Bu öğenin tahmini kalorisi" },
+        },
+        required: ["meal_type", "item", "calories"],
+      },
+    },
+    note: { type: "string", description: "Kısa Türkçe not (okuma güveni vb.)" },
+  },
+  required: ["meals"],
+};
+
+/**
+ * Kullanıcının HAZIR diyet planının fotoğraf(lar)ını okur ve TEK GÜNLÜK bir
+ * öğün şablonu (meal_type + öğe + kalori) olarak yapılandırır. Plan birden çok
+ * gün içeriyorsa temsili bir günü baz alır. Sadece kalori/okuma yapar; reçete vermez.
+ */
+export async function analyzePlanPhoto(params: {
+  images: { base64: string; mediaType: ImageMediaType }[];
+  dietitianRules: string | null;
+}): Promise<PlanPhotoScan> {
+  const system = buildSystemPrompt(params.dietitianRules);
+
+  const response = await anthropic.messages.create({
+    model: DEFAULT_MODEL,
+    max_tokens: 4096,
+    system: [
+      { type: "text", text: system, cache_control: { type: "ephemeral" } },
+    ],
+    tools: [
+      {
+        name: "save_plan_template",
+        description: "Fotoğraftan okunan günlük öğün şablonunu kaydeder.",
+        input_schema: PLANPHOTO_SCHEMA,
+      },
+    ],
+    tool_choice: { type: "tool", name: "save_plan_template" },
+    messages: [
+      {
+        role: "user",
+        content: [
+          ...params.images.map(
+            (img) =>
+              ({
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: img.mediaType,
+                  data: img.base64,
+                },
+              }) as const,
+          ),
+          {
+            type: "text",
+            text: `Bu görsel(ler) kullanıcının elindeki HAZIR bir diyet/beslenme planı. İçindeki öğünleri TEK GÜNLÜK bir şablon olarak çıkar:
+- Her öğeyi meal_type ile eşle: breakfast (kahvaltı), snack_morning (kuşluk/ara), lunch (öğle), snack_afternoon (ikindi/ara), dinner (akşam).
+- Her öğeyi MİKTARIYLA yaz ve tahmini kalorisini ver.
+- Plan birden çok gün içeriyorsa temsili bir günü baz al.
+- Okuman hatalı olabilir; note alanına kısa bir uyarı yaz. Yalnızca save_plan_template aracını çağır.`,
+          },
+        ],
+      },
+    ],
+  });
+
+  const toolUse = response.content.find((block) => block.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") {
+    throw new Error("Plan okunamadı.");
+  }
+  return planPhotoSchema.parse(toolUse.input);
+}

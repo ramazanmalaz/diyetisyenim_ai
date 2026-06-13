@@ -1229,3 +1229,13 @@ create policy "pomodoro_update_self"
 create policy "pomodoro_delete_self"
   on public.pomodoro_plans for delete
   using (client_id = auth.uid());
+
+
+-- ============================================================
+-- 20260101001400_plan_photos.sql
+-- ============================================================
+-- Kullanıcının kendi (mevcut) diyet planını girerken yüklediği referans
+-- görsellerin Storage yolları. progress-photos bucket'ında <uid>/plans/... altında tutulur.
+-- (diet_plans.source zaten 'ai' | 'manual' değerlerini alıyor; varsayılan 'manual'.)
+alter table public.diet_plans
+  add column if not exists photo_paths text[];

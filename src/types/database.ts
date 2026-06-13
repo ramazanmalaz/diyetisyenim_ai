@@ -96,6 +96,7 @@ export type Database = {
           estimated_weeks: number | null;
           goal_loss_kg: number | null;
           source: string;
+          photo_paths: string[] | null;
           created_at: string;
           updated_at: string;
         };
@@ -111,6 +112,7 @@ export type Database = {
           estimated_weeks?: number | null;
           goal_loss_kg?: number | null;
           source?: string;
+          photo_paths?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -126,6 +128,7 @@ export type Database = {
           estimated_weeks?: number | null;
           goal_loss_kg?: number | null;
           source?: string;
+          photo_paths?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { IntakeWizard } from "@/components/onboarding/intake-wizard";
+import { AiOnboarding } from "@/components/onboarding/ai-onboarding";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,13 +24,13 @@ export default async function BaslangicAiPage() {
         <Link href="/panel" className="text-sm text-gray-400 hover:underline">
           ← Geri
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">Diyetine başlayalım 🥗</h1>
+        <h1 className="mt-2 text-2xl font-bold">Diyet Asistanı 🥗</h1>
         <p className="text-sm text-gray-500">
-          Birkaç soruyla seni tanıyıp sana özel bir program ve günlük kalori
-          hedefi hazırlayacağım.
+          Sana plan hazırlayabilir ya da hazır planını alıp kalorilerini
+          hesaplayıp takip edebilirim.
         </p>
       </div>
-      <IntakeWizard />
+      <AiOnboarding />
     </div>
   );
 }

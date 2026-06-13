@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { analyzePlatePhoto, type ImageMediaType } from "@/lib/ai/respond";
@@ -224,6 +225,26 @@ export async function resetMealChecks(values: unknown): Promise<ActionResult> {
 
   revalidatePath("/plan");
   return { success: true };
+}
+
+/**
+ * Aktif planı arşivler ve kullanıcıyı en başa (/baslangic) döndürür.
+ * diet_plans yazımı RLS'de personele kısıtlı → service-role; sahiplik
+ * client_id filtresiyle elle güvence altına alınır.
+ */
+export async function resetPlan(): Promise<void> {
+  const user = await getUser();
+  if (!user) redirect("/giris");
+
+  const admin = createAdminClient();
+  await admin
+    .from("diet_plans")
+    .update({ status: "archived" })
+    .eq("client_id", user.id)
+    .eq("status", "active");
+
+  revalidatePath("/plan");
+  redirect("/baslangic");
 }
 
 export type WaterResult = { error: string } | { total: number };

@@ -49,8 +49,8 @@ export default async function PlanPage() {
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center">
         <h1 className="reveal text-2xl font-bold">Henüz planın yok</h1>
         <p className="reveal text-sm text-gray-500 dark:text-gray-400">
-          Yapay zekâ diyetisyeninle birkaç soruyu yanıtla, sana özel programını
-          hazırlasın.
+          Diyet asistanınla birkaç soruyu yanıtla ya da hazır planını gir;
+          kalorilerini hesaplayıp takip edelim.
         </p>
         <Link
           href="/baslangic"

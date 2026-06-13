@@ -1,9 +1,10 @@
 "use client";
 
-import { LineChart, MessageCircle } from "lucide-react";
+import { LineChart, MessageCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { resetPlan } from "@/app/(app)/plan/actions";
 import { openAssistant } from "@/app/(app)/sohbet/actions";
 import { CalorieFigure } from "@/components/plan/calorie-figure";
 import { CalorieHero } from "@/components/plan/calorie-hero";
@@ -99,6 +100,28 @@ export function PlanBoard({
         selectedDay={selectedDay}
         setSelectedDay={setSelectedDay}
       />
+
+      {/* Planı sıfırla — en baştan başla */}
+      <form
+        action={resetPlan}
+        onSubmit={(e) => {
+          if (
+            !window.confirm(
+              "Mevcut planın arşivlenip en başa döneceksin. Devam edilsin mi?",
+            )
+          ) {
+            e.preventDefault();
+          }
+        }}
+        className="pt-2 text-center"
+      >
+        <button
+          type="submit"
+          className="inline-flex items-center gap-1.5 text-xs text-gray-400 transition-colors duration-200 ease-[var(--ease-out)] hover:text-red-600 hover:underline"
+        >
+          <RotateCcw className="h-3.5 w-3.5" /> Planı sıfırla ve en baştan başla
+        </button>
+      </form>
     </div>
   );
 }
