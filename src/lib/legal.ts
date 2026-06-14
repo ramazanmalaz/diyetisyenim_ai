@@ -6,21 +6,21 @@
 
 export const COMPANY = {
   /** Ticari unvan ya da şahıs işletmesinde Ad Soyad */
-  name: "[Ticari unvan / Ad Soyad]",
+  name: "UzmanDiyet",
   /** Şahıs Şirketi / Limited Şirket / A.Ş. */
-  type: "[Şirket türü]",
+  type: "Şahıs Şirketi",
   /** Açık adres (cadde, no, ilçe, il) */
-  address: "[Açık adres]",
+  address: "ASIK VEYSEL MAH. BAGLARBASI CAD. BÜYÜKSARAY APT NO 69/71 IÇ KAPI NO 32 MAMAK /ANKARA",
   /** Vergi dairesi */
-  taxOffice: "[Vergi Dairesi]",
+  taxOffice: "DİKİMEVİ",
   /** Vergi/TC Kimlik No (VKN veya TCKN) */
-  taxNo: "[VKN / TCKN]",
+  taxNo: "52294422808",
   /** MERSİS No (şirketler için; şahısta boş bırakılabilir) */
-  mersis: "[MERSİS No]",
+  mersis: "",
   /** İletişim telefonu */
-  phone: "[Telefon]",
+  phone: "+905539151278",
   /** İletişim / destek e-postası */
-  email: "[E-posta]",
+  email: "ramazanmalaz@gmail.com",
   /** KEP adresi (varsa) */
   kep: "",
   website: "uzmandiyet.com",
@@ -28,7 +28,7 @@ export const COMPANY = {
 } as const;
 
 /** Yasal metinlerin son güncellenme tarihi (GG.AA.YYYY) */
-export const LAST_UPDATED = "[GG.AA.YYYY]";
+export const LAST_UPDATED = "14.06.2026";
 
 /** Footer + onay kutusunda kullanılan yasal sayfa bağlantıları. */
 export const LEGAL_LINKS: { href: string; label: string }[] = [
