@@ -8,11 +8,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { Footer } from "@/components/footer";
+
 const BOWL =
   "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=720&q=80";
 
 export default function Home() {
   return (
+    <>
     <main className="relative flex min-h-[100dvh] flex-1 flex-col items-center px-5 pt-20 pb-28 text-center sm:pt-24">
       {/* Eyebrow — mikro pill rozet */}
       <span className="reveal inline-flex items-center gap-2 rounded-full bg-white/70 px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-emerald-700 uppercase ring-1 ring-black/5 backdrop-blur dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-white/10">
@@ -92,6 +95,8 @@ export default function Home() {
         Ücretsiz başla · Kredi kartı gerekmez
       </p>
     </main>
+      <Footer />
+    </>
   );
 }
 

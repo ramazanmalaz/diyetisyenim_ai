@@ -1,8 +1,10 @@
 import { Check, Crown, Sparkles } from "lucide-react";
+import Link from "next/link";
 
 import { CheckoutButton } from "@/components/payments/checkout-button";
 import { getEntitlement } from "@/lib/entitlements";
 import { requireProfile } from "@/lib/auth";
+import { LEGAL_LINKS } from "@/lib/legal";
 import {
   SUBSCRIPTION_PRICE,
   SUBSCRIPTION_TITLE,
@@ -142,6 +144,19 @@ export default async function AbonelikPage({
           <p className="text-sm text-gray-500">Henüz ödeme kaydın yok.</p>
         )}
       </div>
+
+      <nav className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-gray-100 pt-4 text-xs text-gray-400 dark:border-gray-800">
+        {LEGAL_LINKS.map((l) => (
+          <Link
+            key={l.href}
+            href={l.href}
+            target="_blank"
+            className="hover:text-emerald-600 hover:underline"
+          >
+            {l.label}
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }
