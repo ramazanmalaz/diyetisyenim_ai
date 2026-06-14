@@ -35,6 +35,16 @@ export function AssistantChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: history }),
       });
+      // Günlük ücretsiz hak doldu → yükseltme mesajını göster.
+      if (res.status === 402) {
+        const msg = await res.text();
+        setMessages((prev) => {
+          const copy = [...prev];
+          copy[copy.length - 1] = { role: "assistant", content: msg };
+          return copy;
+        });
+        return;
+      }
       if (!res.ok || !res.body) throw new Error("İstek başarısız");
 
       const reader = res.body.getReader();

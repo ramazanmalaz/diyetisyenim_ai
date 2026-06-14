@@ -33,6 +33,7 @@ export type Database = {
           full_name: string | null;
           avatar_url: string | null;
           dietitian_id: string | null;
+          premium_until: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -42,6 +43,7 @@ export type Database = {
           full_name?: string | null;
           avatar_url?: string | null;
           dietitian_id?: string | null;
+          premium_until?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -51,7 +53,32 @@ export type Database = {
           full_name?: string | null;
           avatar_url?: string | null;
           dietitian_id?: string | null;
+          premium_until?: string | null;
           created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      ai_usage: {
+        Row: {
+          client_id: string;
+          day: string;
+          chat_count: number;
+          vision_count: number;
+          updated_at: string;
+        };
+        Insert: {
+          client_id: string;
+          day: string;
+          chat_count?: number;
+          vision_count?: number;
+          updated_at?: string;
+        };
+        Update: {
+          client_id?: string;
+          day?: string;
+          chat_count?: number;
+          vision_count?: number;
           updated_at?: string;
         };
         Relationships: [];

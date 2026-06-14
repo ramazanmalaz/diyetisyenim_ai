@@ -7,6 +7,7 @@ import { z } from "zod";
 import { analyzePlatePhoto, type ImageMediaType } from "@/lib/ai/respond";
 import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
+import { consumeAiCredit } from "@/lib/entitlements";
 import { foodMealFields } from "@/lib/foods";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -479,6 +480,15 @@ export type ScanResult =
 export async function scanPlatePhoto(formData: FormData): Promise<ScanResult> {
   const user = await getUser();
   if (!user) return { error: "Oturum bulunamadı." };
+
+  // Freemium: günde 1 ücretsiz foto analizi; üstü premium.
+  const credit = await consumeAiCredit(user.id, "vision");
+  if (!credit.ok) {
+    return {
+      error:
+        "Günlük ücretsiz fotoğraf analizi hakkın doldu. Sınırsız analiz için /abonelik üzerinden Premium'a geçebilir ya da yarın tekrar deneyebilirsin.",
+    };
+  }
 
   const photo = formData.get("photo");
   if (!(photo instanceof File) || photo.size === 0) {

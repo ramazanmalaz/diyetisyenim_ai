@@ -3,6 +3,7 @@ import { type NextRequest } from "next/server";
 import { streamDietAnswer } from "@/lib/ai/respond";
 import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
+import { consumeAiCredit, upgradeMessage } from "@/lib/entitlements";
 import { chatRequestSchema } from "@/lib/validations/ai";
 
 /**
@@ -22,6 +23,15 @@ export async function POST(request: NextRequest) {
   const parsed = chatRequestSchema.safeParse(body);
   if (!parsed.success) {
     return new Response("Geçersiz istek.", { status: 400 });
+  }
+
+  // Freemium: ücretsiz kullanıcının günlük mesaj hakkı (premium sınırsız).
+  const credit = await consumeAiCredit(user.id, "chat");
+  if (!credit.ok) {
+    return new Response(upgradeMessage("chat"), {
+      status: 402,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
   }
 
   const rules = await getActiveDietitianRules();

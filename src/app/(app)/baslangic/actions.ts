@@ -11,6 +11,7 @@ import {
 import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
 import { computeCaloriePlan, ACTIVITY_LABEL } from "@/lib/diet/calories";
+import { consumeAiCredit } from "@/lib/entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { intakeSchema } from "@/lib/validations/intake";
@@ -195,6 +196,15 @@ export async function extractPlanFromPhoto(
     (f) => f instanceof File && f.size > 0,
   );
   if (files.length === 0) return { error: "Önce bir görsel seç." };
+
+  // Freemium: günde 1 ücretsiz foto analizi; üstü premium. (Elle giriş hep ücretsiz.)
+  const credit = await consumeAiCredit(user.id, "vision");
+  if (!credit.ok) {
+    return {
+      error:
+        "Günlük ücretsiz fotoğraf okuma hakkın doldu. Öğünleri elle girebilir, /abonelik üzerinden Premium'a geçebilir ya da yarın tekrar deneyebilirsin.",
+    };
+  }
 
   // Vision için base64 hazırla (yüklemeden önce; aynı File buffer'ları).
   const images: { base64: string; mediaType: ImageMediaType }[] = [];

@@ -11,6 +11,7 @@ import {
 import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
 import { DAYS, mealTypeLabel, mealTypeOrder } from "@/lib/diet";
+import { consumeAiCredit, upgradeMessage } from "@/lib/entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { messageSchema } from "@/lib/validations/chat";
@@ -248,6 +249,20 @@ async function respondWithAi(
   if (!recent || recent.length === 0) return;
 
   const latest = recent[0];
+
+  // Freemium kapısı: fotoğraf = vision, metin = chat kredisi.
+  const kind = latest.type === "user" && latest.image_path ? "vision" : "chat";
+  const credit = await consumeAiCredit(userId, kind);
+  if (!credit.ok) {
+    await admin.from("messages").insert({
+      conversation_id: conversationId,
+      sender_id: null,
+      type: "ai",
+      content: upgradeMessage(kind),
+    });
+    return;
+  }
+
   const transcript = [...recent]
     .reverse()
     .map(

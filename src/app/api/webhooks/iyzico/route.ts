@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { PREMIUM_DAYS } from "@/lib/entitlements";
 import { retrieveCheckout } from "@/lib/payments/iyzico";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -28,10 +29,31 @@ export async function POST(request: NextRequest) {
 
   // Sonucu kaydet (service-role; kullanıcı oturumu yok).
   const admin = createAdminClient();
-  await admin
+  const { data: payment } = await admin
     .from("payments")
     .update({ status: paid ? "paid" : "failed" })
-    .eq("provider_ref", token);
+    .eq("provider_ref", token)
+    .select("client_id")
+    .maybeSingle();
+
+  // Ödeme başarılıysa premium erişimi 30 gün uzat (varsa mevcut süreye ekle).
+  if (paid && payment?.client_id) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("premium_until")
+      .eq("id", payment.client_id)
+      .maybeSingle();
+    const now = Date.now();
+    const current = profile?.premium_until
+      ? new Date(profile.premium_until).getTime()
+      : 0;
+    const base = Math.max(now, current);
+    const until = new Date(base + PREMIUM_DAYS * 86_400_000).toISOString();
+    await admin
+      .from("profiles")
+      .update({ premium_until: until })
+      .eq("id", payment.client_id);
+  }
 
   return NextResponse.redirect(
     new URL(`/abonelik?odeme=${paid ? "basarili" : "hata"}`, APP_URL),
