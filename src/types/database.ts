@@ -59,6 +59,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      app_settings: {
+        Row: {
+          key: string;
+          value: string;
+          updated_at: string;
+        };
+        Insert: {
+          key: string;
+          value: string;
+          updated_at?: string;
+        };
+        Update: {
+          key?: string;
+          value?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       ai_usage: {
         Row: {
           client_id: string;

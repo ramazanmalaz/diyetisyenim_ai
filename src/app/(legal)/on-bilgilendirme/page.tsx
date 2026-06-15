@@ -1,13 +1,11 @@
 import { LegalDoc } from "@/components/legal/legal-doc";
 import { COMPANY } from "@/lib/legal";
-import {
-  SUBSCRIPTION_PRICE,
-  SUBSCRIPTION_TITLE,
-} from "@/lib/payments/constants";
+import { getPricing } from "@/lib/settings";
 
 export const metadata = { title: "Ön Bilgilendirme Formu — UzmanDiyet" };
 
-export default function OnBilgilendirmePage() {
+export default async function OnBilgilendirmePage() {
+  const pricing = await getPricing();
   return (
     <LegalDoc title="Ön Bilgilendirme Formu">
       <p>
@@ -32,15 +30,15 @@ export default function OnBilgilendirmePage() {
       <h2>2. Hizmetin nitelikleri ve fiyatı</h2>
       <ul>
         <li>
-          <strong>Hizmet:</strong> {SUBSCRIPTION_TITLE} — {COMPANY.brand} dijital
+          <strong>Hizmet:</strong> {pricing.title} — {COMPANY.brand} dijital
           premium üyeliği (sınırsız AI sohbet ve fotoğraf/tabak analizi dahil).
         </li>
         <li>
-          <strong>Süre:</strong> 30 gün (tek seferlik ödeme; otomatik yenileme
-          yoktur).
+          <strong>Süre:</strong> {pricing.premiumDays} gün (tek seferlik ödeme;
+          otomatik yenileme yoktur).
         </li>
         <li>
-          <strong>Fiyat:</strong> {SUBSCRIPTION_PRICE} ₺ (KDV dahil).
+          <strong>Fiyat:</strong> {pricing.price} ₺ (KDV dahil).
         </li>
         <li>
           <strong>Ödeme şekli:</strong> Kredi/banka kartı ile iyzico güvenli

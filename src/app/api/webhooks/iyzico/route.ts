@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { PREMIUM_DAYS } from "@/lib/entitlements";
 import { retrieveCheckout } from "@/lib/payments/iyzico";
+import { getPricing } from "@/lib/settings";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
       ? new Date(profile.premium_until).getTime()
       : 0;
     const base = Math.max(now, current);
-    const until = new Date(base + PREMIUM_DAYS * 86_400_000).toISOString();
+    const { premiumDays } = await getPricing();
+    const until = new Date(base + premiumDays * 86_400_000).toISOString();
     await admin
       .from("profiles")
       .update({ premium_until: until })

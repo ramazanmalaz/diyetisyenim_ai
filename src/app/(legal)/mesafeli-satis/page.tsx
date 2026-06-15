@@ -1,13 +1,11 @@
 import { LegalDoc } from "@/components/legal/legal-doc";
 import { COMPANY } from "@/lib/legal";
-import {
-  SUBSCRIPTION_PRICE,
-  SUBSCRIPTION_TITLE,
-} from "@/lib/payments/constants";
+import { getPricing } from "@/lib/settings";
 
 export const metadata = { title: "Mesafeli Satış Sözleşmesi — UzmanDiyet" };
 
-export default function MesafeliSatisPage() {
+export default async function MesafeliSatisPage() {
+  const pricing = await getPricing();
   return (
     <LegalDoc title="Mesafeli Satış Sözleşmesi">
       <h2>1. Taraflar</h2>
@@ -30,13 +28,14 @@ export default function MesafeliSatisPage() {
       <h2>3. Hizmet bilgileri</h2>
       <ul>
         <li>
-          <strong>Hizmet:</strong> {SUBSCRIPTION_TITLE} — dijital premium üyelik.
+          <strong>Hizmet:</strong> {pricing.title} — dijital premium üyelik.
         </li>
         <li>
-          <strong>Süre:</strong> 30 gün (tek seferlik; otomatik yenileme yoktur).
+          <strong>Süre:</strong> {pricing.premiumDays} gün (tek seferlik;
+          otomatik yenileme yoktur).
         </li>
         <li>
-          <strong>Fiyat:</strong> {SUBSCRIPTION_PRICE} ₺ (KDV dahil).
+          <strong>Fiyat:</strong> {pricing.price} ₺ (KDV dahil).
         </li>
         <li>
           <strong>Ödeme:</strong> Kredi/banka kartı ile iyzico üzerinden tek

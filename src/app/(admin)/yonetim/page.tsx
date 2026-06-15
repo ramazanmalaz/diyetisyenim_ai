@@ -15,6 +15,16 @@ const cards: { title: string; desc: string; href?: string }[] = [
     desc: "Diyetisyen profillerini ve randevu saatlerini yönet.",
     href: "/yonetim/diyetisyenler",
   },
+  {
+    title: "Kullanıcılar & Premium",
+    desc: "Kullanıcılara premium erişim ver, uzat veya kaldır.",
+    href: "/yonetim/kullanicilar",
+  },
+  {
+    title: "Tarife & Fiyatlandırma",
+    desc: "Premium fiyatını, başlığını ve erişim süresini düzenle.",
+    href: "/yonetim/ayarlar",
+  },
 ];
 
 export default async function YonetimPage() {

@@ -5,10 +5,7 @@ import { CheckoutButton } from "@/components/payments/checkout-button";
 import { getEntitlement } from "@/lib/entitlements";
 import { requireProfile } from "@/lib/auth";
 import { LEGAL_LINKS } from "@/lib/legal";
-import {
-  SUBSCRIPTION_PRICE,
-  SUBSCRIPTION_TITLE,
-} from "@/lib/payments/constants";
+import { getPricing } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
 import type { PaymentStatus } from "@/types/database";
 
@@ -43,6 +40,7 @@ export default async function AbonelikPage({
   const { odeme } = await searchParams;
   const supabase = await createClient();
   const ent = await getEntitlement(profile.id);
+  const pricing = await getPricing();
 
   const { data: payments } = await supabase
     .from("payments")
@@ -84,9 +82,9 @@ export default async function AbonelikPage({
             </p>
           )}
           <div className="pt-1">
-            <CheckoutButton price={SUBSCRIPTION_PRICE} />
+            <CheckoutButton price={pricing.price} />
             <p className="mt-1 text-xs text-gray-500">
-              Yeniden ödeme yaparsan süreye 30 gün eklenir.
+              Yeniden ödeme yaparsan süreye {pricing.premiumDays} gün eklenir.
             </p>
           </div>
         </div>
@@ -95,10 +93,10 @@ export default async function AbonelikPage({
         <div className="space-y-4 rounded-3xl border border-gray-200 bg-white/70 p-6 shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-900/50">
           <div className="flex items-baseline justify-between">
             <p className="flex items-center gap-2 text-lg font-semibold">
-              <Sparkles className="h-5 w-5 text-emerald-600" /> {SUBSCRIPTION_TITLE}
+              <Sparkles className="h-5 w-5 text-emerald-600" /> {pricing.title}
             </p>
             <p className="text-2xl font-bold">
-              {SUBSCRIPTION_PRICE} ₺
+              {pricing.price} ₺
               <span className="text-sm font-normal text-gray-500"> / ay</span>
             </p>
           </div>
@@ -120,7 +118,7 @@ export default async function AbonelikPage({
             </p>
           </div>
 
-          <CheckoutButton price={SUBSCRIPTION_PRICE} />
+          <CheckoutButton price={pricing.price} />
         </div>
       )}
 

@@ -1,7 +1,5 @@
 import Iyzipay from "iyzipay";
 
-import { SUBSCRIPTION_PRICE, SUBSCRIPTION_TITLE } from "./constants";
-
 let client: Iyzipay | null = null;
 
 function getClient(): Iyzipay {
@@ -30,14 +28,16 @@ export function initializeCheckout(params: {
   conversationId: string;
   callbackUrl: string;
   buyer: CheckoutBuyer;
+  price: string;
+  title: string;
 }): Promise<{ token: string; paymentPageUrl: string }> {
   const iyzipay = getClient();
 
   const request: Record<string, unknown> = {
     locale: Iyzipay.LOCALE.TR,
     conversationId: params.conversationId,
-    price: SUBSCRIPTION_PRICE,
-    paidPrice: SUBSCRIPTION_PRICE,
+    price: params.price,
+    paidPrice: params.price,
     currency: Iyzipay.CURRENCY.TRY,
     basketId: params.conversationId,
     paymentGroup: Iyzipay.PAYMENT_GROUP.SUBSCRIPTION,
@@ -64,10 +64,10 @@ export function initializeCheckout(params: {
     basketItems: [
       {
         id: "subscription-monthly",
-        name: SUBSCRIPTION_TITLE,
+        name: params.title,
         category1: "Danışmanlık",
         itemType: Iyzipay.BASKET_ITEM_TYPE.VIRTUAL,
-        price: SUBSCRIPTION_PRICE,
+        price: params.price,
       },
     ],
   };

@@ -1,11 +1,8 @@
 "use server";
 
 import { getUser, getProfile } from "@/lib/auth";
-import {
-  SUBSCRIPTION_PRICE,
-  SUBSCRIPTION_TITLE,
-} from "@/lib/payments/constants";
 import { initializeCheckout } from "@/lib/payments/iyzico";
+import { getPricing } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
 
 export type CheckoutResult =
@@ -23,6 +20,7 @@ export async function startCheckout(): Promise<CheckoutResult> {
   const [name, ...rest] = fullName.split(" ");
   const surname = rest.join(" ") || "-";
 
+  const pricing = await getPricing();
   const conversationId = `${user.id}-${Date.now()}`;
 
   let checkout: { token: string; paymentPageUrl: string };
@@ -30,6 +28,8 @@ export async function startCheckout(): Promise<CheckoutResult> {
     checkout = await initializeCheckout({
       conversationId,
       callbackUrl: `${APP_URL}/api/webhooks/iyzico`,
+      price: pricing.price,
+      title: pricing.title,
       buyer: {
         id: user.id,
         email: user.email ?? "noreply@example.com",
@@ -45,12 +45,12 @@ export async function startCheckout(): Promise<CheckoutResult> {
   const supabase = await createClient();
   const { error } = await supabase.from("payments").insert({
     client_id: user.id,
-    amount: Number(SUBSCRIPTION_PRICE),
+    amount: Number(pricing.price),
     currency: "TRY",
     provider: "iyzico",
     provider_ref: checkout.token,
     status: "pending",
-    description: SUBSCRIPTION_TITLE,
+    description: pricing.title,
   });
 
   if (error) {
