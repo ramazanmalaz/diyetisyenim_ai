@@ -1,8 +1,10 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
+import { AssistantChat } from "@/components/ai/assistant-chat";
 import type { Meal } from "@/components/plan/editable-meals";
 
 /**
@@ -345,7 +347,8 @@ export function CalorieFigure({
   // --- Sürüklenebilir yüzen konum (kullanıcı istediği yere taşıyabilir) ---
   const SIZE = 72;
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-  const [showBubble, setShowBubble] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [motivShown, setMotivShown] = useState(false);
   const dragRef = useRef<{
     dx: number;
     dy: number;
@@ -354,12 +357,18 @@ export function CalorieFigure({
     moved: boolean;
   } | null>(null);
 
-  // Baloncuğu açınca bir süre sonra kendiliğinden gizle.
+  // Motivasyon penceresi: ikonun tepesinde periyodik açılıp kapanır.
   useEffect(() => {
-    if (!showBubble) return;
-    const id = setTimeout(() => setShowBubble(false), 6000);
-    return () => clearTimeout(id);
-  }, [showBubble, cardLine]);
+    let visible = false;
+    let t: ReturnType<typeof setTimeout>;
+    const cycle = () => {
+      visible = !visible;
+      setMotivShown(visible);
+      t = setTimeout(cycle, visible ? 5200 : 7000);
+    };
+    t = setTimeout(cycle, 2500);
+    return () => clearTimeout(t);
+  }, []);
 
   function onDragStart(e: ReactPointerEvent<HTMLDivElement>) {
     const el = e.currentTarget;
@@ -390,8 +399,8 @@ export function CalorieFigure({
   function onDragEnd() {
     const moved = dragRef.current?.moved;
     dragRef.current = null;
-    // Sürüklenmediyse (dokunuş) → baloncuğu aç/kapat.
-    if (!moved) setShowBubble((v) => !v);
+    // Sürüklenmediyse (dokunuş) → sohbet penceresini aç/kapat.
+    if (!moved) setChatOpen((v) => !v);
   }
 
   return (
@@ -415,13 +424,13 @@ export function CalorieFigure({
         onPointerMove={onDragMove}
         onPointerUp={onDragEnd}
         style={pos ? { left: pos.x, top: pos.y } : { right: 16, bottom: 96 }}
-        className="fixed z-40 cursor-grab touch-none select-none active:cursor-grabbing"
+        className="fixed z-40 flex cursor-grab touch-none flex-col items-center select-none active:cursor-grabbing"
         role="button"
-        aria-label="Ümüş Teyze — taşımak için sürükle, konuşması için dokun"
+        aria-label="Ümüş Teyze — taşımak için sürükle, sohbet için dokun"
       >
-        {/* Konuşma baloncuğu */}
-        {showBubble && (
-          <div className="bubble-in absolute right-0 bottom-full mb-2 w-56 rounded-2xl bg-white px-4 py-3 shadow-[var(--shadow-float)] ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10">
+        {/* Motivasyon penceresi — ikonun tepesinde, periyodik açılır */}
+        {motivShown && !chatOpen && !big && (
+          <div className="bubble-in absolute right-0 bottom-full mb-2 w-52 rounded-2xl bg-white px-4 py-2.5 shadow-[var(--shadow-float)] ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10">
             <div className="flex items-center gap-2">
               <p className="text-xs font-bold text-gray-800 dark:text-gray-100">
                 Ümüş Teyze
@@ -439,7 +448,7 @@ export function CalorieFigure({
             <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
               {cardLine}
             </p>
-            <span className="absolute right-6 -bottom-1.5 h-3 w-3 rotate-45 bg-white dark:bg-gray-900" />
+            <span className="absolute right-6 bottom-[-6px] h-3 w-3 rotate-45 bg-white dark:bg-gray-900" />
           </div>
         )}
 
@@ -458,6 +467,11 @@ export function CalorieFigure({
             }`}
           />
         </div>
+
+        {/* "Sohbet et" etiketi */}
+        <span className="mt-1 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap text-white shadow-[0_4px_12px_-4px_rgb(11_109_72/0.7)]">
+          Sohbet et
+        </span>
       </div>
 
       {/* Tepki: sayfa ortasında büyük + baloncuk. Herhangi bir yere tıkla → kapanır. */}
@@ -485,6 +499,44 @@ export function CalorieFigure({
             <p className="mt-3 text-xs text-white/80">
               (kapatmak için ekrana dokun)
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Sohbet popup'ı — aynı ekranda AI asistanla sohbet */}
+      {chatOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/30 sm:bg-transparent"
+          onClick={() => setChatOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-x-3 top-20 bottom-3 flex flex-col overflow-hidden rounded-3xl bg-white shadow-[var(--shadow-float)] ring-1 ring-black/10 sm:inset-auto sm:right-4 sm:bottom-4 sm:h-[72vh] sm:max-h-[640px] sm:w-[380px] dark:bg-gray-900 dark:ring-white/10"
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-gray-100 bg-emerald-50/60 px-4 py-3 dark:border-gray-800 dark:bg-emerald-950/20">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/50">
+                  <TeyzeSvg state="happy" className="h-7 w-7" />
+                </span>
+                <div>
+                  <p className="text-sm leading-tight font-bold">Ümüş Teyze</p>
+                  <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
+                    Beslenme asistanın
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setChatOpen(false)}
+                aria-label="Kapat"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-black/5 hover:text-gray-600 dark:hover:bg-white/10"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col">
+              <AssistantChat />
+            </div>
           </div>
         </div>
       )}
