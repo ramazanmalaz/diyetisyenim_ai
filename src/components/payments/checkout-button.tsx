@@ -6,7 +6,15 @@ import { useState } from "react";
 import { startCheckout } from "@/app/(app)/abonelik/actions";
 import { Button } from "@/components/ui/button";
 
-export function CheckoutButton({ price }: { price: string }) {
+export function CheckoutButton({
+  price,
+  plan = "monthly",
+  label,
+}: {
+  price: string;
+  plan?: "monthly" | "annual";
+  label?: string;
+}) {
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +26,7 @@ export function CheckoutButton({ price }: { price: string }) {
     }
     setError(null);
     setLoading(true);
-    const result = await startCheckout();
+    const result = await startCheckout(plan);
     if ("error" in result) {
       setError(result.error);
       setLoading(false);
@@ -57,7 +65,9 @@ export function CheckoutButton({ price }: { price: string }) {
       </label>
 
       <Button onClick={onClick} disabled={loading || !agreed}>
-        {loading ? "Ödemeye yönlendiriliyor…" : `${price} ₺ — Öde`}
+        {loading
+          ? "Ödemeye yönlendiriliyor…"
+          : (label ?? `${price} ₺ — Öde`)}
       </Button>
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>

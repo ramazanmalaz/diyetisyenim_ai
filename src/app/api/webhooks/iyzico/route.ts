@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { retrieveCheckout } from "@/lib/payments/iyzico";
-import { getPricing } from "@/lib/settings";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -33,10 +32,10 @@ export async function POST(request: NextRequest) {
     .from("payments")
     .update({ status: paid ? "paid" : "failed" })
     .eq("provider_ref", token)
-    .select("client_id")
+    .select("client_id, premium_days")
     .maybeSingle();
 
-  // Ödeme başarılıysa premium erişimi 30 gün uzat (varsa mevcut süreye ekle).
+  // Ödeme başarılıysa, ödemenin taşıdığı gün kadar premium uzat (mevcut süreye ekle).
   if (paid && payment?.client_id) {
     const { data: profile } = await admin
       .from("profiles")
@@ -48,8 +47,10 @@ export async function POST(request: NextRequest) {
       ? new Date(profile.premium_until).getTime()
       : 0;
     const base = Math.max(now, current);
-    const { premiumDays } = await getPricing();
-    const until = new Date(base + premiumDays * 86_400_000).toISOString();
+    const days = payment.premium_days && payment.premium_days > 0
+      ? payment.premium_days
+      : 30;
+    const until = new Date(base + days * 86_400_000).toISOString();
     await admin
       .from("profiles")
       .update({ premium_until: until })

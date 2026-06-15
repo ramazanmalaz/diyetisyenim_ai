@@ -582,6 +582,7 @@ export type Database = {
           provider_ref: string | null;
           status: PaymentStatus;
           description: string | null;
+          premium_days: number | null;
           created_at: string;
         };
         Insert: {
@@ -593,6 +594,7 @@ export type Database = {
           provider_ref?: string | null;
           status?: PaymentStatus;
           description?: string | null;
+          premium_days?: number | null;
           created_at?: string;
         };
         Update: {
@@ -604,6 +606,7 @@ export type Database = {
           provider_ref?: string | null;
           status?: PaymentStatus;
           description?: string | null;
+          premium_days?: number | null;
           created_at?: string;
         };
         Relationships: [];

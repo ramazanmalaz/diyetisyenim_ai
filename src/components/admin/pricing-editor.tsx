@@ -6,75 +6,68 @@ import { savePricing } from "@/app/(admin)/yonetim/ayarlar/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { Plan } from "@/lib/settings";
 
 export function PricingEditor({
-  initial,
+  monthly,
+  annual,
 }: {
-  initial: { price: string; title: string; premiumDays: number };
+  monthly: Plan;
+  annual: Plan;
 }) {
-  const [price, setPrice] = useState(initial.price);
-  const [title, setTitle] = useState(initial.title);
-  const [premiumDays, setPremiumDays] = useState(String(initial.premiumDays));
+  const [mPrice, setMPrice] = useState(monthly.price);
+  const [mTitle, setMTitle] = useState(monthly.title);
+  const [mDays, setMDays] = useState(String(monthly.days));
+  const [aPrice, setAPrice] = useState(annual.price);
+  const [aTitle, setATitle] = useState(annual.title);
+  const [aDays, setADays] = useState(String(annual.days));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function save() {
     setBusy(true);
     setMsg(null);
-    const res = await savePricing({ price, title, premiumDays });
+    const res = await savePricing({
+      monthlyPrice: mPrice,
+      monthlyTitle: mTitle,
+      monthlyDays: mDays,
+      annualPrice: aPrice,
+      annualTitle: aTitle,
+      annualDays: aDays,
+    });
     setBusy(false);
-    if ("error" in res) {
-      setMsg({ ok: false, text: res.error });
-      return;
-    }
-    setMsg({ ok: true, text: "Kaydedildi. Değişiklikler yayına yansıdı." });
+    setMsg(
+      "error" in res
+        ? { ok: false, text: res.error }
+        : { ok: true, text: "Kaydedildi. Değişiklikler yayına yansıdı." },
+    );
   }
 
   return (
-    <div className="space-y-4 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
-      <div className="space-y-1.5">
-        <Label htmlFor="title">Tarife başlığı</Label>
-        <Input
-          id="title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Premium (Aylık)"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="price">Fiyat (₺)</Label>
-          <Input
-            id="price"
-            inputMode="decimal"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="199.00"
-          />
-          <p className="text-xs text-gray-400">Örn. 199.00 (nokta ile)</p>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="days">Erişim süresi (gün)</Label>
-          <Input
-            id="days"
-            type="number"
-            inputMode="numeric"
-            value={premiumDays}
-            onChange={(e) => setPremiumDays(e.target.value)}
-            placeholder="30"
-          />
-        </div>
-      </div>
+    <div className="space-y-5">
+      <PlanFields
+        heading="Aylık paket"
+        price={mPrice}
+        setPrice={setMPrice}
+        title={mTitle}
+        setTitle={setMTitle}
+        days={mDays}
+        setDays={setMDays}
+        unit="ay"
+      />
+      <PlanFields
+        heading="Yıllık paket"
+        price={aPrice}
+        setPrice={setAPrice}
+        title={aTitle}
+        setTitle={setATitle}
+        days={aDays}
+        setDays={setADays}
+        unit="yıl"
+      />
 
       {msg && (
-        <p
-          className={
-            msg.ok
-              ? "text-sm text-emerald-600"
-              : "text-sm text-red-600"
-          }
-        >
+        <p className={msg.ok ? "text-sm text-emerald-600" : "text-sm text-red-600"}>
           {msg.text}
         </p>
       )}
@@ -85,8 +78,58 @@ export function PricingEditor({
 
       <p className="text-xs text-gray-400">
         Not: iyzico tek ödeme = belirtilen gün kadar erişim. Otomatik yenileme
-        yoktur.
+        yoktur. Fiyat 199.00 biçiminde (nokta ile).
       </p>
+    </div>
+  );
+}
+
+function PlanFields({
+  heading,
+  price,
+  setPrice,
+  title,
+  setTitle,
+  days,
+  setDays,
+  unit,
+}: {
+  heading: string;
+  price: string;
+  setPrice: (v: string) => void;
+  title: string;
+  setTitle: (v: string) => void;
+  days: string;
+  setDays: (v: string) => void;
+  unit: string;
+}) {
+  return (
+    <div className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+      <p className="font-semibold">{heading}</p>
+      <div className="space-y-1.5">
+        <Label>Başlık</Label>
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Fiyat (₺ / {unit})</Label>
+          <Input
+            inputMode="decimal"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="199.00"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Süre (gün)</Label>
+          <Input
+            type="number"
+            inputMode="numeric"
+            value={days}
+            onChange={(e) => setDays(e.target.value)}
+          />
+        </div>
+      </div>
     </div>
   );
 }

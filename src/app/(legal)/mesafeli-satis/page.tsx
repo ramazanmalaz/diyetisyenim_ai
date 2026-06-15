@@ -26,16 +26,15 @@ export default async function MesafeliSatisPage() {
       </p>
 
       <h2>3. Hizmet bilgileri</h2>
+      <p>Dijital premium üyelik. Tek seferlik ödeme; otomatik yenileme yoktur.</p>
       <ul>
         <li>
-          <strong>Hizmet:</strong> {pricing.title} — dijital premium üyelik.
+          <strong>{pricing.monthly.title}:</strong> {pricing.monthly.price} ₺
+          (KDV dahil) — {pricing.monthly.days} gün.
         </li>
         <li>
-          <strong>Süre:</strong> {pricing.premiumDays} gün (tek seferlik;
-          otomatik yenileme yoktur).
-        </li>
-        <li>
-          <strong>Fiyat:</strong> {pricing.price} ₺ (KDV dahil).
+          <strong>{pricing.annual.title}:</strong> {pricing.annual.price} ₺ (KDV
+          dahil) — {pricing.annual.days} gün.
         </li>
         <li>
           <strong>Ödeme:</strong> Kredi/banka kartı ile iyzico üzerinden tek

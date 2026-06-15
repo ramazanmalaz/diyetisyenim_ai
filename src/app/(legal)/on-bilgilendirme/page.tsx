@@ -28,17 +28,19 @@ export default async function OnBilgilendirmePage() {
       </ul>
 
       <h2>2. Hizmetin nitelikleri ve fiyatı</h2>
+      <p>
+        {COMPANY.brand} dijital premium üyeliği (sınırsız AI sohbet ve
+        fotoğraf/tabak analizi dahil). Tek seferlik ödeme; otomatik yenileme
+        yoktur. Paketler:
+      </p>
       <ul>
         <li>
-          <strong>Hizmet:</strong> {pricing.title} — {COMPANY.brand} dijital
-          premium üyeliği (sınırsız AI sohbet ve fotoğraf/tabak analizi dahil).
+          <strong>{pricing.monthly.title}:</strong> {pricing.monthly.price} ₺
+          (KDV dahil) — {pricing.monthly.days} gün erişim.
         </li>
         <li>
-          <strong>Süre:</strong> {pricing.premiumDays} gün (tek seferlik ödeme;
-          otomatik yenileme yoktur).
-        </li>
-        <li>
-          <strong>Fiyat:</strong> {pricing.price} ₺ (KDV dahil).
+          <strong>{pricing.annual.title}:</strong> {pricing.annual.price} ₺ (KDV
+          dahil) — {pricing.annual.days} gün erişim.
         </li>
         <li>
           <strong>Ödeme şekli:</strong> Kredi/banka kartı ile iyzico güvenli

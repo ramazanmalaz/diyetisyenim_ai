@@ -5,8 +5,38 @@ import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export type ActionResult = { error: string } | { success: true };
+
+/**
+ * Kullanıcının rolünü değiştirir. profiles üzerindeki guard tetikleyicisi rol
+ * değişikliğini auth.uid() personel mi diye denetlediği için service-role değil,
+ * personelin OTURUMLU (server) istemcisi kullanılır. Kendi rolünü değiştirmek engellenir.
+ */
+export async function changeRole(values: unknown): Promise<ActionResult> {
+  const me = await requireStaff();
+  const parsed = z
+    .object({
+      userId: z.string().uuid(),
+      role: z.enum(["client", "dietitian", "admin"]),
+    })
+    .safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz veri." };
+  if (parsed.data.userId === me.id) {
+    return { error: "Kendi rolünü buradan değiştiremezsin." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ role: parsed.data.role })
+    .eq("id", parsed.data.userId);
+  if (error) return { error: "Rol güncellenemedi." };
+
+  revalidatePath("/yonetim/kullanicilar");
+  return { success: true };
+}
 
 const grantSchema = z
   .object({

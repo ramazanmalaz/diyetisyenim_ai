@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const metadata = { title: "Kullanıcılar & Premium — Yönetim" };
 
 export default async function KullanicilarPage() {
-  await requireStaff();
+  const me = await requireStaff();
   const admin = createAdminClient();
 
   const { data: profiles } = await admin
@@ -40,7 +40,7 @@ export default async function KullanicilarPage() {
           Kullanıcılara premium erişim ver, uzat veya kaldır.
         </p>
       </div>
-      <PremiumUserList users={users} />
+      <PremiumUserList users={users} currentUserId={me.id} />
     </div>
   );
 }

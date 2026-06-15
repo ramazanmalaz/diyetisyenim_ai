@@ -17,13 +17,7 @@ export default async function AyarlarPage() {
           Değişiklik abonelik ve sözleşme sayfalarına anında yansır.
         </p>
       </div>
-      <PricingEditor
-        initial={{
-          price: pricing.price,
-          title: pricing.title,
-          premiumDays: pricing.premiumDays,
-        }}
-      />
+      <PricingEditor monthly={pricing.monthly} annual={pricing.annual} />
     </div>
   );
 }

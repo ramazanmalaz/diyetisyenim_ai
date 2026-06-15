@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import {
+  changeRole,
   grantPremium,
   revokePremium,
 } from "@/app/(admin)/yonetim/kullanicilar/actions";
@@ -39,7 +40,13 @@ function fmt(iso: string): string {
   });
 }
 
-export function PremiumUserList({ users }: { users: UserRow[] }) {
+export function PremiumUserList({
+  users,
+  currentUserId,
+}: {
+  users: UserRow[];
+  currentUserId: string;
+}) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -95,6 +102,7 @@ export function PremiumUserList({ users }: { users: UserRow[] }) {
             key={u.id}
             user={u}
             busy={busyId === u.id}
+            isSelf={u.id === currentUserId}
             onGrantDays={(days) =>
               run(u.id, () => grantPremium({ userId: u.id, days }))
             }
@@ -102,6 +110,9 @@ export function PremiumUserList({ users }: { users: UserRow[] }) {
               run(u.id, () => grantPremium({ userId: u.id, until }))
             }
             onRevoke={() => run(u.id, () => revokePremium({ userId: u.id }))}
+            onRole={(role) =>
+              run(u.id, () => changeRole({ userId: u.id, role }))
+            }
           />
         ))}
       </ul>
@@ -112,15 +123,19 @@ export function PremiumUserList({ users }: { users: UserRow[] }) {
 function UserItem({
   user,
   busy,
+  isSelf,
   onGrantDays,
   onGrantUntil,
   onRevoke,
+  onRole,
 }: {
   user: UserRow;
   busy: boolean;
+  isSelf: boolean;
   onGrantDays: (days: number) => void;
   onGrantUntil: (until: string) => void;
   onRevoke: () => void;
+  onRole: (role: UserRole) => void;
 }) {
   const [until, setUntil] = useState("");
   const active = isActive(user.premiumUntil);
@@ -131,9 +146,23 @@ function UserItem({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium">{user.name ?? "(isimsiz)"}</span>
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-              {ROLE_LABEL[user.role]}
-            </span>
+            {isSelf ? (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                {ROLE_LABEL[user.role]} (sen)
+              </span>
+            ) : (
+              <select
+                value={user.role}
+                disabled={busy}
+                onChange={(e) => onRole(e.target.value as UserRole)}
+                aria-label="Rol"
+                className="rounded-lg border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium dark:border-gray-700 dark:bg-gray-900"
+              >
+                <option value="client">Danışan</option>
+                <option value="dietitian">Diyetisyen</option>
+                <option value="admin">Admin</option>
+              </select>
+            )}
           </div>
           {user.email && (
             <p className="truncate text-xs text-gray-500">{user.email}</p>

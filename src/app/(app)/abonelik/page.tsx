@@ -5,7 +5,7 @@ import { CheckoutButton } from "@/components/payments/checkout-button";
 import { getEntitlement } from "@/lib/entitlements";
 import { requireProfile } from "@/lib/auth";
 import { LEGAL_LINKS } from "@/lib/legal";
-import { getPricing } from "@/lib/settings";
+import { getPricing, type Plan } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
 import type { PaymentStatus } from "@/types/database";
 
@@ -31,6 +31,49 @@ function formatDate(iso: string): string {
   });
 }
 
+/** Bir tarife kartı — fiyat, süre, (yıllıkta) tasarruf ve ödeme butonu. */
+function PlanCard({ plan, savingTl }: { plan: Plan; savingTl?: number }) {
+  const annual = plan.key === "annual";
+  return (
+    <div
+      className={
+        "flex flex-col rounded-3xl border p-5 shadow-[var(--shadow-soft)] " +
+        (annual
+          ? "border-emerald-300 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-950/20"
+          : "border-gray-200 bg-white/70 dark:border-gray-800 dark:bg-gray-900/50")
+      }
+    >
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-1.5 font-semibold">
+          <Sparkles className="h-4 w-4 text-emerald-600" /> {plan.title}
+        </p>
+        {annual && savingTl && savingTl > 0 && (
+          <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
+            ~{savingTl}₺ tasarruf
+          </span>
+        )}
+      </div>
+      <p className="mt-2 text-2xl font-bold">
+        {plan.price} ₺
+        <span className="text-sm font-normal text-gray-500">
+          {" "}
+          / {annual ? "yıl" : "ay"}
+        </span>
+      </p>
+      <p className="mt-0.5 text-xs text-gray-500">
+        {plan.days} gün premium erişim
+      </p>
+      <div className="mt-4">
+        <CheckoutButton
+          price={plan.price}
+          plan={plan.key}
+          label={`${plan.price} ₺ — ${annual ? "Yıllık al" : "Aylık al"}`}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default async function AbonelikPage({
   searchParams,
 }: {
@@ -41,6 +84,9 @@ export default async function AbonelikPage({
   const supabase = await createClient();
   const ent = await getEntitlement(profile.id);
   const pricing = await getPricing();
+
+  const saving =
+    Math.round(Number(pricing.monthly.price) * 12 - Number(pricing.annual.price));
 
   const { data: payments } = await supabase
     .from("payments")
@@ -69,56 +115,44 @@ export default async function AbonelikPage({
         </p>
       )}
 
-      {ent.isPremium ? (
-        // Premium aktif kartı
-        <div className="space-y-3 rounded-3xl border border-amber-200 bg-amber-50/60 p-6 dark:border-amber-900/50 dark:bg-amber-950/20">
-          <p className="flex items-center gap-2 text-lg font-semibold text-amber-800 dark:text-amber-200">
+      {ent.isPremium && ent.premiumUntil && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/60 px-5 py-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+          <p className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-200">
             <Crown className="h-5 w-5" /> Premium üyeliğin aktif
           </p>
-          {ent.premiumUntil && (
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              <b>{formatDate(ent.premiumUntil)}</b> tarihine kadar sınırsız AI
-              sohbet ve fotoğraf analizi.
-            </p>
-          )}
-          <div className="pt-1">
-            <CheckoutButton price={pricing.price} />
-            <p className="mt-1 text-xs text-gray-500">
-              Yeniden ödeme yaparsan süreye {pricing.premiumDays} gün eklenir.
-            </p>
-          </div>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            <b>{formatDate(ent.premiumUntil)}</b> tarihine kadar sınırsız erişim.
+            Aşağıdan ödeme yaparsan süre uzar.
+          </p>
         </div>
-      ) : (
-        // Ücretsiz kullanıcı: avantajlar + bugünkü kullanım + ödeme
-        <div className="space-y-4 rounded-3xl border border-gray-200 bg-white/70 p-6 shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-900/50">
-          <div className="flex items-baseline justify-between">
-            <p className="flex items-center gap-2 text-lg font-semibold">
-              <Sparkles className="h-5 w-5 text-emerald-600" /> {pricing.title}
-            </p>
-            <p className="text-2xl font-bold">
-              {pricing.price} ₺
-              <span className="text-sm font-normal text-gray-500"> / ay</span>
-            </p>
-          </div>
+      )}
 
-          <ul className="space-y-2">
-            {BENEFITS.map((b) => (
-              <li key={b} className="flex items-start gap-2 text-sm">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                <span className="text-gray-700 dark:text-gray-200">{b}</span>
-              </li>
-            ))}
-          </ul>
+      {!ent.isPremium && (
+        <ul className="space-y-2">
+          {BENEFITS.map((b) => (
+            <li key={b} className="flex items-start gap-2 text-sm">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+              <span className="text-gray-700 dark:text-gray-200">{b}</span>
+            </li>
+          ))}
+        </ul>
+      )}
 
-          <div className="rounded-2xl bg-gray-50 px-4 py-3 text-sm dark:bg-gray-800/50">
-            <p className="text-gray-600 dark:text-gray-300">Bugünkü ücretsiz kullanımın</p>
-            <p className="mt-1 font-medium">
-              Sohbet: {ent.chatUsed}/{ent.chatLimit} · Fotoğraf:{" "}
-              {ent.visionUsed}/{ent.visionLimit}
-            </p>
-          </div>
+      {/* Tarife kartları — aylık + yıllık */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <PlanCard plan={pricing.monthly} />
+        <PlanCard plan={pricing.annual} savingTl={saving} />
+      </div>
 
-          <CheckoutButton price={pricing.price} />
+      {!ent.isPremium && (
+        <div className="rounded-2xl bg-gray-50 px-4 py-3 text-sm dark:bg-gray-800/50">
+          <p className="text-gray-600 dark:text-gray-300">
+            Bugünkü ücretsiz kullanımın
+          </p>
+          <p className="mt-1 font-medium">
+            Sohbet: {ent.chatUsed}/{ent.chatLimit} · Fotoğraf: {ent.visionUsed}/
+            {ent.visionLimit}
+          </p>
         </div>
       )}
 

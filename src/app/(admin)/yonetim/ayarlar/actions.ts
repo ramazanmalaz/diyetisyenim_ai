@@ -8,37 +8,36 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ActionResult = { error: string } | { success: true };
 
+const priceRe = /^\d+(\.\d{1,2})?$/;
+
 const schema = z.object({
-  price: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/, "Fiyat 199.00 biçiminde olmalı."),
-  title: z.string().trim().min(1, "Başlık boş olamaz.").max(80),
-  premiumDays: z.coerce.number().int().min(1).max(3650),
+  monthlyPrice: z.string().regex(priceRe, "Aylık fiyat 199.00 biçiminde olmalı."),
+  monthlyTitle: z.string().trim().min(1, "Aylık başlık boş olamaz.").max(80),
+  monthlyDays: z.coerce.number().int().min(1).max(3650),
+  annualPrice: z.string().regex(priceRe, "Yıllık fiyat 1990.00 biçiminde olmalı."),
+  annualTitle: z.string().trim().min(1, "Yıllık başlık boş olamaz.").max(80),
+  annualDays: z.coerce.number().int().min(1).max(3650),
 });
 
-/** Tarife ayarlarını (fiyat/başlık/premium gün) app_settings'e yazar. */
+/** Aylık + yıllık tarife ayarlarını app_settings'e yazar. */
 export async function savePricing(values: unknown): Promise<ActionResult> {
   await requireStaff();
   const parsed = schema.safeParse(values);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Geçersiz veri." };
   }
+  const v = parsed.data;
 
   const admin = createAdminClient();
   const now = new Date().toISOString();
   const { error } = await admin.from("app_settings").upsert(
     [
-      { key: "subscription_price", value: parsed.data.price, updated_at: now },
-      {
-        key: "subscription_title",
-        value: parsed.data.title.trim(),
-        updated_at: now,
-      },
-      {
-        key: "premium_days",
-        value: String(parsed.data.premiumDays),
-        updated_at: now,
-      },
+      { key: "subscription_price", value: v.monthlyPrice, updated_at: now },
+      { key: "subscription_title", value: v.monthlyTitle.trim(), updated_at: now },
+      { key: "premium_days", value: String(v.monthlyDays), updated_at: now },
+      { key: "annual_price", value: v.annualPrice, updated_at: now },
+      { key: "annual_title", value: v.annualTitle.trim(), updated_at: now },
+      { key: "annual_days", value: String(v.annualDays), updated_at: now },
     ],
     { onConflict: "key" },
   );
