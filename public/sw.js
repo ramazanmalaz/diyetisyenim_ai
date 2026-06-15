@@ -1,4 +1,12 @@
-/* UzmanDiyet — Web Push service worker */
+/* UzmanDiyet — Web Push + PWA service worker */
+
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) =>
+  event.waitUntil(self.clients.claim()),
+);
+
+// Kurulabilirlik için fetch handler (varsayılan ağ davranışı).
+self.addEventListener("fetch", () => {});
 
 self.addEventListener("push", (event) => {
   let data = {};

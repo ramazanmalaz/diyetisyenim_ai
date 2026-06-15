@@ -1,0 +1,34 @@
+{
+  "name": "UzmanDiyet — Diyet & Beslenme Asistanı",
+  "short_name": "UzmanDiyet",
+  "description": "Yapay zekâ destekli beslenme asistanı, kişiye özel diyet takibi ve kalori hesabı.",
+  "start_url": "/panel",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2f7d31",
+  "lang": "tr",
+  "dir": "ltr",
+  "orientation": "portrait",
+  "categories": ["health", "lifestyle", "food"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
