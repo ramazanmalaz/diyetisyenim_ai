@@ -2,6 +2,7 @@ import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { MedicalDisclaimer } from "@/components/medical-disclaimer";
 import { AiOnboarding } from "@/components/onboarding/ai-onboarding";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -36,6 +37,7 @@ export default async function BaslangicAiPage() {
           hesaplayıp takip edebilirim.
         </p>
       </div>
+      <MedicalDisclaimer />
       <AiOnboarding />
     </div>
   );

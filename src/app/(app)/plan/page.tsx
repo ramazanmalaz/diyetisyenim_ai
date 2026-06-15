@@ -13,7 +13,7 @@ export default async function PlanPage() {
   const { data: plan } = await supabase
     .from("diet_plans")
     .select(
-      "id, title, status, daily_calorie_target, estimated_weeks, goal_loss_kg",
+      "id, title, status, daily_calorie_target, estimated_weeks, goal_loss_kg, valid_from, valid_to",
     )
     .eq("status", "active")
     .order("created_at", { ascending: false })
@@ -24,7 +24,7 @@ export default async function PlanPage() {
     ? await supabase
         .from("meals")
         .select(
-          "id, day_of_week, meal_type, content, calories, food_id, quantity, checked",
+          "id, week_index, day_of_week, meal_type, content, calories, food_id, quantity, checked",
         )
         .eq("plan_id", plan.id)
     : { data: [] };
@@ -43,6 +43,31 @@ export default async function PlanPage() {
     .maybeSingle();
 
   const todayIdx = (new Date().getDay() + 6) % 7; // 0=Pzt ... 6=Paz
+
+  // Çok-haftalık: saklanan farklı hafta sayısı + bugünün denk geldiği hafta.
+  const rows = meals ?? [];
+  const weekCount = Math.max(
+    1,
+    rows.reduce((mx, m) => Math.max(mx, (m.week_index ?? 0) + 1), 1),
+  );
+  const nowMs = new Date().getTime();
+  const startMs = plan?.valid_from
+    ? new Date(plan.valid_from).getTime()
+    : nowMs;
+  const weeksSinceStart = Math.max(
+    0,
+    Math.floor((nowMs - startMs) / (7 * 86_400_000)),
+  );
+  const currentWeek = weekCount > 0 ? weeksSinceStart % weekCount : 0;
+  const totalWeeks =
+    plan?.valid_from && plan?.valid_to
+      ? Math.max(
+          1,
+          Math.round(
+            (new Date(plan.valid_to).getTime() - startMs) / (7 * 86_400_000),
+          ),
+        )
+      : weekCount;
 
   if (!plan) {
     return (
@@ -85,6 +110,10 @@ export default async function PlanPage() {
         estimatedWeeks={plan.estimated_weeks}
         todayIdx={todayIdx}
         initialWaterMl={water?.total_ml ?? 0}
+        weekCount={weekCount}
+        initialWeek={currentWeek}
+        totalWeeks={totalWeeks}
+        validTo={plan.valid_to}
       />
     </div>
   );

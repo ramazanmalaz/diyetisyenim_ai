@@ -37,6 +37,7 @@ import type { MealType } from "@/types/database";
 
 export type Meal = {
   id: string;
+  week_index: number;
   day_of_week: number;
   meal_type: MealType;
   content: string;
@@ -99,6 +100,7 @@ export function EditableMeals({
   foods,
   selectedDay,
   setSelectedDay,
+  selectedWeek,
 }: {
   meals: Meal[];
   setMeals: Dispatch<SetStateAction<Meal[]>>;
@@ -106,6 +108,7 @@ export function EditableMeals({
   foods: Food[];
   selectedDay: number;
   setSelectedDay: Dispatch<SetStateAction<number>>;
+  selectedWeek: number;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -207,6 +210,7 @@ export function EditableMeals({
     setBusy(true);
     const res = await addFoodMeal({
       planId,
+      weekIndex: selectedWeek,
       dayOfWeek: selectedDay,
       mealType,
       foodId: addFood.id,
@@ -214,7 +218,10 @@ export function EditableMeals({
     });
     setBusy(false);
     if ("error" in res) return setError(res.error);
-    setMeals((prev) => [...prev, { ...res.meal, checked: false }]);
+    setMeals((prev) => [
+      ...prev,
+      { ...res.meal, week_index: selectedWeek, checked: false },
+    ]);
     setAddType(null);
     setAddFood(null);
     setAddQty("1");
@@ -246,6 +253,7 @@ export function EditableMeals({
     setApplying(true);
     const res = await applyMealFromItems({
       planId,
+      weekIndex: selectedWeek,
       dayOfWeek: selectedDay,
       mealType: scanType,
       items: scanItems,
@@ -255,7 +263,11 @@ export function EditableMeals({
     setMeals((prev) => [
       ...prev.filter(
         (m) =>
-          !(m.day_of_week === res.dayOfWeek && m.meal_type === res.mealType),
+          !(
+            (m.week_index ?? 0) === selectedWeek &&
+            m.day_of_week === res.dayOfWeek &&
+            m.meal_type === res.mealType
+          ),
       ),
       ...res.meals.map((m) => ({ ...m, checked: false })),
     ]);
@@ -304,7 +316,9 @@ export function EditableMeals({
     setEditing(null);
   }
 
-  const dayMeals = meals.filter((m) => m.day_of_week === selectedDay);
+  const dayMeals = meals.filter(
+    (m) => (m.week_index ?? 0) === selectedWeek && m.day_of_week === selectedDay,
+  );
 
   return (
     <div className="space-y-4">

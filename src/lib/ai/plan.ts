@@ -65,6 +65,7 @@ export async function generatePlanMeals(params: {
   dietitianRules: string | null;
   dailyTarget: number;
   intakeSummary: string;
+  weekNote?: string;
 }): Promise<GeneratedMeal[]> {
   const system = buildSystemPrompt(params.dietitianRules);
 
@@ -74,8 +75,8 @@ export async function generatePlanMeals(params: {
 - Her öğün için 1-3 yiyecek öğesi ver. Her öğeyi MİKTARIYLA yaz (örn. "2 haşlanmış yumurta", "5 siyah zeytin", "1 dilim tam buğday ekmeği").
 - Her öğenin tahmini kalorisini ekle.
 - Günlük toplam kalori YAKLAŞIK ${params.dailyTarget} kcal olmalı (±100).
-- Günler arasında çeşitlilik olsun.
-
+- ÇOK ÖNEMLİ: 7 günün HER BİRİ BİRBİRİNDEN FARKLI olsun. Aynı öğünü/menüyü iki güne KOYMA; malzeme, pişirme ve öğünleri günden güne değiştir.
+${params.weekNote ? `- ${params.weekNote}\n` : ""}
 Kişi bilgisi: ${params.intakeSummary}
 
 Planı yalnızca save_diet_plan aracını çağırarak döndür.`;
@@ -103,4 +104,31 @@ Planı yalnızca save_diet_plan aracını çağırarak döndür.`;
   }
 
   return planSchema.parse(toolUse.input).meals;
+}
+
+/** Maliyet/süre dengesi için üretilen farklı hafta sayısı üst sınırı. */
+export const MAX_PLAN_WEEKS = 4;
+
+/**
+ * Hedef süreye göre BİRBİRİNDEN FARKLI haftalık programlar üretir (paralel).
+ * numWeeks 1..MAX_PLAN_WEEKS arasına çekilir; plan bu haftaları hedef süre
+ * boyunca döngüyle yayar. Dizinin her elemanı bir haftanın öğünleridir.
+ */
+export async function generateWeeklyPrograms(params: {
+  dietitianRules: string | null;
+  dailyTarget: number;
+  intakeSummary: string;
+  numWeeks: number;
+}): Promise<GeneratedMeal[][]> {
+  const n = Math.max(1, Math.min(MAX_PLAN_WEEKS, params.numWeeks));
+  return Promise.all(
+    Array.from({ length: n }, (_, i) =>
+      generatePlanMeals({
+        dietitianRules: params.dietitianRules,
+        dailyTarget: params.dailyTarget,
+        intakeSummary: params.intakeSummary,
+        weekNote: `Bu, ${n} haftalık programın ${i + 1}. haftası. Diğer haftalardan TAMAMEN farklı menüler kur (hiç tekrar olmasın).`,
+      }),
+    ),
+  );
 }

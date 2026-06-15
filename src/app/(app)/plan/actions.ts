@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { generateWeeklyPrograms } from "@/lib/ai/plan";
 import { analyzePlatePhoto, type ImageMediaType } from "@/lib/ai/respond";
 import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
+import { ACTIVITY_LABEL, computeCaloriePlan } from "@/lib/diet/calories";
 import { consumeAiCredit } from "@/lib/entitlements";
 import { foodMealFields } from "@/lib/foods";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -248,6 +250,145 @@ export async function resetPlan(): Promise<void> {
   redirect("/baslangic");
 }
 
+const SEX_LABEL = { female: "Kadın", male: "Erkek" } as const;
+
+/**
+ * İlerlemeye göre programı yeniden üretir: en güncel kilo + kalan süreyi baz alıp
+ * kalori hedefini yeniden hesaplar ve yeni çok-haftalık program üretir. Hedefe
+ * ulaşıldıysa kalori koruma yönüne kayar (computeCaloriePlan kalan kiloyla ayarlar).
+ */
+export async function regeneratePlan(): Promise<void> {
+  const user = await getUser();
+  if (!user) redirect("/giris");
+
+  const admin = createAdminClient();
+
+  const { data: intake } = await admin
+    .from("intakes")
+    .select(
+      "sex, age, height_cm, current_weight_kg, activity_level, goal_loss_kg, goal_weeks, health_notes, dislikes",
+    )
+    .eq("client_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  // AI intake'i yoksa (örn. manuel plan) yeniden üretemeyiz → en baştan.
+  if (!intake) redirect("/baslangic");
+
+  // En güncel kilo (ilerleme) hedefi etkiler.
+  const { data: w } = await admin
+    .from("progress_entries")
+    .select("weight_kg")
+    .eq("client_id", user.id)
+    .not("weight_kg", "is", null)
+    .order("entry_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const currentWeight = Number(w?.weight_kg ?? intake.current_weight_kg);
+
+  // Aktif planın kalan süresi.
+  const { data: active } = await admin
+    .from("diet_plans")
+    .select("valid_to, goal_loss_kg")
+    .eq("client_id", user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  let remainingWeeks = intake.goal_weeks;
+  if (active?.valid_to) {
+    const days = Math.ceil(
+      (new Date(active.valid_to).getTime() - Date.now()) / 86_400_000,
+    );
+    remainingWeeks = Math.max(1, Math.ceil(days / 7));
+  }
+
+  const goalLossKg = Number(active?.goal_loss_kg ?? intake.goal_loss_kg);
+  const cal = computeCaloriePlan({
+    sex: intake.sex,
+    age: intake.age,
+    heightCm: Number(intake.height_cm),
+    weightKg: currentWeight,
+    activity: intake.activity_level,
+    goalLossKg,
+    goalWeeks: remainingWeeks,
+  });
+
+  const intakeSummary = [
+    `Cinsiyet: ${SEX_LABEL[intake.sex]}`,
+    `Yaş: ${intake.age}`,
+    `Boy: ${intake.height_cm} cm`,
+    `Güncel kilo: ${currentWeight} kg`,
+    `Aktivite: ${ACTIVITY_LABEL[intake.activity_level]}`,
+    `Kalan hedef: ${goalLossKg} kg / ${remainingWeeks} hafta`,
+    intake.health_notes ? `Sağlık: ${intake.health_notes}` : null,
+    intake.dislikes ? `Sevmedikleri: ${intake.dislikes}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const rules = await getActiveDietitianRules();
+  let weeks;
+  try {
+    weeks = await generateWeeklyPrograms({
+      dietitianRules: rules,
+      dailyTarget: cal.dailyTarget,
+      intakeSummary,
+      numWeeks: remainingWeeks,
+    });
+  } catch {
+    // Üretim başarısızsa eski plan korunur.
+    redirect("/plan");
+  }
+
+  // Üretim başarılı → eskiyi arşivle, yeniyi kur.
+  await admin
+    .from("diet_plans")
+    .update({ status: "archived" })
+    .eq("client_id", user.id)
+    .eq("status", "active");
+
+  const today = new Date();
+  const validFrom = today.toISOString().slice(0, 10);
+  const validTo = new Date(today.getTime() + remainingWeeks * 7 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+
+  const { data: plan } = await admin
+    .from("diet_plans")
+    .insert({
+      client_id: user.id,
+      created_by: user.id,
+      title: "AI Asistan Diyet Planı (güncel)",
+      status: "active",
+      source: "ai",
+      daily_calorie_target: cal.dailyTarget,
+      estimated_weeks: cal.estimatedWeeks,
+      goal_loss_kg: goalLossKg,
+      valid_from: validFrom,
+      valid_to: validTo,
+    })
+    .select("id")
+    .single();
+  if (!plan) redirect("/plan");
+
+  const rows = weeks.flatMap((weekMeals, wi) =>
+    weekMeals.map((m, i) => ({
+      plan_id: plan.id,
+      week_index: wi,
+      day_of_week: m.day_of_week,
+      meal_type: m.meal_type,
+      content: m.item,
+      calories: m.calories,
+      sort_order: i,
+    })),
+  );
+  await admin.from("meals").insert(rows);
+
+  revalidatePath("/plan");
+  redirect("/plan");
+}
+
 export type WaterResult = { error: string } | { total: number };
 
 /** Bugünün su tüketimini günceller (delta ekler veya sıfırlar) ve yeni toplamı döndürür. */
@@ -304,6 +445,7 @@ export async function addFoodMeal(values: unknown): Promise<FoodMealResult> {
   const parsed = z
     .object({
       planId: z.string().uuid(),
+      weekIndex: z.coerce.number().int().min(0).max(51).optional(),
       dayOfWeek: z.coerce.number().int().min(0).max(6),
       mealType: MEAL_TYPE_ENUM,
       foodId: z.string().uuid(),
@@ -328,6 +470,7 @@ export async function addFoodMeal(values: unknown): Promise<FoodMealResult> {
     .from("meals")
     .insert({
       plan_id: parsed.data.planId,
+      week_index: parsed.data.weekIndex ?? 0,
       day_of_week: parsed.data.dayOfWeek,
       meal_type: parsed.data.mealType,
       content,
@@ -522,6 +665,7 @@ export async function scanPlatePhoto(formData: FormData): Promise<ScanResult> {
 
 const applySchema = z.object({
   planId: z.string().uuid(),
+  weekIndex: z.coerce.number().int().min(0).max(51).optional(),
   dayOfWeek: z.coerce.number().int().min(0).max(6),
   mealType: MEAL_TYPE_ENUM,
   items: z
@@ -542,6 +686,7 @@ export type ApplyResult =
       mealType: (typeof MEAL_TYPE_ENUM)["_output"];
       meals: {
         id: string;
+        week_index: number;
         day_of_week: number;
         meal_type: (typeof MEAL_TYPE_ENUM)["_output"];
         content: string;
@@ -569,16 +714,19 @@ export async function applyMealFromItems(
     .single();
   if (plan?.client_id !== user.id) return { error: "Yetkin yok." };
 
-  // O gün + öğün tipindeki mevcut öğeleri kaldır.
+  const weekIndex = parsed.data.weekIndex ?? 0;
+  // O hafta + gün + öğün tipindeki mevcut öğeleri kaldır.
   await admin
     .from("meals")
     .delete()
     .eq("plan_id", parsed.data.planId)
+    .eq("week_index", weekIndex)
     .eq("day_of_week", parsed.data.dayOfWeek)
     .eq("meal_type", parsed.data.mealType);
 
   const rows = parsed.data.items.map((it) => ({
     plan_id: parsed.data.planId,
+    week_index: weekIndex,
     day_of_week: parsed.data.dayOfWeek,
     meal_type: parsed.data.mealType,
     content: it.name,
@@ -589,7 +737,7 @@ export async function applyMealFromItems(
     .from("meals")
     .insert(rows)
     .select(
-      "id, day_of_week, meal_type, content, calories, food_id, quantity",
+      "id, week_index, day_of_week, meal_type, content, calories, food_id, quantity",
     );
   if (error || !data) return { error: "Uygulanamadı." };
 

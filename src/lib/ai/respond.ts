@@ -233,13 +233,15 @@ const planPhotoSchema = z.object({
   meals: z
     .array(
       z.object({
+        day_of_week: z.coerce.number().int().min(0).max(6),
         meal_type: z.enum(PLAN_MEAL_TYPES),
         item: z.string().min(1).max(200),
         calories: z.coerce.number().int().min(0).max(3000),
       }),
     )
     .min(1)
-    .max(40),
+    .max(140),
+  multi_day: z.boolean().optional().default(false),
   note: z.string().max(1000).optional().default(""),
 });
 
@@ -250,10 +252,15 @@ const PLANPHOTO_SCHEMA: AnthropicNS.Tool.InputSchema = {
   properties: {
     meals: {
       type: "array",
-      description: "Plandaki bir günlük öğün şablonu (öğeler).",
+      description: "Plandaki öğünler (günlere göre).",
       items: {
         type: "object",
         properties: {
+          day_of_week: {
+            type: "integer",
+            description:
+              "0=Pazartesi ... 6=Pazar. Plan tek günlük şablonsa hepsi 0.",
+          },
           meal_type: { type: "string", enum: [...PLAN_MEAL_TYPES] },
           item: {
             type: "string",
@@ -261,8 +268,12 @@ const PLANPHOTO_SCHEMA: AnthropicNS.Tool.InputSchema = {
           },
           calories: { type: "integer", description: "Bu öğenin tahmini kalorisi" },
         },
-        required: ["meal_type", "item", "calories"],
+        required: ["day_of_week", "meal_type", "item", "calories"],
       },
+    },
+    multi_day: {
+      type: "boolean",
+      description: "Görselde birden çok güne ait farklı menüler varsa true.",
     },
     note: { type: "string", description: "Kısa Türkçe not (okuma güveni vb.)" },
   },
@@ -311,10 +322,11 @@ export async function analyzePlanPhoto(params: {
           ),
           {
             type: "text",
-            text: `Bu görsel(ler) kullanıcının elindeki HAZIR bir diyet/beslenme planı. İçindeki öğünleri TEK GÜNLÜK bir şablon olarak çıkar:
+            text: `Bu görsel(ler) kullanıcının elindeki HAZIR bir diyet/beslenme planı. İçindeki öğünleri çıkar:
+- Görselde HAFTANIN GÜNLERİ (Pzt, Sal, ... veya 1.gün, 2.gün) ayrı ayrı yazıyorsa, her öğeyi doğru day_of_week'e (0=Pazartesi ... 6=Pazar) ata ve multi_day=true yap.
+- Görselde tek bir günlük şablon varsa tüm öğeleri day_of_week=0 yap ve multi_day=false.
 - Her öğeyi meal_type ile eşle: breakfast (kahvaltı), snack_morning (kuşluk/ara), lunch (öğle), snack_afternoon (ikindi/ara), dinner (akşam).
 - Her öğeyi MİKTARIYLA yaz ve tahmini kalorisini ver.
-- Plan birden çok gün içeriyorsa temsili bir günü baz al.
 - Okuman hatalı olabilir; note alanına kısa bir uyarı yaz. Yalnızca save_plan_template aracını çağır.`,
           },
         ],

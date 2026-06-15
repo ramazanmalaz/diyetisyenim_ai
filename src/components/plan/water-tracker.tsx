@@ -1,7 +1,7 @@
 "use client";
 
-import { Droplets, Minus, Plus } from "lucide-react";
-import { useState } from "react";
+import { Bell, BellOff, Droplets, Minus, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { updateWater } from "@/app/(app)/plan/actions";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,35 @@ import { Input } from "@/components/ui/input";
 
 const GLASS_ML = 200; // 1 bardak
 const GOAL_ML = 2500; // günlük hedef
+const REMINDER_KEY = "su_reminder_enabled";
 
 export function WaterTracker({ initialMl }: { initialMl: number }) {
   const [total, setTotal] = useState(initialMl);
+  const [reminderOn, setReminderOn] = useState(false);
+
+  // Hatırlatıcı durumunu localStorage'dan oku (varsayılan açık).
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setReminderOn(localStorage.getItem(REMINDER_KEY) !== "0");
+    } catch {
+      /* no-op */
+    }
+  }, []);
+
+  function toggleReminder() {
+    const next = !reminderOn;
+    setReminderOn(next);
+    try {
+      localStorage.setItem(REMINDER_KEY, next ? "1" : "0");
+    } catch {
+      /* no-op */
+    }
+    // Açarken OS bildirim izni iste (kullanıcı jesti).
+    if (next && "Notification" in window && Notification.permission === "default") {
+      void Notification.requestPermission();
+    }
+  }
   const [custom, setCustom] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -151,6 +177,38 @@ export function WaterTracker({ initialMl }: { initialMl: number }) {
           </button>
         )}
       </div>
+
+      {/* Gün içi su hatırlatıcısı */}
+      <button
+        type="button"
+        onClick={toggleReminder}
+        aria-pressed={reminderOn}
+        className="mt-4 flex w-full items-center justify-between rounded-xl bg-white/60 px-3 py-2 text-sm ring-1 ring-black/5 transition hover:bg-white dark:bg-white/5 dark:ring-white/10"
+      >
+        <span className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
+          {reminderOn ? (
+            <Bell className="h-4 w-4 text-sky-600" strokeWidth={1.75} />
+          ) : (
+            <BellOff className="h-4 w-4 text-gray-400" strokeWidth={1.75} />
+          )}
+          Su içme hatırlatıcısı
+        </span>
+        <span
+          className={
+            "rounded-full px-2 py-0.5 text-[11px] font-semibold " +
+            (reminderOn
+              ? "bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300"
+              : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400")
+          }
+        >
+          {reminderOn ? "Açık" : "Kapalı"}
+        </span>
+      </button>
+      {reminderOn && (
+        <p className="mt-1 text-[11px] text-gray-400">
+          Uygulama açıkken gün içinde (08:00–22:00) birkaç saatte bir hatırlatır.
+        </p>
+      )}
     </section>
   );
 }

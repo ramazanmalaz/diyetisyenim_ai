@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { generatePlanMeals } from "@/lib/ai/plan";
+import { generateWeeklyPrograms } from "@/lib/ai/plan";
 import {
   analyzePlanPhoto,
   type ImageMediaType,
@@ -79,12 +79,14 @@ export async function generatePlan(values: unknown): Promise<GenerateResult> {
 
   const rules = await getActiveDietitianRules();
 
-  let meals;
+  // Hedef süreye göre birbirinden farklı haftalık programlar (paralel üretim).
+  let weeks;
   try {
-    meals = await generatePlanMeals({
+    weeks = await generateWeeklyPrograms({
       dietitianRules: rules,
       dailyTarget: cal.dailyTarget,
       intakeSummary,
+      numWeeks: v.goalWeeks,
     });
   } catch {
     return { error: "Plan oluşturulamadı. Lütfen tekrar dene." };
@@ -97,6 +99,13 @@ export async function generatePlan(values: unknown): Promise<GenerateResult> {
     .eq("client_id", user.id)
     .eq("status", "active");
 
+  // Hedef süre aralığı: bugünden başlayıp goalWeeks hafta sonra biter.
+  const today = new Date();
+  const validFrom = today.toISOString().slice(0, 10);
+  const validTo = new Date(today.getTime() + v.goalWeeks * 7 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+
   const { data: plan, error: planError } = await admin
     .from("diet_plans")
     .insert({
@@ -108,6 +117,8 @@ export async function generatePlan(values: unknown): Promise<GenerateResult> {
       daily_calorie_target: cal.dailyTarget,
       estimated_weeks: cal.estimatedWeeks,
       goal_loss_kg: v.goalLossKg,
+      valid_from: validFrom,
+      valid_to: validTo,
     })
     .select("id")
     .single();
@@ -116,14 +127,17 @@ export async function generatePlan(values: unknown): Promise<GenerateResult> {
     return { error: "Plan kaydedilemedi." };
   }
 
-  const rows = meals.map((m, i) => ({
-    plan_id: plan.id,
-    day_of_week: m.day_of_week,
-    meal_type: m.meal_type,
-    content: m.item,
-    calories: m.calories,
-    sort_order: i,
-  }));
+  const rows = weeks.flatMap((weekMeals, w) =>
+    weekMeals.map((m, i) => ({
+      plan_id: plan.id,
+      week_index: w,
+      day_of_week: m.day_of_week,
+      meal_type: m.meal_type,
+      content: m.item,
+      calories: m.calories,
+      sort_order: i,
+    })),
+  );
   await admin.from("meals").insert(rows);
 
   redirect("/plan");
@@ -246,11 +260,17 @@ export async function saveManualPlan(values: unknown): Promise<GenerateResult> {
     return { error: parsed.error.issues[0]?.message ?? "Geçersiz plan." };
   }
   const v = parsed.data;
+  const applyAll = v.applyToAllDays ?? false;
 
+  // Günlük hedef: verilmişse o; değilse ortalama bir günün toplamı.
+  const totalCal = v.items.reduce((s, it) => s + it.calories, 0);
+  const distinctDays = applyAll
+    ? 1
+    : new Set(v.items.map((it) => it.dayOfWeek)).size || 1;
   const dailyTarget =
     v.dailyTarget && v.dailyTarget > 0
       ? v.dailyTarget
-      : v.items.reduce((s, it) => s + it.calories, 0);
+      : Math.round(totalCal / distinctDays);
 
   const admin = createAdminClient();
 
@@ -277,17 +297,28 @@ export async function saveManualPlan(values: unknown): Promise<GenerateResult> {
 
   if (planError || !plan) return { error: "Plan kaydedilemedi." };
 
-  // Tek günlük şablonu 7 güne (0=Pzt ... 6=Paz) uygula.
-  const rows = Array.from({ length: 7 }, (_, day) =>
-    v.items.map((it, i) => ({
-      plan_id: plan.id,
-      day_of_week: day,
-      meal_type: it.mealType,
-      content: it.content,
-      calories: it.calories,
-      sort_order: i,
-    })),
-  ).flat();
+  // applyToAllDays: tek günlük şablonu 7 güne kopyala. Aksi halde her öğe kendi gününde.
+  const rows = applyAll
+    ? Array.from({ length: 7 }, (_, day) =>
+        v.items.map((it, i) => ({
+          plan_id: plan.id,
+          week_index: 0,
+          day_of_week: day,
+          meal_type: it.mealType,
+          content: it.content,
+          calories: it.calories,
+          sort_order: i,
+        })),
+      ).flat()
+    : v.items.map((it, i) => ({
+        plan_id: plan.id,
+        week_index: 0,
+        day_of_week: it.dayOfWeek,
+        meal_type: it.mealType,
+        content: it.content,
+        calories: it.calories,
+        sort_order: i,
+      }));
   await admin.from("meals").insert(rows);
 
   redirect("/plan");

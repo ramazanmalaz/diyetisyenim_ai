@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { logout } from "@/app/(auth)/actions";
 import { BottomNav } from "@/components/app/bottom-nav";
+import { WaterReminder } from "@/components/app/water-reminder";
 import { requireProfile } from "@/lib/auth";
 
 export default async function AppLayout({
@@ -60,6 +61,7 @@ export default async function AppLayout({
       <main className="flex flex-1 flex-col pb-28">{children}</main>
 
       <BottomNav />
+      <WaterReminder />
     </div>
   );
 }

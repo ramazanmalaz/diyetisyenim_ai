@@ -236,18 +236,22 @@ export function CalorieFigure({
   target,
   meals,
   selectedDay,
+  selectedWeek = 0,
 }: {
   consumed: number;
   target: number | null;
   meals: Meal[];
   selectedDay: number;
+  selectedWeek?: number;
 }) {
   const t = target ?? 0;
   const ratio = t > 0 ? consumed / t : 0;
   const over = ratio > 1;
   const overBy = Math.max(0, Math.round(consumed - t));
 
-  const dayItems = meals.filter((m) => m.day_of_week === selectedDay);
+  const dayItems = meals.filter(
+    (m) => (m.week_index ?? 0) === selectedWeek && m.day_of_week === selectedDay,
+  );
   const allChecked = dayItems.length > 0 && dayItems.every((m) => m.checked);
   const hasSweet = dayItems.some((m) => isSweet(m.content));
 

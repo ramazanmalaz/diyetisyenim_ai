@@ -260,6 +260,7 @@ export type Database = {
           quantity: number | null;
           checked: boolean;
           sort_order: number;
+          week_index: number;
           created_at: string;
         };
         Insert: {
@@ -273,6 +274,7 @@ export type Database = {
           quantity?: number | null;
           checked?: boolean;
           sort_order?: number;
+          week_index?: number;
           created_at?: string;
         };
         Update: {
@@ -286,6 +288,7 @@ export type Database = {
           quantity?: number | null;
           checked?: boolean;
           sort_order?: number;
+          week_index?: number;
           created_at?: string;
         };
         Relationships: [];
