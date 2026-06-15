@@ -1,18 +1,22 @@
 "use client";
 
+import { Camera } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { analyzeAssistantPhoto } from "@/app/(app)/asistan/actions";
+import { PlateCamera } from "@/components/plan/plate-camera";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "@/components/ui/markdown";
 import { cn } from "@/lib/utils";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = { role: "user" | "assistant"; content: string; image?: string };
 
 export function AssistantChat() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,7 +37,9 @@ export function AssistantChat() {
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history }),
+        body: JSON.stringify({
+          messages: history.map((m) => ({ role: m.role, content: m.content })),
+        }),
       });
       // Günlük ücretsiz hak doldu → yükseltme mesajını göster.
       if (res.status === 402) {
@@ -74,6 +80,48 @@ export function AssistantChat() {
     }
   }
 
+  async function handlePhoto(file: File) {
+    if (loading) return;
+    const preview = URL.createObjectURL(file);
+    const transcript = messages
+      .map((m) => `${m.role === "user" ? "Danışan" : "Asistan"}: ${m.content}`)
+      .join("\n");
+
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: "📷 Fotoğraf paylaştım", image: preview },
+      { role: "assistant", content: "" },
+    ]);
+    setLoading(true);
+
+    try {
+      const fd = new FormData();
+      fd.set("photo", file);
+      fd.set("transcript", transcript);
+      const res = await analyzeAssistantPhoto(fd);
+      const answer =
+        "answer" in res
+          ? res.answer
+          : (res.error ?? "Fotoğraf analiz edilemedi.");
+      setMessages((prev) => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { role: "assistant", content: answer };
+        return copy;
+      });
+    } catch {
+      setMessages((prev) => {
+        const copy = [...prev];
+        copy[copy.length - 1] = {
+          role: "assistant",
+          content: "Fotoğraf analiz edilemedi, lütfen tekrar dene.",
+        };
+        return copy;
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       <div
@@ -83,8 +131,8 @@ export function AssistantChat() {
       >
         {messages.length === 0 && (
           <div className="mx-auto max-w-md pt-10 text-center text-sm text-gray-500">
-            Beslenme ve diyetinle ilgili sorularını yazabilirsin. Örneğin:
-            “Akşam yemeğinde tok tutan hafif bir öneri var mı?”
+            Sorularını yazabilir ya da tabağının fotoğrafını paylaşabilirsin.
+            Örneğin: “Akşam yemeğinde tok tutan hafif bir öneri var mı?”
           </div>
         )}
 
@@ -104,6 +152,14 @@ export function AssistantChat() {
                   : "bg-gray-100 dark:bg-gray-800",
               )}
             >
+              {m.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={m.image}
+                  alt="Paylaşılan fotoğraf"
+                  className="mb-1.5 max-h-44 rounded-lg object-cover"
+                />
+              )}
               {m.role === "assistant" ? (
                 m.content ? (
                   <Markdown>{m.content}</Markdown>
@@ -121,8 +177,17 @@ export function AssistantChat() {
 
       <form
         onSubmit={send}
-        className="flex gap-2 border-t border-gray-200 p-3 dark:border-gray-800"
+        className="flex items-center gap-2 border-t border-gray-200 p-3 dark:border-gray-800"
       >
+        <button
+          type="button"
+          onClick={() => setCameraOpen(true)}
+          disabled={loading}
+          aria-label="Fotoğraf çek veya yükle"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-300 text-gray-500 transition hover:border-emerald-400 hover:text-emerald-600 disabled:opacity-50 dark:border-gray-700"
+        >
+          <Camera className="h-5 w-5" strokeWidth={1.75} />
+        </button>
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -133,6 +198,13 @@ export function AssistantChat() {
           Gönder
         </Button>
       </form>
+
+      <PlateCamera
+        open={cameraOpen}
+        title="Fotoğrafını paylaş"
+        onClose={() => setCameraOpen(false)}
+        onCapture={handlePhoto}
+      />
     </div>
   );
 }
