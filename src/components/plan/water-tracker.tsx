@@ -3,9 +3,11 @@
 import { Bell, BellOff, Droplets, Minus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { setWaterReminder } from "@/app/(app)/push/actions";
 import { updateWater } from "@/app/(app)/plan/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { enablePush } from "@/lib/push-client";
 
 const GLASS_ML = 200; // 1 bardak
 const GOAL_ML = 2500; // günlük hedef
@@ -25,7 +27,7 @@ export function WaterTracker({ initialMl }: { initialMl: number }) {
     }
   }, []);
 
-  function toggleReminder() {
+  async function toggleReminder() {
     const next = !reminderOn;
     setReminderOn(next);
     try {
@@ -33,10 +35,10 @@ export function WaterTracker({ initialMl }: { initialMl: number }) {
     } catch {
       /* no-op */
     }
-    // Açarken OS bildirim izni iste (kullanıcı jesti).
-    if (next && "Notification" in window && Notification.permission === "default") {
-      void Notification.requestPermission();
-    }
+    // Açarken: push izni + abonelik (panel kapalıyken de bildirim için).
+    if (next) await enablePush();
+    // Sunucu tercihini güncelle (cron bunu okur).
+    void setWaterReminder(next);
   }
   const [custom, setCustom] = useState("");
   const [busy, setBusy] = useState(false);

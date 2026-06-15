@@ -32,6 +32,7 @@ import {
   type Schedule,
   type Segment,
 } from "@/lib/pomodoro";
+import { enablePush } from "@/lib/push-client";
 import { cn } from "@/lib/utils";
 
 function fmtClock(totalSec: number): string {
@@ -86,6 +87,8 @@ function PomodoroSetup({ onCreated }: { onCreated: (p: PomodoroPlan) => void }) 
       setError(res.error);
       return;
     }
+    // Panel kapalıyken de bildirim gelsin diye push iznini iste.
+    void enablePush();
     onCreated(res.plan);
   }
 

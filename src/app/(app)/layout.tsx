@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { logout } from "@/app/(auth)/actions";
 import { BottomNav } from "@/components/app/bottom-nav";
+import { PushSetup } from "@/components/app/push-setup";
 import { WaterReminder } from "@/components/app/water-reminder";
 import { requireProfile } from "@/lib/auth";
 
@@ -62,6 +63,7 @@ export default async function AppLayout({
 
       <BottomNav />
       <WaterReminder />
+      <PushSetup />
     </div>
   );
 }

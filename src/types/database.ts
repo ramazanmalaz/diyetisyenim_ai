@@ -34,6 +34,7 @@ export type Database = {
           avatar_url: string | null;
           dietitian_id: string | null;
           premium_until: string | null;
+          water_reminder_enabled: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -44,6 +45,7 @@ export type Database = {
           avatar_url?: string | null;
           dietitian_id?: string | null;
           premium_until?: string | null;
+          water_reminder_enabled?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -54,8 +56,33 @@ export type Database = {
           avatar_url?: string | null;
           dietitian_id?: string | null;
           premium_until?: string | null;
+          water_reminder_enabled?: boolean;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      push_subscriptions: {
+        Row: {
+          endpoint: string;
+          client_id: string;
+          p256dh: string;
+          auth: string;
+          created_at: string;
+        };
+        Insert: {
+          endpoint: string;
+          client_id: string;
+          p256dh: string;
+          auth: string;
+          created_at?: string;
+        };
+        Update: {
+          endpoint?: string;
+          client_id?: string;
+          p256dh?: string;
+          auth?: string;
+          created_at?: string;
         };
         Relationships: [];
       };

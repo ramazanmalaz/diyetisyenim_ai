@@ -106,13 +106,15 @@ Planı yalnızca save_diet_plan aracını çağırarak döndür.`;
   return planSchema.parse(toolUse.input).meals;
 }
 
-/** Maliyet/süre dengesi için üretilen farklı hafta sayısı üst sınırı. */
-export const MAX_PLAN_WEEKS = 4;
+/** Üretilen farklı hafta sayısı üst sınırı (~3 ay). */
+export const MAX_PLAN_WEEKS = 13;
+/** Rate limit'e takılmamak için aynı anda üretilen hafta sayısı. */
+const GEN_CONCURRENCY = 5;
 
 /**
- * Hedef süreye göre BİRBİRİNDEN FARKLI haftalık programlar üretir (paralel).
- * numWeeks 1..MAX_PLAN_WEEKS arasına çekilir; plan bu haftaları hedef süre
- * boyunca döngüyle yayar. Dizinin her elemanı bir haftanın öğünleridir.
+ * Hedef süreye göre BİRBİRİNDEN FARKLI haftalık programlar üretir. numWeeks
+ * 1..MAX_PLAN_WEEKS (≈3 ay) arasına çekilir; rate limit için gruplar halinde
+ * paralel üretilir. Plan, hedef süre bu sınırı aşarsa haftaları döngüyle yayar.
  */
 export async function generateWeeklyPrograms(params: {
   dietitianRules: string | null;
@@ -121,14 +123,21 @@ export async function generateWeeklyPrograms(params: {
   numWeeks: number;
 }): Promise<GeneratedMeal[][]> {
   const n = Math.max(1, Math.min(MAX_PLAN_WEEKS, params.numWeeks));
-  return Promise.all(
-    Array.from({ length: n }, (_, i) =>
-      generatePlanMeals({
-        dietitianRules: params.dietitianRules,
-        dailyTarget: params.dailyTarget,
-        intakeSummary: params.intakeSummary,
-        weekNote: `Bu, ${n} haftalık programın ${i + 1}. haftası. Diğer haftalardan TAMAMEN farklı menüler kur (hiç tekrar olmasın).`,
+  const out: GeneratedMeal[][] = [];
+  for (let start = 0; start < n; start += GEN_CONCURRENCY) {
+    const size = Math.min(GEN_CONCURRENCY, n - start);
+    const batch = await Promise.all(
+      Array.from({ length: size }, (_, j) => {
+        const i = start + j;
+        return generatePlanMeals({
+          dietitianRules: params.dietitianRules,
+          dailyTarget: params.dailyTarget,
+          intakeSummary: params.intakeSummary,
+          weekNote: `Bu, ${n} haftalık programın ${i + 1}. haftası. Diğer haftalardan TAMAMEN farklı menüler kur (hiç tekrar olmasın).`,
+        });
       }),
-    ),
-  );
+    );
+    out.push(...batch);
+  }
+  return out;
 }

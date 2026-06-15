@@ -23,6 +23,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",
+    "@types/web-push": "^3.6.4",
     "clsx": "^2.1.1",
     "iyzipay": "^2.0.67",
     "lucide-react": "^1.17.0",
@@ -33,6 +34,7 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.6.0",
+    "web-push": "^3.6.7",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
