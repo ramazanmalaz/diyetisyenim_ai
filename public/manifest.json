@@ -11,6 +11,22 @@
   "dir": "ltr",
   "orientation": "portrait",
   "categories": ["health", "lifestyle", "food"],
+  "shortcuts": [
+    {
+      "name": "Asistan",
+      "short_name": "Asistan",
+      "description": "Beslenme asistanıyla sohbet et",
+      "url": "/asistan",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Planım",
+      "short_name": "Plan",
+      "description": "Diyet planını görüntüle",
+      "url": "/plan",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icon-192.png",
