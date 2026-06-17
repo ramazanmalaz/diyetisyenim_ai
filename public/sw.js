@@ -18,8 +18,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "UzmanDiyet";
   const options = {
     body: data.body || "",
-    icon: "/icon.svg",
-    badge: "/icon.svg",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
     tag: data.tag || undefined,
     renotify: Boolean(data.tag),
     vibrate: [200, 100, 200],
