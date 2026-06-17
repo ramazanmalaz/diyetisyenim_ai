@@ -10,6 +10,7 @@ import {
 } from "@/lib/ai/respond";
 import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
+import { getAssistantConversationId } from "@/lib/chat/assistant";
 import { DAYS, mealTypeLabel, mealTypeOrder } from "@/lib/diet";
 import { consumeAiCredit, upgradeMessage } from "@/lib/entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -32,57 +33,16 @@ function mediaTypeFromPath(path: string): ImageMediaType {
 export type ActionResult = { error: string } | { success: true };
 
 /**
- * Kullanıcının kişisel AI asistan konuşmasını bulur; yoksa oluşturur.
- * Konuşma/üyelik eklemek RLS'de personele kısıtlı olduğundan service-role kullanır.
+ * Kullanıcının kişisel AI asistan konuşmasını açar (yoksa oluşturur).
  */
 export async function openAssistant(): Promise<void> {
   const user = await getUser();
   if (!user) redirect("/giris");
 
   const admin = createAdminClient();
+  const conversationId = await getAssistantConversationId(admin, user.id);
 
-  // Kullanıcının üye olduğu konuşmalar arasından AI asistan konuşmasını bul.
-  const { data: memberships } = await admin
-    .from("conversation_members")
-    .select("conversation_id")
-    .eq("user_id", user.id);
-
-  const memberIds = (memberships ?? []).map((m) => m.conversation_id);
-  if (memberIds.length > 0) {
-    const { data: existing } = await admin
-      .from("conversations")
-      .select("id")
-      .in("id", memberIds)
-      .eq("ai_enabled", true)
-      .eq("type", "direct")
-      .limit(1)
-      .maybeSingle();
-    if (existing?.id) {
-      redirect(`/sohbet/${existing.id}`);
-    }
-  }
-
-  const { data: created, error } = await admin
-    .from("conversations")
-    .insert({
-      type: "direct",
-      title: "Beslenme Asistanı",
-      ai_enabled: true,
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
-
-  if (error || !created) {
-    redirect("/sohbet");
-  }
-
-  await admin.from("conversation_members").insert({
-    conversation_id: created.id,
-    user_id: user.id,
-  });
-
-  redirect(`/sohbet/${created.id}`);
+  redirect(conversationId ? `/sohbet/${conversationId}` : "/sohbet");
 }
 
 export async function sendMessage(values: unknown): Promise<ActionResult> {

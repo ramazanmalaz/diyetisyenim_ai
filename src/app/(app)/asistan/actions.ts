@@ -6,7 +6,12 @@ import {
 } from "@/lib/ai/respond";
 import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
+import {
+  getAssistantConversationId,
+  logAssistantMessage,
+} from "@/lib/chat/assistant";
 import { consumeAiCredit, upgradeMessage } from "@/lib/entitlements";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ALLOWED_PHOTO_TYPES,
   MAX_PHOTO_BYTES,
@@ -57,6 +62,27 @@ export async function analyzeAssistantPhoto(
       dietitianRules: rules,
       planContext: null,
     });
+
+    // Denetlenebilirlik (§5): foto etkileşimini asistan konuşmasına kaydet.
+    // Fotoğraf bellekte analiz edilir (Storage'a yazılmaz) → image_path yok.
+    const admin = createAdminClient();
+    const conversationId = await getAssistantConversationId(
+      admin,
+      user.id,
+    ).catch(() => null);
+    if (conversationId) {
+      await logAssistantMessage(admin, conversationId, {
+        type: "user",
+        content: "📷 Asistana fotoğraf paylaştım",
+        senderId: user.id,
+      });
+      await logAssistantMessage(admin, conversationId, {
+        type: "ai",
+        content: answer,
+        senderId: null,
+      });
+    }
+
     return { answer };
   } catch {
     return { error: "Fotoğraf analiz edilemedi, lütfen tekrar dene." };
