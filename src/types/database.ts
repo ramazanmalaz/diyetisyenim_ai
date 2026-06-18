@@ -484,6 +484,12 @@ export type Database = {
           sort_order: number;
           contact_phone: string | null;
           contact_email: string | null;
+          slogan: string | null;
+          services: string[];
+          working_hours: Record<string, string> | null;
+          address: string | null;
+          instagram: string | null;
+          whatsapp: string | null;
           created_at: string;
         };
         Insert: {
@@ -499,6 +505,12 @@ export type Database = {
           sort_order?: number;
           contact_phone?: string | null;
           contact_email?: string | null;
+          slogan?: string | null;
+          services?: string[];
+          working_hours?: Record<string, string> | null;
+          address?: string | null;
+          instagram?: string | null;
+          whatsapp?: string | null;
           created_at?: string;
         };
         Update: {
@@ -514,6 +526,12 @@ export type Database = {
           sort_order?: number;
           contact_phone?: string | null;
           contact_email?: string | null;
+          slogan?: string | null;
+          services?: string[];
+          working_hours?: Record<string, string> | null;
+          address?: string | null;
+          instagram?: string | null;
+          whatsapp?: string | null;
           created_at?: string;
         };
         Relationships: [];

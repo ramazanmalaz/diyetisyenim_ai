@@ -1,11 +1,15 @@
 import type { SlotStatus } from "@/types/database";
 
 /**
- * Danışana gösterilen diyetisyen alanları — iletişim (telefon/e-posta)
- * kolonları KESİNLİKLE buraya eklenmez.
+ * Danışana gösterilen diyetisyen alanları. Gizli iletişim kolonları
+ * (contact_phone / contact_email) KESİNLİKLE buraya eklenmez. Ancak diyetisyenin
+ * yayımlamayı seçtiği HALKA AÇIK alanlar (slogan, hizmetler, çalışma saatleri,
+ * adres, instagram, whatsapp) profilde gösterilir.
  */
 export const PUBLIC_DIETITIAN_COLUMNS =
-  "id, full_name, title, bio, specialties, city, photo_url, years_experience, is_active, sort_order";
+  "id, full_name, title, bio, specialties, city, photo_url, years_experience, is_active, sort_order, slogan, services, working_hours, address, instagram, whatsapp";
+
+export type WorkingHours = Record<string, string>;
 
 export type PublicDietitian = {
   id: string;
@@ -18,7 +22,35 @@ export type PublicDietitian = {
   years_experience: number | null;
   is_active: boolean;
   sort_order: number;
+  slogan: string | null;
+  services: string[];
+  working_hours: WorkingHours | null;
+  address: string | null;
+  instagram: string | null;
+  whatsapp: string | null;
 };
+
+/** Çalışma saatleri tablosu için gün sırası ve Türkçe etiketler. */
+export const WORKING_DAYS: { key: string; label: string; short: string }[] = [
+  { key: "mon", label: "Pazartesi", short: "Pzt" },
+  { key: "tue", label: "Salı", short: "Sal" },
+  { key: "wed", label: "Çarşamba", short: "Çar" },
+  { key: "thu", label: "Perşembe", short: "Per" },
+  { key: "fri", label: "Cuma", short: "Cum" },
+  { key: "sat", label: "Cumartesi", short: "Cmt" },
+  { key: "sun", label: "Pazar", short: "Paz" },
+];
+
+/** Bugünün gün anahtarı (working_hours için): mon..sun. */
+export function todayDayKey(): string {
+  // getDay: 0=Paz..6=Cmt → WORKING_DAYS index'ine çevir.
+  return WORKING_DAYS[(new Date().getDay() + 6) % 7].key;
+}
+
+/** "Kapalı"/boş değilse çalışma günü kabul edilir. */
+export function isOpenHours(value: string | undefined): boolean {
+  return !!value && !/kapal/i.test(value);
+}
 
 export type Slot = {
   id: string;
