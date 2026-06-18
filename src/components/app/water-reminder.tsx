@@ -4,6 +4,7 @@ import { Droplets, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { updateWater } from "@/app/(app)/plan/actions";
+import { playAlertChime } from "@/lib/alert-sound";
 
 const ENABLED_KEY = "su_reminder_enabled";
 const LAST_KEY = "su_reminder_last";
@@ -51,13 +52,16 @@ export function WaterReminder() {
       if (now - Number(getLs(LAST_KEY) ?? 0) >= INTERVAL_MS) {
         setDue(true);
         setLs(LAST_KEY, String(now));
+        // Belirgin uyarı sesi + titreşim (sessiz kalmasın, kaçmasın).
+        playAlertChime();
         try {
           if (
             "Notification" in window &&
             Notification.permission === "granted"
           ) {
-            new Notification("Su molası 💧", {
-              body: "Bir bardak su içmeyi unutma!",
+            new Notification("💧 Su molası — UzmanDiyet", {
+              body: "Bir bardak (200 ml) su içme zamanı. Hadi bir yudum! 🥤",
+              tag: "water",
             });
           }
         } catch {

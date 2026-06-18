@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
         .eq("water_reminder_enabled", true);
       for (const p of profs ?? []) {
         sent += await sendPushToUser(p.id, {
-          title: "Su molası 💧",
-          body: "Bir bardak su içmeyi unutma!",
+          title: "💧 Su molası — UzmanDiyet",
+          body: "Bir bardak (200 ml) su içme zamanı. Hadi bir yudum! 🥤",
           tag: "water",
           url: "/plan",
         });
@@ -69,8 +69,8 @@ export async function GET(request: NextRequest) {
 
     if (minuteOfDay === plan.start_min) {
       sent += await sendPushToUser(plan.client_id, {
-        title: "Pomodoro ⏱️",
-        body: "Odak zamanı başladı — ilk seans!",
+        title: "⏱️ Odak zamanı — UzmanDiyet",
+        body: "İlk pomodoro seansın başladı. Telefonu bırak, odaklan! 💪",
         tag: "pomodoro",
         url: "/pomodoro",
       });
@@ -83,11 +83,11 @@ export async function GET(request: NextRequest) {
       const next = schedule.segments[i + 1];
       const body = next
         ? next.kind === "work"
-          ? `${next.session}. seans başlasın, odaklan!`
-          : `Mola zamanı — ${next.endMin - next.startMin} dk dinlen.`
-        : "Tüm seanslar tamamlandı, harika iş! 🎉";
+          ? `🎯 ${next.session}. seans başlıyor — odaklanma vakti!`
+          : `☕ Mola zamanı — ${next.endMin - next.startMin} dk dinlen, nefes al.`
+        : "🎉 Tüm seanslar tamamlandı, harika iş çıkardın!";
       sent += await sendPushToUser(plan.client_id, {
-        title: "Pomodoro ⏱️",
+        title: "⏱️ Odak zamanı — UzmanDiyet",
         body,
         tag: "pomodoro",
         url: "/pomodoro",

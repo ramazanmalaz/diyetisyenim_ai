@@ -2,6 +2,7 @@ import { Crown, LogOut, Salad } from "lucide-react";
 import Link from "next/link";
 
 import { logout } from "@/app/(auth)/actions";
+import { AudioArmer } from "@/components/app/audio-armer";
 import { BottomNav } from "@/components/app/bottom-nav";
 import { PushSetup } from "@/components/app/push-setup";
 import { WaterReminder } from "@/components/app/water-reminder";
@@ -64,6 +65,7 @@ export default async function AppLayout({
       <BottomNav />
       <WaterReminder />
       <PushSetup />
+      <AudioArmer />
     </div>
   );
 }

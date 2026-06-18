@@ -6,7 +6,7 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function PlanPage() {
-  await requireProfile();
+  const profile = await requireProfile();
   const supabase = await createClient();
 
   // RLS sayesinde danışan yalnızca kendi planlarını görür.
@@ -114,6 +114,7 @@ export default async function PlanPage() {
         initialWeek={currentWeek}
         totalWeeks={totalWeeks}
         validTo={plan.valid_to}
+        userName={profile.full_name}
       />
     </div>
   );

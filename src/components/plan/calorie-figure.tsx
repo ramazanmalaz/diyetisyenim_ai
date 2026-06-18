@@ -56,23 +56,42 @@ function isSweet(name: string): boolean {
 
 type FigureState = "idle" | "happy" | "sweet" | "over" | "full";
 
+/** Adı biliniyorsa ilk adı döndürür; yoksa null. */
+function firstName(name?: string | null): string | null {
+  if (!name) return null;
+  const f = name.trim().split(/\s+/)[0];
+  return f.length > 0 ? f : null;
+}
+
+// Replikler `dear` (kullanıcının adı; yoksa "yavrum") ile kişiselleştirilir.
+
 // Normal (formda) durumda dönüşümlü motive edici sözler.
-const MOTIVATION = [
-  "Formdasın yavrum, böyle devam! 💪",
+const motivationLines = (dear: string) => [
+  `Formdasın ${dear}, böyle devam! 💪`,
   "Sağlık her şeyden önce gelir 🌿",
   "Su içmeyi unutma canım 💧",
   "Azimle her şey güzel olacak ✨",
   "Bir adım daha, sen yaparsın! 🌟",
   "Dengeli beslen, keyfine de bak 😊",
   "Bugün dünden daha iyisin 👏",
+  "Oldu, gözlerim doldu 🥹",
+  "Benim bileceğim işler değil onlar 🤷‍♀️",
 ];
 
 // Eklemede dönüşümlü söylenen şekerli/diyet dışı repliği.
-const SWEET_LINES = [
+const sweetLines = (dear: string) => [
   "Aman canımmm nolacak sanki 😋",
-  "Bir lokmadan bir şey olmaz yavrum 🤭",
+  `Bir lokmadan bir şey olmaz ${dear} 🤭`,
   "Tamam tamam, görmedim say 🙈",
   "Azıcık kaçamak iyidir canım 😌",
+  "Aman canım o kadarcıktan bir şey olmaz 😌",
+];
+
+// Kalori aşımında (kızgın/üzgün) dönüşümlü repliği.
+const overLines = (dear: string, overBy: number) => [
+  `Hooop! ${overBy} kcal fazla kaçtı, olmadı ${dear} 😠`,
+  `Benim tansiyonumu zıplatma ${dear}! 😤`,
+  `Beni çok üzüyorsun ${dear}… 🥺`,
 ];
 
 /**
@@ -237,17 +256,25 @@ export function CalorieFigure({
   meals,
   selectedDay,
   selectedWeek = 0,
+  userName = null,
 }: {
   consumed: number;
   target: number | null;
   meals: Meal[];
   selectedDay: number;
   selectedWeek?: number;
+  userName?: string | null;
 }) {
   const t = target ?? 0;
   const ratio = t > 0 ? consumed / t : 0;
   const over = ratio > 1;
   const overBy = Math.max(0, Math.round(consumed - t));
+
+  // Adı biliniyorsa ona hitap et; yoksa "yavrum". Replikler buna göre üretilir.
+  const dear = firstName(userName) ?? "yavrum";
+  const MOT = motivationLines(dear);
+  const SWEETL = sweetLines(dear);
+  const OVERL = overLines(dear, overBy);
 
   const dayItems = meals.filter(
     (m) => (m.week_index ?? 0) === selectedWeek && m.day_of_week === selectedDay,
@@ -267,10 +294,10 @@ export function CalorieFigure({
           : "happy";
 
   const cardMsg: Record<FigureState, string> = {
-    idle: "Hadi başlayalım yavrum 🤲",
+    idle: `Hadi başlayalım ${dear} 🤲`,
     happy: "Aferin sana, böyle devam 😊",
-    sweet: "Aman canımmm nolacak sanki 😋",
-    over: `Hooop! ${overBy} kcal fazla kaçtı, olmadı yavrum 😠`,
+    sweet: SWEETL[0],
+    over: OVERL[0],
     full: "Bu günde doyduk 🎉",
   };
   const status: Record<FigureState, string> = {
@@ -282,7 +309,7 @@ export function CalorieFigure({
   };
   const rose = state === "over";
 
-  // Normal (formda) durumda dönüşümlü motive edici sözler.
+  // Baloncukta dönüşümlü sözler (formda/şekerli/aşım durumlarına göre).
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((x) => x + 1), 5000);
@@ -290,8 +317,12 @@ export function CalorieFigure({
   }, []);
   const cardLine =
     state === "happy"
-      ? MOTIVATION[tick % MOTIVATION.length]
-      : cardMsg[state];
+      ? MOT[tick % MOT.length]
+      : state === "over"
+        ? OVERL[tick % OVERL.length]
+        : state === "sweet"
+          ? SWEETL[tick % SWEETL.length]
+          : cardMsg[state];
 
   // Ortadaki büyük tepki + baloncuk.
   const [big, setBig] = useState<{ state: FigureState; msg: string } | null>(
@@ -301,6 +332,7 @@ export function CalorieFigure({
   const prevIds = useRef<Set<string> | null>(null);
   const prevState = useRef<FigureState | null>(null);
   const sweetTurn = useRef(0);
+  const overTurn = useRef(0);
   const fallback = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function trigger(next: { state: FigureState; msg: string }) {
@@ -333,14 +365,18 @@ export function CalorieFigure({
     const newSweet = added.find((m) => isSweet(m.content));
 
     if (newSweet && state === "sweet") {
-      const line = SWEET_LINES[sweetTurn.current % SWEET_LINES.length];
+      const line = SWEETL[sweetTurn.current % SWEETL.length];
       sweetTurn.current += 1;
       trigger({ state: "sweet", msg: line });
     } else if (
       prevState.current !== state &&
       (state === "over" || state === "full")
     ) {
-      trigger({ state, msg: cardMsg[state] });
+      const msg =
+        state === "over"
+          ? OVERL[overTurn.current++ % OVERL.length]
+          : cardMsg[state];
+      trigger({ state, msg });
     }
 
     prevIds.current = ids;

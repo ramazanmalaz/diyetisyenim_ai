@@ -28,6 +28,7 @@ type Props = {
   initialWeek: number;
   totalWeeks: number;
   validTo: string | null;
+  userName: string | null;
 };
 
 export function PlanBoard({
@@ -43,6 +44,7 @@ export function PlanBoard({
   initialWeek,
   totalWeeks,
   validTo,
+  userName,
 }: Props) {
   const [meals, setMeals] = useState<Meal[]>(initialMeals);
   const [selectedDay, setSelectedDay] = useState<number>(todayIdx);
@@ -208,6 +210,7 @@ export function PlanBoard({
         meals={meals}
         selectedDay={selectedDay}
         selectedWeek={selectedWeek}
+        userName={userName}
       />
     </div>
   );
