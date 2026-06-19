@@ -293,7 +293,9 @@ export async function analyzePlanPhoto(params: {
 
   const response = await anthropic.messages.create({
     model: DEFAULT_MODEL,
-    max_tokens: 4096,
+    // Haftalık (7 günlük) tablolar 70+ öğe → ~3.5k token üretebilir; 4096 sınıra
+    // çok yakın olup kesiliyordu (truncation → bozuk tool JSON → okuma başarısız).
+    max_tokens: 8192,
     system: [
       { type: "text", text: system, cache_control: { type: "ephemeral" } },
     ],
@@ -324,8 +326,9 @@ export async function analyzePlanPhoto(params: {
             type: "text",
             text: `Bu görsel(ler) kullanıcının elindeki HAZIR bir diyet/beslenme planı. İçindeki öğünleri çıkar:
 - Görselde HAFTANIN GÜNLERİ (Pzt, Sal, ... veya 1.gün, 2.gün) ayrı ayrı yazıyorsa, her öğeyi doğru day_of_week'e (0=Pazartesi ... 6=Pazar) ata ve multi_day=true yap.
+- Aynı gün adı BİRDEN FAZLA sütunda görünüyorsa (örn. tablo Perşembe'den başlayıp Perşembe'de bitiyorsa), o günü YALNIZCA İLK görüldüğü sütundan al; tekrar eden sütunu yok say. Her gün (0–6) en fazla bir kez doldurulmalı.
 - Görselde tek bir günlük şablon varsa tüm öğeleri day_of_week=0 yap ve multi_day=false.
-- Her öğeyi meal_type ile eşle: breakfast (kahvaltı), snack_morning (kuşluk/ara), lunch (öğle), snack_afternoon (ikindi/ara), dinner (akşam).
+- Her öğeyi meal_type ile eşle: breakfast (kahvaltı/sabah), snack_morning (kuşluk/ilk ara), lunch (öğle), snack_afternoon (ikindi/ikinci ara), dinner (akşam). Saat etiketi varsa: en erken öğün=breakfast, akşam/son öğün=dinner; aradakiler sırasıyla snack_morning ve snack_afternoon.
 - Her öğeyi MİKTARIYLA yaz ve tahmini kalorisini ver.
 - Okuman hatalı olabilir; note alanına kısa bir uyarı yaz. Yalnızca save_plan_template aracını çağır.`,
           },
