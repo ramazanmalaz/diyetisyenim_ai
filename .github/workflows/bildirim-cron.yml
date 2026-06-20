@@ -1,0 +1,40 @@
+name: Bildirim cron (su + pomodoro)
+
+# Uygulama KAPALIYKEN de push bildirimi gönderir.
+# GitHub Actions en sık 5 dakikada bir tetiklenebildiğinden, her çalışmada
+# endpoint'i 60 sn aralıkla 5 kez çağırırız → neredeyse dakikalık kapsama.
+# Endpoint'in tam-dakika mantığı (su saat başı, pomodoro seans sınırları) korunur.
+#
+# Gereken: repo secret CRON_SECRET (Settings → Secrets and variables → Actions).
+# Not: GitHub zamanlı işleri yoğunlukta birkaç dakika gecikebilir; pomodoro
+# bildirimleri ara sıra kayabilir (kabul edilen ödünleşim).
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+# Üst üste binen çalışmaları engelle (çift bildirim riskini azaltır).
+concurrency:
+  group: bildirim-cron
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Endpoint'i ~dakikalık tetikle
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "HATA: CRON_SECRET repo secret'i tanımlı değil."
+            exit 1
+          fi
+          URL="https://uzmandiyet.com/api/cron/notifications"
+          for i in 1 2 3 4 5; do
+            echo "[$i] $(date -u +%H:%M:%S) tetikleniyor…"
+            curl -fsS -m 30 -H "Authorization: Bearer $CRON_SECRET" "$URL" || echo "[$i] istek hatası (yok sayıldı)"
+            echo ""
+            if [ "$i" -lt 5 ]; then sleep 60; fi
+          done
