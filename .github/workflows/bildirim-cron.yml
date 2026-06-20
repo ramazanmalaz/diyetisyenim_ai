@@ -1,20 +1,29 @@
 name: Bildirim cron (su + pomodoro)
 
 # Uygulama KAPALIYKEN de push bildirimi gönderir.
-# GitHub Actions en sık 5 dakikada bir tetiklenebildiğinden, her çalışmada
-# endpoint'i 60 sn aralıkla 5 kez çağırırız → neredeyse dakikalık kapsama.
-# Endpoint'in tam-dakika mantığı (su saat başı, pomodoro seans sınırları) korunur.
+#
+# GitHub Actions zamanlı (schedule) tetiklemeleri GÜVENİLMEZ: çoğu run atlanıyor,
+# saatlerce hiç çalışmayabiliyor. Bu yüzden "kısa ama sık" yerine "uzun ve
+# zincirleme" model kullanıyoruz:
+#   - Her run ~5 saat boyunca endpoint'i 60 sn'de bir çağırır (≈dakikalık kapsama).
+#   - concurrency (cancel-in-progress:false) ile aynı anda tek run çalışır; yeni
+#     tetiklemeler "pending" bekl, biten run'ı hemen devralır → kesintisiz zincir.
+#   - schedule sadece "sıradaki run hazır beklesin" diye var; bırakılsa bile
+#     çalışan run zaten ~5 saat kapsıyor.
+# Repo PUBLIC olduğundan Actions dakikaları ücretsiz/sınırsız.
+#
+# NOT: Beklemedeki run'lar 15 dk'da bir yenilenir → Actions sekmesinde "cancelled"
+# girdiler GÖRÜNÜR; bu normaldir (işlevi etkilemez).
+# NOT: GitHub uzun süreli döngüleri kısıtlayabilir; sorun olursa cron-job.org
+# (gerçek dakikalık, ücretsiz) en sağlam alternatiftir.
 #
 # Gereken: repo secret CRON_SECRET (Settings → Secrets and variables → Actions).
-# Not: GitHub zamanlı işleri yoğunlukta birkaç dakika gecikebilir; pomodoro
-# bildirimleri ara sıra kayabilir (kabul edilen ödünleşim).
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch: {}
 
-# Üst üste binen çalışmaları engelle (çift bildirim riskini azaltır).
 concurrency:
   group: bildirim-cron
   cancel-in-progress: false
@@ -22,8 +31,9 @@ concurrency:
 jobs:
   notify:
     runs-on: ubuntu-latest
+    timeout-minutes: 330
     steps:
-      - name: Endpoint'i ~dakikalık tetikle
+      - name: ~5 saat boyunca dakikalık tetikle (sonra sıradaki run devralır)
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
@@ -32,9 +42,15 @@ jobs:
             exit 1
           fi
           URL="https://uzmandiyet.com/api/cron/notifications"
-          for i in 1 2 3 4 5; do
-            echo "[$i] $(date -u +%H:%M:%S) tetikleniyor…"
-            curl -fsS -m 30 -H "Authorization: Bearer $CRON_SECRET" "$URL" || echo "[$i] istek hatası (yok sayıldı)"
-            echo ""
-            if [ "$i" -lt 5 ]; then sleep 60; fi
+          END=$((SECONDS + 18000))   # ~5 saat
+          n=0
+          while [ "$SECONDS" -lt "$END" ]; do
+            n=$((n + 1))
+            if curl -fsS -m 30 -H "Authorization: Bearer $CRON_SECRET" "$URL" >/dev/null; then
+              :
+            else
+              echo "$(date -u +%H:%M:%S) [$n] istek hatası (yok sayıldı)"
+            fi
+            sleep 60
           done
+          echo "Döngü tamamlandı ($n tetikleme). Sıradaki run devralır."
