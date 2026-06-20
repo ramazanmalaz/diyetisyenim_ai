@@ -1,6 +1,8 @@
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { z } from "zod";
 
+import { enrichMealsWithUsda } from "@/lib/foods/usda";
+
 import { anthropic, DEFAULT_MODEL, MAX_TOKENS } from "./client";
 import { buildChatSystemPrompt, buildSystemPrompt } from "./prompt";
 
@@ -341,5 +343,8 @@ export async function analyzePlanPhoto(params: {
   if (!toolUse || toolUse.type !== "tool_use") {
     throw new Error("Plan okunamadı.");
   }
-  return planPhotoSchema.parse(toolUse.input);
+  const scan = planPhotoSchema.parse(toolUse.input);
+  // Okunan standart gıdaların kalorisini USDA ile doğrula/güncelle (best-effort).
+  const meals = await enrichMealsWithUsda(scan.meals);
+  return { ...scan, meals };
 }

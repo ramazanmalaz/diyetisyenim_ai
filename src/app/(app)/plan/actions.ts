@@ -10,7 +10,8 @@ import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
 import { ACTIVITY_LABEL, computeCaloriePlan } from "@/lib/diet/calories";
 import { consumeAiCredit } from "@/lib/entitlements";
-import { foodMealFields } from "@/lib/foods";
+import { foodMealFields, type Food } from "@/lib/foods";
+import { searchUsdaForPicker } from "@/lib/foods/usda";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -609,6 +610,59 @@ export async function swapMealFood(values: unknown): Promise<RecalcResult> {
     .eq("id", parsed.data.mealId);
   revalidatePath("/plan");
   return { calories, content, quantity: qty, foodId: parsed.data.foodId };
+}
+
+// ---------------------------------------------------------------------------
+// USDA: yerel katalogda olmayan gıdaları USDA FoodData Central'dan getir
+// ---------------------------------------------------------------------------
+export type UsdaSearchResult =
+  | { error: string }
+  | { candidates: { fdcId: number; description: string; kcalPer100g: number }[] };
+
+/** Türkçe terimi çevirip USDA adaylarını (100 g başına kcal) döndürür. */
+export async function searchUsdaFoods(term: unknown): Promise<UsdaSearchResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+  const t = typeof term === "string" ? term.trim() : "";
+  if (t.length < 2) return { candidates: [] };
+  const candidates = await searchUsdaForPicker(t);
+  return { candidates };
+}
+
+/**
+ * Seçilen USDA adayını yerel `foods` kataloğuna ekler (unit "100 g") ve gerçek
+ * Food kaydını döndürür; böylece mevcut ekleme/miktar akışı aynen kullanılır.
+ */
+export async function importUsdaFood(values: unknown): Promise<{ food: Food } | { error: string }> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+  const parsed = z
+    .object({
+      description: z.string().min(1).max(180),
+      kcalPer100g: z.coerce.number().int().min(1).max(2000),
+    })
+    .safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz veri." };
+
+  const admin = createAdminClient();
+  const name = parsed.data.description.slice(0, 180);
+  // Aynı isim varsa onu kullan (foods.name unique). Yoksa ekle.
+  const { error: insertErr } = await admin
+    .from("foods")
+    .insert({ name, unit_label: "100 g", kcal_per_unit: parsed.data.kcalPer100g })
+    .select("id")
+    .single();
+  // Çakışma (zaten var) hata değildir; mevcut kaydı çek.
+  if (insertErr && !insertErr.message.includes("duplicate")) {
+    return { error: "Eklenemedi." };
+  }
+  const { data, error } = await admin
+    .from("foods")
+    .select("id, name, unit_label, kcal_per_unit")
+    .eq("name", name)
+    .single();
+  if (error || !data) return { error: "Eklenemedi." };
+  return { food: data as Food };
 }
 
 // ---------------------------------------------------------------------------

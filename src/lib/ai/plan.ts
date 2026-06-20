@@ -1,6 +1,8 @@
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { z } from "zod";
 
+import { enrichMealsWithUsda } from "@/lib/foods/usda";
+
 import { anthropic, DEFAULT_MODEL } from "./client";
 import { buildSystemPrompt } from "./prompt";
 
@@ -103,7 +105,9 @@ Planı yalnızca save_diet_plan aracını çağırarak döndür.`;
     throw new Error("Plan üretilemedi.");
   }
 
-  return planSchema.parse(toolUse.input).meals;
+  const meals = planSchema.parse(toolUse.input).meals;
+  // Standart gıdaların kalorisini USDA ile doğrula/güncelle (best-effort).
+  return enrichMealsWithUsda(meals);
 }
 
 /** Üretilen farklı hafta sayısı üst sınırı (~3 ay). */
