@@ -3,7 +3,9 @@
 import {
   Camera,
   Check,
+  ChefHat,
   ChevronDown,
+  Loader2,
   Minus,
   Pencil,
   Plus,
@@ -17,11 +19,13 @@ import {
   addFoodMeal,
   applyMealFromItems,
   deleteMealItem,
+  getMealDetail,
   scanPlatePhoto,
   setMealQuantity,
   swapMealFood,
   updateMeal,
 } from "@/app/(app)/plan/actions";
+import type { MealDetail } from "@/lib/ai/meal-detail";
 import { FoodPicker } from "@/components/plan/food-picker";
 import { PlateCamera } from "@/components/plan/plate-camera";
 import { Button } from "@/components/ui/button";
@@ -118,6 +122,11 @@ export function EditableMeals({
   });
   const [editing, setEditing] = useState<Meal | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Öğün detayı (makro + tarif) — mealId bazında cache + yükleme durumu.
+  const [detailByMeal, setDetailByMeal] = useState<Record<string, MealDetail>>(
+    {},
+  );
+  const [detailBusy, setDetailBusy] = useState(false);
   // Serbest metin öğün düzenleme alanları (miktar / besin adı / kalori ayrı).
   const [fAmount, setFAmount] = useState("");
   const [fName, setFName] = useState("");
@@ -168,6 +177,19 @@ export function EditableMeals({
       calories: res.calories,
       content: res.content,
     });
+  }
+
+  async function loadDetail(mealId: string) {
+    if (detailByMeal[mealId]) return;
+    setDetailBusy(true);
+    setError(null);
+    const res = await getMealDetail({ mealId });
+    setDetailBusy(false);
+    if ("error" in res) {
+      setError(res.error);
+      return;
+    }
+    setDetailByMeal((prev) => ({ ...prev, [mealId]: res.detail }));
   }
 
   async function doDelete(id: string) {
@@ -622,7 +644,7 @@ export function EditableMeals({
           onClick={() => setEditing(null)}
         >
           <div
-            className="reveal w-full max-w-sm space-y-5 rounded-3xl border border-gray-200 bg-white p-5 shadow-[var(--shadow-float)] dark:border-gray-700 dark:bg-gray-900"
+            className="reveal max-h-[88vh] w-full max-w-sm space-y-5 overflow-y-auto rounded-3xl border border-gray-200 bg-white p-5 shadow-[var(--shadow-float)] dark:border-gray-700 dark:bg-gray-900"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -654,6 +676,74 @@ export function EditableMeals({
                 {editing.food_id ? cleanName(editing) : fName || editing.content}
               </p>
             </div>
+
+            {/* Makro besin değerleri + nasıl hazırlanır */}
+            {(() => {
+              const d = detailByMeal[editing.id];
+              if (!d) {
+                return (
+                  <button
+                    type="button"
+                    onClick={() => loadDetail(editing.id)}
+                    disabled={detailBusy}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 active:scale-[0.98] disabled:opacity-60 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300"
+                  >
+                    {detailBusy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ChefHat className="h-4 w-4" />
+                    )}
+                    {detailBusy ? "Hazırlanıyor…" : "Makro & nasıl hazırlanır"}
+                  </button>
+                );
+              }
+              const pk = d.protein_g * 4;
+              const ck = d.carb_g * 4;
+              const fk = d.fat_g * 9;
+              const tot = Math.max(1, pk + ck + fk);
+              return (
+                <div className="space-y-3 rounded-2xl border border-gray-100 p-3 dark:border-gray-800">
+                  <div className="flex h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                    <span
+                      className="bg-emerald-400"
+                      style={{ width: `${(pk / tot) * 100}%` }}
+                    />
+                    <span
+                      className="bg-amber-400"
+                      style={{ width: `${(ck / tot) * 100}%` }}
+                    />
+                    <span
+                      className="bg-sky-400"
+                      style={{ width: `${(fk / tot) * 100}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs font-medium">
+                    <span className="text-emerald-700 dark:text-emerald-300">
+                      Protein {d.protein_g} g
+                    </span>
+                    <span className="text-amber-700 dark:text-amber-300">
+                      Karb {d.carb_g} g
+                    </span>
+                    <span className="text-sky-700 dark:text-sky-300">
+                      Yağ {d.fat_g} g
+                    </span>
+                  </div>
+                  <div>
+                    <p className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                      <ChefHat className="h-3.5 w-3.5" /> Nasıl hazırlanır
+                    </p>
+                    <p className="mt-1 text-sm whitespace-pre-line text-gray-600 dark:text-gray-300">
+                      {d.recipe}
+                    </p>
+                  </div>
+                  {d.tip && (
+                    <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                      💡 {d.tip}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             {editing.food_id ? (
               <>

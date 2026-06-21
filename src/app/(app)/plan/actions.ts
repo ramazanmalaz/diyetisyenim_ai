@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { generateMealDetail, type MealDetail } from "@/lib/ai/meal-detail";
 import { generateWeeklyPrograms } from "@/lib/ai/plan";
 import { analyzePlatePhoto, type ImageMediaType } from "@/lib/ai/respond";
 import { getActiveDietitianRules } from "@/lib/ai/rules";
@@ -223,6 +224,65 @@ export async function setMealStatus(values: unknown): Promise<ActionResult> {
 
   revalidatePath("/plan");
   return { success: true };
+}
+
+export type MealDetailResult =
+  | { error: string }
+  | { detail: MealDetail };
+
+/**
+ * Öğünün makro besin değerleri + kısa hazırlanış/ipucu. İlk çağrıda AI ile
+ * üretilip meals'e yazılır (cache); sonraki çağrılar anında DB'den döner.
+ */
+export async function getMealDetail(values: unknown): Promise<MealDetailResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+  const parsed = z.object({ mealId: z.string().uuid() }).safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz veri." };
+
+  const admin = createAdminClient();
+  if (!(await assertOwnership(admin, parsed.data.mealId, user.id))) {
+    return { error: "Yetkin yok." };
+  }
+  const { data: meal } = await admin
+    .from("meals")
+    .select("content, calories, protein_g, carb_g, fat_g, recipe, tip")
+    .eq("id", parsed.data.mealId)
+    .single();
+  if (!meal) return { error: "Öğün bulunamadı." };
+
+  // Cache: tarif daha önce üretilmişse onu döndür.
+  if (meal.recipe) {
+    return {
+      detail: {
+        protein_g: Number(meal.protein_g) || 0,
+        carb_g: Number(meal.carb_g) || 0,
+        fat_g: Number(meal.fat_g) || 0,
+        recipe: meal.recipe,
+        tip: meal.tip ?? "",
+      },
+    };
+  }
+
+  try {
+    const detail = await generateMealDetail({
+      item: meal.content,
+      calories: meal.calories ?? 0,
+    });
+    await admin
+      .from("meals")
+      .update({
+        protein_g: detail.protein_g,
+        carb_g: detail.carb_g,
+        fat_g: detail.fat_g,
+        recipe: detail.recipe,
+        tip: detail.tip,
+      })
+      .eq("id", parsed.data.mealId);
+    return { detail };
+  } catch {
+    return { error: "Detay alınamadı, tekrar dene." };
+  }
 }
 
 export async function toggleMealChecked(

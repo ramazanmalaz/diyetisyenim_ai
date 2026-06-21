@@ -288,6 +288,11 @@ export type Database = {
           checked: boolean;
           sort_order: number;
           week_index: number;
+          protein_g: number | null;
+          carb_g: number | null;
+          fat_g: number | null;
+          recipe: string | null;
+          tip: string | null;
           created_at: string;
         };
         Insert: {
@@ -302,6 +307,11 @@ export type Database = {
           checked?: boolean;
           sort_order?: number;
           week_index?: number;
+          protein_g?: number | null;
+          carb_g?: number | null;
+          fat_g?: number | null;
+          recipe?: string | null;
+          tip?: string | null;
           created_at?: string;
         };
         Update: {
@@ -316,6 +326,11 @@ export type Database = {
           checked?: boolean;
           sort_order?: number;
           week_index?: number;
+          protein_g?: number | null;
+          carb_g?: number | null;
+          fat_g?: number | null;
+          recipe?: string | null;
+          tip?: string | null;
           created_at?: string;
         };
         Relationships: [];
