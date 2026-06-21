@@ -1,0 +1,189 @@
+"use client";
+
+import { Bell, Check, Clock, Droplets, Timer, UtensilsCrossed } from "lucide-react";
+import { useState } from "react";
+
+import { saveNotificationPrefs } from "@/app/(app)/push/actions";
+import { enablePush } from "@/lib/push-client";
+import { cn } from "@/lib/utils";
+
+type Props = {
+  water: boolean;
+  meals: boolean;
+  breakfast: string;
+  lunch: string;
+  dinner: string;
+  pomodoro: boolean;
+};
+
+function Toggle({
+  on,
+  onChange,
+  label,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      onClick={() => onChange(!on)}
+      className={cn(
+        "relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ease-[var(--ease-out)]",
+        on ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-700",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ease-[var(--ease-out)]",
+          on && "translate-x-5",
+        )}
+      />
+    </button>
+  );
+}
+
+export function NotificationSettings(props: Props) {
+  const [water, setWater] = useState(props.water);
+  const [meals, setMeals] = useState(props.meals);
+  const [breakfast, setBreakfast] = useState(props.breakfast);
+  const [lunch, setLunch] = useState(props.lunch);
+  const [dinner, setDinner] = useState(props.dinner);
+  const [pomodoro, setPomodoro] = useState(props.pomodoro);
+
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    setSaved(false);
+    // Herhangi bir push bildirimi açıksa izin + abonelik sağla.
+    if (water || meals || pomodoro) {
+      const ok = await enablePush();
+      if (!ok) {
+        setBusy(false);
+        setError(
+          "Bildirim izni verilmedi. Tarayıcı/uygulama ayarlarından izin verip tekrar dene.",
+        );
+        return;
+      }
+    }
+    const res = await saveNotificationPrefs({
+      water,
+      meals,
+      breakfast,
+      lunch,
+      dinner,
+      pomodoro,
+    });
+    setBusy(false);
+    if ("error" in res) {
+      setError(res.error);
+      return;
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Su */}
+      <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-950/50 dark:text-sky-300">
+          <Droplets className="h-5 w-5" strokeWidth={2} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Su hatırlatıcısı</p>
+          <p className="text-xs text-gray-500">
+            Gün içinde (10–20 arası) düzenli su molası bildirimi.
+          </p>
+        </div>
+        <Toggle on={water} onChange={setWater} label="Su hatırlatıcısı" />
+      </div>
+
+      {/* Öğün */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300">
+            <UtensilsCrossed className="h-5 w-5" strokeWidth={2} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Öğün hatırlatmaları</p>
+            <p className="text-xs text-gray-500">
+              Kahvaltı, öğle ve akşam için zamanı geldiğinde bildirim.
+            </p>
+          </div>
+          <Toggle on={meals} onChange={setMeals} label="Öğün hatırlatmaları" />
+        </div>
+
+        {meals && (
+          <div className="mt-3 grid grid-cols-3 gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+            {(
+              [
+                ["Kahvaltı", breakfast, setBreakfast],
+                ["Öğle", lunch, setLunch],
+                ["Akşam", dinner, setDinner],
+              ] as const
+            ).map(([label, value, setter]) => (
+              <label key={label} className="flex flex-col gap-1">
+                <span className="flex items-center gap-1 text-xs font-medium text-gray-500">
+                  <Clock className="h-3 w-3" /> {label}
+                </span>
+                <input
+                  type="time"
+                  value={value}
+                  onChange={(e) => setter(e.target.value)}
+                  className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm tabular-nums dark:border-gray-700 dark:bg-gray-800"
+                />
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Pomodoro */}
+      <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-300">
+          <Timer className="h-5 w-5" strokeWidth={2} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Odak (pomodoro) bildirimleri</p>
+          <p className="text-xs text-gray-500">
+            Çalışma/mola seansları başlayıp bittiğinde bildirim.
+          </p>
+        </div>
+        <Toggle on={pomodoro} onChange={setPomodoro} label="Pomodoro bildirimleri" />
+      </div>
+
+      <p className="flex items-center gap-1.5 px-1 text-[11px] text-gray-400">
+        <Bell className="h-3 w-3" /> Bildirimler uygulama kapalıyken de gelir.
+        iPhone&apos;da uygulamanın ana ekrana eklenmiş (PWA) olması gerekir.
+      </p>
+
+      {error && <p className="px-1 text-sm text-red-600">{error}</p>}
+
+      <button
+        type="button"
+        onClick={save}
+        disabled={busy}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgba(5,150,105,0.7)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
+      >
+        {saved ? (
+          <>
+            <Check className="h-4 w-4" /> Kaydedildi
+          </>
+        ) : busy ? (
+          "Kaydediliyor…"
+        ) : (
+          "Ayarları kaydet"
+        )}
+      </button>
+    </div>
+  );
+}

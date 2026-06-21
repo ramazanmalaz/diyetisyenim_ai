@@ -1,4 +1,4 @@
-import { Crown, LogOut, Salad } from "lucide-react";
+import { Crown, LogOut, Salad, Settings } from "lucide-react";
 import Link from "next/link";
 
 import { logout } from "@/app/(auth)/actions";
@@ -47,6 +47,13 @@ export default async function AppLayout({
                 </span>
               </span>
             </span>
+            <Link
+              href="/ayarlar"
+              aria-label="Bildirim ayarları"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-[background-color,color,transform] duration-200 ease-[var(--ease-out)] hover:bg-black/5 hover:text-gray-600 active:scale-[0.94] dark:hover:bg-white/5"
+            >
+              <Settings className="h-[18px] w-[18px]" strokeWidth={1.5} />
+            </Link>
             <form action={logout}>
               <button
                 type="submit"

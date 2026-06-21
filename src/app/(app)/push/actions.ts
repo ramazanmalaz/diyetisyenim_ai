@@ -37,6 +37,42 @@ export async function savePushSubscription(
   return { ok: true };
 }
 
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Tüm bildirim tercihlerini kaydeder (merkezi /ayarlar sayfası; cron okur). */
+export async function saveNotificationPrefs(
+  values: unknown,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+  const parsed = z
+    .object({
+      water: z.boolean(),
+      meals: z.boolean(),
+      breakfast: z.string().regex(TIME_RE),
+      lunch: z.string().regex(TIME_RE),
+      dinner: z.string().regex(TIME_RE),
+      pomodoro: z.boolean(),
+    })
+    .safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz ayar." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      water_reminder_enabled: parsed.data.water,
+      meal_reminders_enabled: parsed.data.meals,
+      breakfast_time: parsed.data.breakfast,
+      lunch_time: parsed.data.lunch,
+      dinner_time: parsed.data.dinner,
+      pomodoro_reminders_enabled: parsed.data.pomodoro,
+    })
+    .eq("id", user.id);
+  if (error) return { error: "Ayarlar kaydedilemedi." };
+  return { ok: true };
+}
+
 /** Su hatırlatıcısı tercihini sunucuda kaydeder (cron bunu okur). */
 export async function setWaterReminder(enabled: unknown): Promise<ActionResult> {
   const user = await getUser();

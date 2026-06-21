@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
   const minute = ist.getUTCMinutes();
   const minuteOfDay = hour * 60 + minute;
   const dateStr = ist.toISOString().slice(0, 10);
+  const hhmm = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 
   const admin = createAdminClient();
   let sent = 0;
@@ -51,6 +52,36 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // --- Öğün hatırlatmaları (kullanıcının seçtiği saatte) ---
+  {
+    const { data: mealProfs } = await admin
+      .from("profiles")
+      .select("id, breakfast_time, lunch_time, dinner_time")
+      .eq("meal_reminders_enabled", true);
+    for (const p of mealProfs ?? []) {
+      let title: string | null = null;
+      let body = "";
+      if (p.breakfast_time === hhmm) {
+        title = "🍳 Kahvaltı vakti — UzmanDiyet";
+        body = "Güne sağlıklı bir kahvaltıyla başla. Planına göz at!";
+      } else if (p.lunch_time === hhmm) {
+        title = "🥗 Öğle yemeği vakti — UzmanDiyet";
+        body = "Öğle öğününün zamanı geldi. Afiyet olsun!";
+      } else if (p.dinner_time === hhmm) {
+        title = "🍲 Akşam yemeği vakti — UzmanDiyet";
+        body = "Akşam öğününün vakti. Bugünü güzel kapat!";
+      }
+      if (title) {
+        sent += await sendPushToUser(p.id, {
+          title,
+          body,
+          tag: "meal",
+          url: "/plan",
+        });
+      }
+    }
+  }
+
   // --- Pomodoro seans sınırları ---
   const { data: plans } = await admin
     .from("pomodoro_plans")
@@ -58,7 +89,21 @@ export async function GET(request: NextRequest) {
     .eq("plan_date", dateStr)
     .eq("muted", false);
 
+  // Pomodoro ana anahtarı kapalı olan kullanıcıları atla.
+  const pomoIds = [...new Set((plans ?? []).map((p) => p.client_id))];
+  const pomoOff = new Set<string>();
+  if (pomoIds.length) {
+    const { data: pp } = await admin
+      .from("profiles")
+      .select("id, pomodoro_reminders_enabled")
+      .in("id", pomoIds);
+    for (const x of pp ?? []) {
+      if (!x.pomodoro_reminders_enabled) pomoOff.add(x.id);
+    }
+  }
+
   for (const plan of plans ?? []) {
+    if (pomoOff.has(plan.client_id)) continue;
     const schedule = buildSchedule({
       startMin: plan.start_min,
       endMin: plan.end_min,

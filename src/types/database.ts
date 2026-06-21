@@ -35,6 +35,11 @@ export type Database = {
           dietitian_id: string | null;
           premium_until: string | null;
           water_reminder_enabled: boolean;
+          meal_reminders_enabled: boolean;
+          breakfast_time: string;
+          lunch_time: string;
+          dinner_time: string;
+          pomodoro_reminders_enabled: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -46,6 +51,11 @@ export type Database = {
           dietitian_id?: string | null;
           premium_until?: string | null;
           water_reminder_enabled?: boolean;
+          meal_reminders_enabled?: boolean;
+          breakfast_time?: string;
+          lunch_time?: string;
+          dinner_time?: string;
+          pomodoro_reminders_enabled?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -57,6 +67,11 @@ export type Database = {
           dietitian_id?: string | null;
           premium_until?: string | null;
           water_reminder_enabled?: boolean;
+          meal_reminders_enabled?: boolean;
+          breakfast_time?: string;
+          lunch_time?: string;
+          dinner_time?: string;
+          pomodoro_reminders_enabled?: boolean;
           created_at?: string;
           updated_at?: string;
         };
