@@ -42,6 +42,13 @@ export default async function PlanPage() {
     .eq("day", todayKey)
     .maybeSingle();
 
+  // Kullanıcının günlük su hedefi (ayarlardan; varsayılan 2500).
+  const { data: prefs } = await supabase
+    .from("profiles")
+    .select("water_goal_ml")
+    .maybeSingle();
+  const waterGoalMl = prefs?.water_goal_ml ?? 2500;
+
   // Son ~30 günün öğün günlüğü (tarih-bazlı yedim/atladım; RLS: kendi kaydı).
   const since = new Date();
   since.setDate(since.getDate() - 30);
@@ -128,6 +135,7 @@ export default async function PlanPage() {
         userName={profile.full_name}
         todayDate={todayKey}
         initialLogs={mealLogs ?? []}
+        waterGoalMl={waterGoalMl}
       />
     </div>
   );

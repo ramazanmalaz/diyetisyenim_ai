@@ -37,6 +37,7 @@ type Props = {
   userName: string | null;
   todayDate: string; // bugünün ISO tarihi (yyyy-mm-dd, sunucudan)
   initialLogs: { meal_id: string; log_date: string; status: string }[];
+  waterGoalMl: number;
 };
 
 type MealStatus = "eaten" | "skipped";
@@ -57,6 +58,7 @@ export function PlanBoard({
   userName,
   todayDate,
   initialLogs,
+  waterGoalMl,
 }: Props) {
   const [meals, setMeals] = useState<Meal[]>(initialMeals);
   const [selectedDay, setSelectedDay] = useState<number>(todayIdx);
@@ -226,7 +228,7 @@ export function PlanBoard({
         target={dailyTarget}
       />
 
-      <WaterTracker initialMl={initialWaterMl} />
+      <WaterTracker initialMl={initialWaterMl} goalMl={waterGoalMl} />
 
       {/* Hızlı erişim */}
       <div className="grid gap-2 sm:grid-cols-2">

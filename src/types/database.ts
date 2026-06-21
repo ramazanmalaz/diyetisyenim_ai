@@ -44,6 +44,7 @@ export type Database = {
           water_end_hour: number;
           water_interval_hours: number;
           water_amount_ml: number;
+          water_goal_ml: number;
           created_at: string;
           updated_at: string;
         };
@@ -64,6 +65,7 @@ export type Database = {
           water_end_hour?: number;
           water_interval_hours?: number;
           water_amount_ml?: number;
+          water_goal_ml?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -84,6 +86,7 @@ export type Database = {
           water_end_hour?: number;
           water_interval_hours?: number;
           water_amount_ml?: number;
+          water_goal_ml?: number;
           created_at?: string;
           updated_at?: string;
         };

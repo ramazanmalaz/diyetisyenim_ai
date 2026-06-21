@@ -13,6 +13,7 @@ type Props = {
   waterEnd: number;
   waterInterval: number;
   waterAmount: number;
+  waterGoal: number;
   meals: boolean;
   breakfast: string;
   lunch: string;
@@ -21,6 +22,7 @@ type Props = {
 };
 
 const AMOUNT_PRESETS = [150, 200, 250, 330, 500];
+const GOAL_PRESETS = [2000, 2500, 3000, 3500];
 
 function Toggle({
   on,
@@ -59,6 +61,7 @@ export function NotificationSettings(props: Props) {
   const [waterEnd, setWaterEnd] = useState(props.waterEnd);
   const [waterInterval, setWaterInterval] = useState(props.waterInterval);
   const [waterAmount, setWaterAmount] = useState(props.waterAmount);
+  const [waterGoal, setWaterGoal] = useState(props.waterGoal);
   const [meals, setMeals] = useState(props.meals);
   const [breakfast, setBreakfast] = useState(props.breakfast);
   const [lunch, setLunch] = useState(props.lunch);
@@ -90,6 +93,7 @@ export function NotificationSettings(props: Props) {
       waterEnd,
       waterInterval,
       waterAmount,
+      waterGoal,
       meals,
       breakfast,
       lunch,
@@ -122,6 +126,40 @@ export function NotificationSettings(props: Props) {
             </p>
           </div>
           <Toggle on={water} onChange={setWater} label="Su hatırlatıcısı" />
+        </div>
+
+        {/* Günlük toplam hedef (hatırlatıcıdan bağımsız; su sayacında kullanılır) */}
+        <div className="mt-3 flex flex-col gap-1.5 border-t border-gray-100 pt-3 dark:border-gray-800">
+          <span className="text-xs font-medium text-gray-500">
+            Günlük su hedefi (toplam)
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {GOAL_PRESETS.map((ml) => (
+              <button
+                key={ml}
+                type="button"
+                onClick={() => setWaterGoal(ml)}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm font-medium transition",
+                  waterGoal === ml
+                    ? "bg-sky-500 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300",
+                )}
+              >
+                {(ml / 1000).toFixed(1).replace(".", ",")} L
+              </button>
+            ))}
+            <input
+              type="number"
+              inputMode="numeric"
+              value={waterGoal}
+              min={500}
+              max={6000}
+              onChange={(e) => setWaterGoal(Number(e.target.value) || 0)}
+              aria-label="Özel günlük su hedefi (ml)"
+              className="w-24 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm tabular-nums dark:border-gray-700 dark:bg-gray-800"
+            />
+          </div>
         </div>
 
         {water && (

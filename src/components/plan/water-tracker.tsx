@@ -9,11 +9,17 @@ import { Input } from "@/components/ui/input";
 import { enablePush } from "@/lib/push-client";
 
 const GLASS_ML = 250; // 1 bardak (standart)
-const GOAL_ML = 2500; // günlük hedef
-const GLASSES = Math.round(GOAL_ML / GLASS_ML); // 10 bardak
 const REMINDER_KEY = "su_reminder_enabled";
 
-export function WaterTracker({ initialMl }: { initialMl: number }) {
+export function WaterTracker({
+  initialMl,
+  goalMl = 2500,
+}: {
+  initialMl: number;
+  goalMl?: number;
+}) {
+  const GOAL_ML = goalMl > 0 ? goalMl : 2500; // günlük hedef (kullanıcı ayarı)
+  const GLASSES = Math.max(1, Math.round(GOAL_ML / GLASS_ML)); // bardak sayısı
   const [total, setTotal] = useState(initialMl);
   const [reminderOn, setReminderOn] = useState(false);
   const [custom, setCustom] = useState("");
@@ -135,7 +141,9 @@ export function WaterTracker({ initialMl }: { initialMl: number }) {
               {liters}
               <span className="ml-0.5 text-lg font-semibold text-sky-500">L</span>
             </span>
-            <span className="text-sm text-gray-400">/ 2,5 L</span>
+            <span className="text-sm text-gray-400">
+              / {(GOAL_ML / 1000).toFixed(1).replace(".", ",")} L
+            </span>
           </p>
           <p className="mt-0.5 text-sm font-medium text-sky-700/90 dark:text-sky-300/90">
             {reached ? (
@@ -183,7 +191,12 @@ export function WaterTracker({ initialMl }: { initialMl: number }) {
           </p>
           <p className="text-[11px] text-gray-400">Bardağa dokunup işaretle</p>
         </div>
-        <div className="mt-2 grid grid-cols-10 gap-1.5">
+        <div
+          className="mt-2 grid gap-1.5"
+          style={{
+            gridTemplateColumns: `repeat(${Math.min(GLASSES, 10)}, minmax(0, 1fr))`,
+          }}
+        >
           {Array.from({ length: GLASSES }).map((_, i) => {
             const isFull = i < filled;
             return (
