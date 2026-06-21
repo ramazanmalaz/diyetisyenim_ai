@@ -1,9 +1,18 @@
 "use client";
 
-import { Bell, Check, Clock, Droplets, Timer, UtensilsCrossed } from "lucide-react";
-import { useState } from "react";
+import {
+  Bell,
+  Check,
+  Clock,
+  Droplets,
+  Sun,
+  Timer,
+  UtensilsCrossed,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { saveNotificationPrefs } from "@/app/(app)/push/actions";
+import { DEFAULT_POMODORO_CONFIG, type PomodoroConfig } from "@/lib/pomodoro";
 import { enablePush } from "@/lib/push-client";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +32,43 @@ type Props = {
 
 const AMOUNT_PRESETS = [150, 200, 250, 330, 500];
 const GOAL_PRESETS = [2000, 2500, 3000, 3500];
+// Pomodoro timer (canlı, client-side) ile paylaşılan localStorage anahtarları.
+const POMO_CFG_KEY = "pomodoro_config_v2";
+const POMO_MUTE_KEY = "pomodoro_muted";
+
+function PomoNum({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  suffix = "dk",
+}: {
+  label: string;
+  value: number;
+  onChange: (n: number) => void;
+  min: number;
+  max: number;
+  suffix?: string;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs font-medium text-gray-500">{label}</span>
+      <span className="flex items-center gap-1">
+        <input
+          type="number"
+          inputMode="numeric"
+          value={value}
+          min={min}
+          max={max}
+          onChange={(e) => onChange(Number(e.target.value) || 0)}
+          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm tabular-nums dark:border-gray-700 dark:bg-gray-800"
+        />
+        {suffix && <span className="text-xs text-gray-400">{suffix}</span>}
+      </span>
+    </label>
+  );
+}
 
 function Toggle({
   on,
@@ -66,18 +112,39 @@ export function NotificationSettings(props: Props) {
   const [breakfast, setBreakfast] = useState(props.breakfast);
   const [lunch, setLunch] = useState(props.lunch);
   const [dinner, setDinner] = useState(props.dinner);
-  const [pomodoro, setPomodoro] = useState(props.pomodoro);
+  const [pomodoro, setPomodoro] = useState(props.pomodoro); // ses & uyarı açık mı
+  const [pomoCfg, setPomoCfg] = useState<PomodoroConfig>(DEFAULT_POMODORO_CONFIG);
 
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Pomodoro ayarları canlı timer ile localStorage üzerinden paylaşılır.
+  useEffect(() => {
+    try {
+      const c = localStorage.getItem(POMO_CFG_KEY);
+      if (c) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setPomoCfg({ ...DEFAULT_POMODORO_CONFIG, ...JSON.parse(c) });
+      }
+      const m = localStorage.getItem(POMO_MUTE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (m !== null) setPomodoro(m !== "1"); // muted=1 → ses kapalı
+    } catch {
+      /* no-op */
+    }
+  }, []);
+
+  const setCfg = (p: Partial<PomodoroConfig>) =>
+    setPomoCfg((prev) => ({ ...prev, ...p }));
+
   async function save() {
     setBusy(true);
     setError(null);
     setSaved(false);
-    // Herhangi bir push bildirimi açıksa izin + abonelik sağla.
-    if (water || meals || pomodoro) {
+    // Su/öğün push (kapalıyken) için izin + abonelik gerekir. (Pomodoro canlı
+    // timer'dır; ayrı push aboneliği gerektirmez.)
+    if (water || meals) {
       const ok = await enablePush();
       if (!ok) {
         setBusy(false);
@@ -86,6 +153,13 @@ export function NotificationSettings(props: Props) {
         );
         return;
       }
+    }
+    // Pomodoro ayarlarını canlı timer'ın okuduğu localStorage'a yaz.
+    try {
+      localStorage.setItem(POMO_CFG_KEY, JSON.stringify(pomoCfg));
+      localStorage.setItem(POMO_MUTE_KEY, pomodoro ? "0" : "1");
+    } catch {
+      /* no-op */
     }
     const res = await saveNotificationPrefs({
       water,
@@ -289,18 +363,62 @@ export function NotificationSettings(props: Props) {
         )}
       </div>
 
-      {/* Pomodoro */}
-      <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-300">
-          <Timer className="h-5 w-5" strokeWidth={2} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Odak (pomodoro) bildirimleri</p>
-          <p className="text-xs text-gray-500">
-            Çalışma/mola seansları başlayıp bittiğinde bildirim.
-          </p>
+      {/* Pomodoro (Odak) */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-300">
+            <Timer className="h-5 w-5" strokeWidth={2} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Odak (Pomodoro) ses & uyarı</p>
+            <p className="text-xs text-gray-500">
+              Başlatınca tik-tak, seans geçişlerinde çan sesi + bildirim.
+            </p>
+          </div>
+          <Toggle on={pomodoro} onChange={setPomodoro} label="Pomodoro ses & uyarı" />
         </div>
-        <Toggle on={pomodoro} onChange={setPomodoro} label="Pomodoro bildirimleri" />
+
+        {/* Süreler (canlı timer ile paylaşılır) */}
+        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+          <PomoNum label="Odak" value={pomoCfg.focusMin} min={1} max={120} onChange={(n) => setCfg({ focusMin: n })} />
+          <PomoNum label="Kısa mola" value={pomoCfg.shortBreakMin} min={1} max={60} onChange={(n) => setCfg({ shortBreakMin: n })} />
+          <PomoNum label="Uzun mola" value={pomoCfg.longBreakMin} min={1} max={90} onChange={(n) => setCfg({ longBreakMin: n })} />
+          <PomoNum label="Periyot" value={pomoCfg.periods} min={1} max={12} suffix="adet" onChange={(n) => setCfg({ periods: n })} />
+        </div>
+
+        {/* Öğle arası */}
+        <div className="mt-2.5 border-t border-gray-100 pt-3 dark:border-gray-800">
+          <label className="flex items-center gap-2.5 text-sm">
+            <input
+              type="checkbox"
+              checked={pomoCfg.lunchEnabled}
+              onChange={(e) => setCfg({ lunchEnabled: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span className="flex items-center gap-1.5 font-medium">
+              <Sun className="h-4 w-4 text-amber-500" /> Öğle arası ekle
+            </span>
+          </label>
+          {pomoCfg.lunchEnabled && (
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
+              <PomoNum
+                label="Kaçıncıdan sonra"
+                value={pomoCfg.lunchAfter}
+                min={1}
+                max={Math.max(1, pomoCfg.periods - 1)}
+                suffix=""
+                onChange={(n) => setCfg({ lunchAfter: n })}
+              />
+              <PomoNum
+                label="Süresi"
+                value={pomoCfg.lunchMin}
+                min={10}
+                max={180}
+                onChange={(n) => setCfg({ lunchMin: n })}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <p className="flex items-center gap-1.5 px-1 text-[11px] text-gray-400">
