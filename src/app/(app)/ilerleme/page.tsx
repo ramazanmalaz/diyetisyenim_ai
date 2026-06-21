@@ -1,4 +1,5 @@
 import { deleteProgress } from "@/app/(app)/ilerleme/actions";
+import { GoalProgress } from "@/components/progress/goal-progress";
 import { ProgressForm } from "@/components/progress/progress-form";
 import { WeightChart } from "@/components/progress/weight-chart";
 import { requireProfile } from "@/lib/auth";
@@ -41,9 +42,50 @@ export default async function IlerlemePage() {
     .reverse()
     .map((e) => ({ date: e.entry_date, weight: Number(e.weight_kg) }));
 
+  // Hedefe ilerleme: başlangıç (intake) + hedef (plan/intake) + güncel kilo.
+  const { data: intake } = await supabase
+    .from("intakes")
+    .select("current_weight_kg, goal_loss_kg")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { data: plan } = await supabase
+    .from("diet_plans")
+    .select("goal_loss_kg, valid_to")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const goalLossKg = plan?.goal_loss_kg ?? intake?.goal_loss_kg ?? null;
+  const startKg = intake?.current_weight_kg ?? null;
+  const latestWeight = chartPoints.length
+    ? chartPoints[chartPoints.length - 1].weight
+    : startKg;
+  const showGoal =
+    startKg != null && goalLossKg != null && goalLossKg !== 0;
+  const finishDate = plan?.valid_to
+    ? new Date(plan.valid_to).toLocaleDateString("tr-TR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
       <h1 className="text-2xl font-bold">İlerleme Takibi</h1>
+
+      {showGoal && (
+        <GoalProgress
+          startKg={startKg}
+          currentKg={latestWeight ?? startKg}
+          goalKg={startKg - goalLossKg}
+          goalLossKg={goalLossKg}
+          finishDate={finishDate}
+        />
+      )}
 
       <WeightChart points={chartPoints} />
 
