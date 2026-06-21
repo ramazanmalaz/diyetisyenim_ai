@@ -40,6 +40,10 @@ export type Database = {
           lunch_time: string;
           dinner_time: string;
           pomodoro_reminders_enabled: boolean;
+          water_start_hour: number;
+          water_end_hour: number;
+          water_interval_hours: number;
+          water_amount_ml: number;
           created_at: string;
           updated_at: string;
         };
@@ -56,6 +60,10 @@ export type Database = {
           lunch_time?: string;
           dinner_time?: string;
           pomodoro_reminders_enabled?: boolean;
+          water_start_hour?: number;
+          water_end_hour?: number;
+          water_interval_hours?: number;
+          water_amount_ml?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -72,6 +80,10 @@ export type Database = {
           lunch_time?: string;
           dinner_time?: string;
           pomodoro_reminders_enabled?: boolean;
+          water_start_hour?: number;
+          water_end_hour?: number;
+          water_interval_hours?: number;
+          water_amount_ml?: number;
           created_at?: string;
           updated_at?: string;
         };

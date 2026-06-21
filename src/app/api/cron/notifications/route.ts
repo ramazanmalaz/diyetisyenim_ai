@@ -6,10 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-// Vercel cron her dakika çağırır. Türkiye saatine (UTC+3) göre:
-// - belirli saatlerde su hatırlatıcısı,
-// - pomodoro seans sınırlarında bildirim gönderir.
-const WATER_HOURS = [10, 12, 14, 16, 18, 20];
+// Her dakika çağrılır (cron-job.org). Türkiye saatine (UTC+3) göre kullanıcının
+// kişisel ayarına uygun su, öğün ve pomodoro bildirimleri gönderir.
 
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -29,26 +27,27 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient();
   let sent = 0;
 
-  // --- Su hatırlatıcısı (saat başı, belirli saatlerde) ---
-  if (minute === 0 && WATER_HOURS.includes(hour)) {
-    const { data: subs } = await admin
-      .from("push_subscriptions")
-      .select("client_id");
-    const ids = [...new Set((subs ?? []).map((s) => s.client_id))];
-    if (ids.length) {
-      const { data: profs } = await admin
-        .from("profiles")
-        .select("id")
-        .in("id", ids)
-        .eq("water_reminder_enabled", true);
-      for (const p of profs ?? []) {
-        sent += await sendPushToUser(p.id, {
-          title: "💧 Su molası — UzmanDiyet",
-          body: "Bir bardak (200 ml) su içme zamanı. Hadi bir yudum! 🥤",
-          tag: "water",
-          url: "/plan",
-        });
-      }
+  // --- Su hatırlatıcısı (kullanıcının saat aralığı + sıklığı + miktarı) ---
+  if (minute === 0) {
+    const { data: profs } = await admin
+      .from("profiles")
+      .select(
+        "id, water_start_hour, water_end_hour, water_interval_hours, water_amount_ml",
+      )
+      .eq("water_reminder_enabled", true);
+    for (const p of profs ?? []) {
+      const start = p.water_start_hour ?? 10;
+      const end = p.water_end_hour ?? 20;
+      const interval = Math.max(1, p.water_interval_hours ?? 2);
+      if (hour < start || hour > end) continue;
+      if ((hour - start) % interval !== 0) continue;
+      const ml = p.water_amount_ml ?? 200;
+      sent += await sendPushToUser(p.id, {
+        title: "💧 Su molası — UzmanDiyet",
+        body: `Bir bardak (${ml} ml) su içme zamanı. Hadi bir yudum! 🥤`,
+        tag: "water",
+        url: "/plan",
+      });
     }
   }
 

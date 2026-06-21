@@ -9,7 +9,7 @@ export default async function SettingsPage() {
   const { data } = await supabase
     .from("profiles")
     .select(
-      "water_reminder_enabled, meal_reminders_enabled, breakfast_time, lunch_time, dinner_time, pomodoro_reminders_enabled",
+      "water_reminder_enabled, water_start_hour, water_end_hour, water_interval_hours, water_amount_ml, meal_reminders_enabled, breakfast_time, lunch_time, dinner_time, pomodoro_reminders_enabled",
     )
     .maybeSingle();
 
@@ -29,6 +29,10 @@ export default async function SettingsPage() {
 
       <NotificationSettings
         water={data?.water_reminder_enabled ?? false}
+        waterStart={data?.water_start_hour ?? 10}
+        waterEnd={data?.water_end_hour ?? 20}
+        waterInterval={data?.water_interval_hours ?? 2}
+        waterAmount={data?.water_amount_ml ?? 200}
         meals={data?.meal_reminders_enabled ?? false}
         breakfast={data?.breakfast_time ?? "08:00"}
         lunch={data?.lunch_time ?? "13:00"}

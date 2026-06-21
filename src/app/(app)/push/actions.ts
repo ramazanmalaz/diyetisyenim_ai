@@ -48,20 +48,33 @@ export async function saveNotificationPrefs(
   const parsed = z
     .object({
       water: z.boolean(),
+      waterStart: z.coerce.number().int().min(5).max(22),
+      waterEnd: z.coerce.number().int().min(6).max(23),
+      waterInterval: z.coerce.number().int().min(1).max(6),
+      waterAmount: z.coerce.number().int().min(50).max(2000),
       meals: z.boolean(),
       breakfast: z.string().regex(TIME_RE),
       lunch: z.string().regex(TIME_RE),
       dinner: z.string().regex(TIME_RE),
       pomodoro: z.boolean(),
     })
+    .refine((v) => v.waterEnd > v.waterStart, {
+      message: "Bitiş saati başlangıçtan sonra olmalı.",
+    })
     .safeParse(values);
-  if (!parsed.success) return { error: "Geçersiz ayar." };
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Geçersiz ayar." };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
     .update({
       water_reminder_enabled: parsed.data.water,
+      water_start_hour: parsed.data.waterStart,
+      water_end_hour: parsed.data.waterEnd,
+      water_interval_hours: parsed.data.waterInterval,
+      water_amount_ml: parsed.data.waterAmount,
       meal_reminders_enabled: parsed.data.meals,
       breakfast_time: parsed.data.breakfast,
       lunch_time: parsed.data.lunch,
