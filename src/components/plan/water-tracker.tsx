@@ -1,21 +1,24 @@
 "use client";
 
-import { Bell, BellOff, Droplets, Minus, Plus } from "lucide-react";
+import { Bell, BellOff, GlassWater, Plus, RotateCcw, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { setWaterReminder } from "@/app/(app)/push/actions";
 import { updateWater } from "@/app/(app)/plan/actions";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { enablePush } from "@/lib/push-client";
 
-const GLASS_ML = 200; // 1 bardak
+const GLASS_ML = 250; // 1 bardak (standart)
 const GOAL_ML = 2500; // günlük hedef
+const GLASSES = Math.round(GOAL_ML / GLASS_ML); // 10 bardak
 const REMINDER_KEY = "su_reminder_enabled";
 
 export function WaterTracker({ initialMl }: { initialMl: number }) {
   const [total, setTotal] = useState(initialMl);
   const [reminderOn, setReminderOn] = useState(false);
+  const [custom, setCustom] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [lastAdd, setLastAdd] = useState(0); // son eklenen miktar (geri al için)
 
   // Hatırlatıcı durumunu localStorage'dan oku (varsayılan açık).
   useEffect(() => {
@@ -27,32 +30,30 @@ export function WaterTracker({ initialMl }: { initialMl: number }) {
     }
   }, []);
 
-  async function toggleReminder() {
-    const next = !reminderOn;
-    setReminderOn(next);
-    try {
-      localStorage.setItem(REMINDER_KEY, next ? "1" : "0");
-    } catch {
-      /* no-op */
-    }
-    // Açarken: push izni + abonelik (panel kapalıyken de bildirim için).
-    if (next) await enablePush();
-    // Sunucu tercihini güncelle (cron bunu okur).
-    void setWaterReminder(next);
-  }
-  const [custom, setCustom] = useState("");
-  const [busy, setBusy] = useState(false);
-
   const pct = Math.min(100, Math.round((total / GOAL_ML) * 100));
-  const glasses = Math.round((total / GLASS_ML) * 10) / 10;
+  const filled = Math.min(GLASSES, Math.floor(total / GLASS_ML)); // dolu bardak sayısı
+  const glassesExact = Math.round((total / GLASS_ML) * 10) / 10;
+  const remainingMl = Math.max(0, GOAL_ML - total);
+  const remainingGlasses = Math.ceil(remainingMl / GLASS_ML);
   const reached = total >= GOAL_ML;
+  const liters = (total / 1000).toFixed(total % 1000 === 0 ? 0 : 1);
 
   async function change(deltaMl: number) {
+    if (deltaMl === 0) return;
+    setLastAdd(deltaMl > 0 ? deltaMl : 0);
     setBusy(true);
     setTotal((t) => Math.max(0, t + deltaMl)); // iyimser
     const res = await updateWater({ deltaMl });
     setBusy(false);
     if ("total" in res) setTotal(res.total);
+  }
+
+  // Bir bardağa dokununca o seviyeye ayarla (mutlak → delta).
+  function tapGlass(index: number) {
+    const target = (index + 1) * GLASS_ML;
+    // Zaten o seviyedeyse (son dolu bardağa dokunma) → bir bardak geri al.
+    const next = total === target ? index * GLASS_ML : target;
+    void change(next - total);
   }
 
   async function addCustom() {
@@ -65,150 +66,222 @@ export function WaterTracker({ initialMl }: { initialMl: number }) {
   async function reset() {
     setBusy(true);
     setTotal(0);
+    setLastAdd(0);
     const res = await updateWater({ reset: true });
     setBusy(false);
     if ("total" in res) setTotal(res.total);
   }
 
+  async function toggleReminder() {
+    const next = !reminderOn;
+    setReminderOn(next);
+    try {
+      localStorage.setItem(REMINDER_KEY, next ? "1" : "0");
+    } catch {
+      /* no-op */
+    }
+    if (next) await enablePush();
+    void setWaterReminder(next);
+  }
+
   return (
-    <section className="rounded-3xl border border-sky-200 bg-sky-50/60 p-5 shadow-[var(--shadow-soft)] dark:border-sky-900/50 dark:bg-sky-950/20">
+    <section className="relative overflow-hidden rounded-3xl border border-sky-200/80 bg-gradient-to-br from-sky-50 to-cyan-50/40 p-5 shadow-[var(--shadow-soft)] dark:border-sky-900/50 dark:from-sky-950/30 dark:to-cyan-950/10">
       <style>{`
-        @keyframes water-wave { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
-        .water-wave { animation: water-wave 3.5s linear infinite; }
-        @media (prefers-reduced-motion: reduce) { .water-wave { animation: none; } }
+        @keyframes wt-rise { from { transform: translateY(8px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+        @keyframes wt-pop { 0%{transform:scale(1)} 40%{transform:scale(1.18)} 100%{transform:scale(1)} }
+        @keyframes wt-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-2px)} }
+        .wt-glass { animation: wt-rise .45s var(--ease-out) backwards; }
+        .wt-pop { animation: wt-pop .5s var(--ease-out); }
+        .wt-bob { animation: wt-bob 2.6s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .wt-glass, .wt-pop, .wt-bob { animation: none; }
+        }
       `}</style>
 
-      <div className="flex items-center gap-4">
-        {/* Animasyonlu bardak */}
-        <div className="relative h-28 w-20 shrink-0">
-          <div className="absolute inset-0 overflow-hidden rounded-t-md rounded-b-2xl border-2 border-sky-300 bg-white/70 dark:border-sky-800 dark:bg-gray-900/40">
-            {/* Su seviyesi — yükseklik yerine transform (GPU; layout tetiklemez) */}
-            <div
-              className="absolute inset-0 bg-gradient-to-b from-sky-400 to-sky-500 transition-transform duration-700 ease-[var(--ease-out)] will-change-transform"
-              style={{ transform: `translateY(${100 - pct}%)` }}
-            >
-              {/* Dalga */}
-              <div className="water-wave absolute -top-2 left-0 h-3 w-[200%] opacity-70">
-                <svg
-                  viewBox="0 0 120 12"
-                  preserveAspectRatio="none"
-                  className="h-full w-full"
-                >
-                  <path
-                    d="M0 6 Q 15 0 30 6 T 60 6 T 90 6 T 120 6 V12 H0 Z"
-                    fill="#38bdf8"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-          <Droplets className="absolute -top-1 left-1/2 h-4 w-4 -translate-x-1/2 text-sky-400" />
-        </div>
+      {/* Başlık + hatırlatıcı */}
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="flex items-center gap-2 font-semibold text-sky-900 dark:text-sky-100">
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-300">
+            <GlassWater className="h-4 w-4" strokeWidth={2} />
+          </span>
+          Su Takibi
+        </h3>
+        <button
+          type="button"
+          onClick={toggleReminder}
+          aria-pressed={reminderOn}
+          aria-label="Su içme hatırlatıcısını aç/kapat"
+          className={
+            "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 transition-colors duration-200 ease-[var(--ease-out)] " +
+            (reminderOn
+              ? "bg-sky-100 text-sky-700 ring-sky-200 hover:bg-sky-200/70 dark:bg-sky-950/50 dark:text-sky-300 dark:ring-sky-900"
+              : "bg-gray-100 text-gray-500 ring-gray-200 hover:bg-gray-200/70 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700")
+          }
+        >
+          {reminderOn ? (
+            <Bell className="h-3.5 w-3.5" strokeWidth={2} />
+          ) : (
+            <BellOff className="h-3.5 w-3.5" strokeWidth={2} />
+          )}
+          {reminderOn ? "Hatırlat: Açık" : "Hatırlat: Kapalı"}
+        </button>
+      </div>
 
-        <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-2 font-semibold text-sky-800 dark:text-sky-200">
-            Su takibi
-            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700 dark:bg-sky-900/50 dark:text-sky-300">
-              %{pct}
+      {/* Büyük sayı + ilerleme çubuğu */}
+      <div className="mt-4 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-baseline gap-1.5">
+            <span className="text-3xl font-bold tabular-nums tracking-tight text-sky-900 dark:text-sky-50">
+              {liters}
+              <span className="ml-0.5 text-lg font-semibold text-sky-500">L</span>
             </span>
+            <span className="text-sm text-gray-400">/ 2,5 L</span>
           </p>
-          <p className="mt-0.5 text-sm text-gray-700 dark:text-gray-200">
-            <b className="tabular-nums">{total}</b> / {GOAL_ML} ml
-            <span className="text-gray-400"> · ~{glasses} bardak</span>
+          <p className="mt-0.5 text-sm font-medium text-sky-700/90 dark:text-sky-300/90">
+            {reached ? (
+              <>Hedefe ulaştın 🎉</>
+            ) : (
+              <>
+                <span className="tabular-nums">{remainingGlasses}</span> bardak (
+                {(remainingMl / 1000).toFixed(1)} L) kaldı
+              </>
+            )}
           </p>
-          <p className="mt-1 text-xs text-sky-700/80 dark:text-sky-300/80">
-            {reached
-              ? "Günlük su hedefini tamamladın, harika! 💧"
-              : "Gün boyu küçük yudumlar al; günde ~2.5 L (≈10 bardak) hedefle."}
+        </div>
+        <span
+          className={
+            "shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums " +
+            (reached
+              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+              : "bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300")
+          }
+        >
+          %{pct}
+        </span>
+      </div>
+
+      <div className="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-sky-100 dark:bg-sky-950/60">
+        <div
+          className={
+            "h-full rounded-full transition-[width] duration-700 ease-[var(--ease-out)] " +
+            (reached
+              ? "bg-gradient-to-r from-emerald-400 to-sky-400"
+              : "bg-gradient-to-r from-sky-400 to-cyan-400")
+          }
+          style={{ width: `${Math.max(pct, total > 0 ? 5 : 0)}%` }}
+        />
+      </div>
+
+      {/* Dokunsal bardak dizisi */}
+      <div className="mt-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium text-sky-800/80 dark:text-sky-200/70">
+            <span className="tabular-nums font-semibold text-sky-700 dark:text-sky-300">
+              {glassesExact}
+            </span>{" "}
+            / {GLASSES} bardak
           </p>
+          <p className="text-[11px] text-gray-400">Bardağa dokunup işaretle</p>
+        </div>
+        <div className="mt-2 grid grid-cols-10 gap-1.5">
+          {Array.from({ length: GLASSES }).map((_, i) => {
+            const isFull = i < filled;
+            return (
+              <button
+                key={i}
+                type="button"
+                disabled={busy}
+                onClick={() => tapGlass(i)}
+                aria-label={`${i + 1}. bardak${isFull ? " (dolu)" : ""}`}
+                className={
+                  "wt-glass group grid aspect-[3/4] place-items-center rounded-lg ring-1 transition-[transform,background-color,box-shadow] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 active:scale-90 disabled:opacity-60 " +
+                  (isFull
+                    ? reached
+                      ? "bg-gradient-to-b from-emerald-400 to-emerald-500 text-white ring-emerald-300 shadow-[0_4px_10px_-3px_rgba(16,185,129,0.55)] dark:ring-emerald-700"
+                      : "bg-gradient-to-b from-sky-400 to-cyan-500 text-white ring-sky-300 shadow-[0_4px_10px_-3px_rgba(14,165,233,0.55)] dark:ring-sky-700"
+                    : "bg-white/70 text-sky-300 ring-sky-200/80 hover:bg-sky-50 dark:bg-white/5 dark:text-sky-700 dark:ring-sky-900")
+                }
+                style={{ animationDelay: `${i * 35}ms` }}
+              >
+                <GlassWater
+                  className={
+                    "h-4 w-4 " +
+                    (isFull && i === filled - 1 ? "wt-pop" : "")
+                  }
+                  strokeWidth={2}
+                />
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Hızlı ekleme */}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={busy}
-          onClick={() => change(GLASS_ML)}
-          className="gap-1.5"
-        >
-          <Plus className="h-4 w-4" /> 1 bardak
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={busy}
-          onClick={() => change(250)}
-          className="gap-1.5"
-        >
-          <Plus className="h-4 w-4" /> 250 ml
-        </Button>
+      {/* Birincil aksiyon + yardımcılar */}
+      <div className="mt-4 flex items-center gap-2">
         <button
           type="button"
-          disabled={busy || total === 0}
-          onClick={() => change(-GLASS_ML)}
-          aria-label="Bir bardak geri al"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-gray-100 active:scale-[0.94] disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-800"
+          disabled={busy || reached}
+          onClick={() => change(GLASS_ML)}
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-sky-500 to-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgba(2,132,199,0.7)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Minus className="h-4 w-4" />
+          <Plus className="h-4 w-4" strokeWidth={2.5} /> 1 bardak ekle
+          <span className="opacity-80">· 250 ml</span>
         </button>
+        <button
+          type="button"
+          disabled={busy || lastAdd === 0}
+          onClick={() => change(-lastAdd)}
+          aria-label="Son eklemeyi geri al"
+          title="Geri al"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-sky-200 bg-white/70 text-sky-600 transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-white active:scale-90 disabled:opacity-40 dark:border-sky-900 dark:bg-white/5 dark:text-sky-300"
+        >
+          <Undo2 className="h-4 w-4" strokeWidth={2} />
+        </button>
+      </div>
 
-        <div className="flex items-center gap-1">
+      {/* Özel miktar + sıfırla */}
+      <div className="mt-2.5 flex items-center gap-2">
+        <div className="relative flex-1">
           <Input
             type="number"
             inputMode="numeric"
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
-            placeholder="ml"
-            className="w-20"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void addCustom();
+            }}
+            placeholder="Özel miktar (ml)"
+            className="pr-14"
+            aria-label="Özel su miktarı (ml)"
           />
-          <Button type="button" disabled={busy} onClick={addCustom}>
+          <button
+            type="button"
+            disabled={busy || !custom}
+            onClick={addCustom}
+            className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded-lg bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-700 transition-colors duration-200 ease-[var(--ease-out)] hover:bg-sky-200 disabled:opacity-40 dark:bg-sky-950/60 dark:text-sky-300"
+          >
             Ekle
-          </Button>
+          </button>
         </div>
-
         {total > 0 && (
           <button
             type="button"
             disabled={busy}
             onClick={reset}
-            className="ml-auto text-xs text-gray-400 transition-colors duration-200 ease-[var(--ease-out)] hover:text-gray-600 hover:underline"
+            aria-label="Günü sıfırla"
+            title="Sıfırla"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-gray-400 transition-colors duration-200 ease-[var(--ease-out)] hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
           >
-            Sıfırla
+            <RotateCcw className="h-4 w-4" strokeWidth={2} />
           </button>
         )}
       </div>
 
-      {/* Gün içi su hatırlatıcısı */}
-      <button
-        type="button"
-        onClick={toggleReminder}
-        aria-pressed={reminderOn}
-        className="mt-4 flex w-full items-center justify-between rounded-xl bg-white/60 px-3 py-2 text-sm ring-1 ring-black/5 transition hover:bg-white dark:bg-white/5 dark:ring-white/10"
-      >
-        <span className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
-          {reminderOn ? (
-            <Bell className="h-4 w-4 text-sky-600" strokeWidth={1.75} />
-          ) : (
-            <BellOff className="h-4 w-4 text-gray-400" strokeWidth={1.75} />
-          )}
-          Su içme hatırlatıcısı
-        </span>
-        <span
-          className={
-            "rounded-full px-2 py-0.5 text-[11px] font-semibold " +
-            (reminderOn
-              ? "bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300"
-              : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400")
-          }
-        >
-          {reminderOn ? "Açık" : "Kapalı"}
-        </span>
-      </button>
       {reminderOn && (
-        <p className="mt-1 text-[11px] text-gray-400">
-          Uygulama açıkken gün içinde (08:00–22:00) birkaç saatte bir hatırlatır.
+        <p className="mt-3 flex items-center gap-1.5 text-[11px] text-sky-700/70 dark:text-sky-300/60">
+          <Bell className="h-3 w-3" strokeWidth={2} />
+          Gün içinde (08:00–22:00) düzenli olarak hatırlatırız — uygulama kapalı olsa
+          bile.
         </p>
       )}
     </section>
