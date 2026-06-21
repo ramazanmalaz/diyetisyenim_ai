@@ -1,27 +1,14 @@
-name: Bildirim cron (su + pomodoro)
+name: Bildirim cron (su + pomodoro) — YEDEK (devre dışı)
 
-# Uygulama KAPALIYKEN de push bildirimi gönderir.
-#
-# GitHub Actions zamanlı (schedule) tetiklemeleri GÜVENİLMEZ: çoğu run atlanıyor,
-# saatlerce hiç çalışmayabiliyor. Bu yüzden "kısa ama sık" yerine "uzun ve
-# zincirleme" model kullanıyoruz:
-#   - Her run ~5 saat boyunca endpoint'i 60 sn'de bir çağırır (≈dakikalık kapsama).
-#   - concurrency (cancel-in-progress:false) ile aynı anda tek run çalışır; yeni
-#     tetiklemeler "pending" bekl, biten run'ı hemen devralır → kesintisiz zincir.
-#   - schedule sadece "sıradaki run hazır beklesin" diye var; bırakılsa bile
-#     çalışan run zaten ~5 saat kapsıyor.
-# Repo PUBLIC olduğundan Actions dakikaları ücretsiz/sınırsız.
-#
-# NOT: Beklemedeki run'lar 15 dk'da bir yenilenir → Actions sekmesinde "cancelled"
-# girdiler GÖRÜNÜR; bu normaldir (işlevi etkilemez).
-# NOT: GitHub uzun süreli döngüleri kısıtlayabilir; sorun olursa cron-job.org
-# (gerçek dakikalık, ücretsiz) en sağlam alternatiftir.
+# DURUM: Birincil tetikleyici artık cron-job.org (gerçek dakikalık, güvenilir).
+# GitHub Actions schedule GÜVENİLMEZ olduğu kanıtlandı (run'ları atlıyor / saatlerce
+# "pending"de takılıyor), bu yüzden otomatik (schedule) çalışma KALDIRILDI.
+# Bu workflow yalnızca ELLE (workflow_dispatch) çalışan bir acil yedek olarak duruyor;
+# cron-job.org bir gün durursa buradan ~5 saatlik bir kapsama başlatılabilir.
 #
 # Gereken: repo secret CRON_SECRET (Settings → Secrets and variables → Actions).
 
 on:
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch: {}
 
 concurrency:
