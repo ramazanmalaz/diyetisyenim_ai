@@ -48,6 +48,55 @@ export function MessageThread({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Gerçek zamanlı: bu konuşmaya gelen yeni mesajları (async AI yanıtı, başka
+  // gönderen) anında ekle. RLS'li realtime için oturum token'ı şarttır
+  // (SSR cookie istemcisinde otomatik gelmiyor → setAuth ile veriyoruz).
+  useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!active) return;
+      if (session?.access_token) supabase.realtime.setAuth(session.access_token);
+      channel = supabase
+        .channel(`messages-${conversationId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            if (!active) return;
+            const row = payload.new as ChatMessageRow;
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === row.id)) return prev;
+              // Aynı içerikli iyimser (temp-) mesajı gerçeğiyle değiştir.
+              const cleaned = prev.filter(
+                (m) =>
+                  !(
+                    m.id.startsWith("temp-") &&
+                    m.sender_id === row.sender_id &&
+                    m.content === row.content
+                  ),
+              );
+              return [...cleaned, row];
+            });
+          },
+        )
+        .subscribe();
+    })();
+    return () => {
+      active = false;
+      if (channel) void supabase.removeChannel(channel);
+    };
+  }, [conversationId]);
+
   // Fotoğraflı mesajlar için imzalı URL üret (gizli bucket).
   useEffect(() => {
     const missing = messages

@@ -19,6 +19,7 @@ import { MedicalDisclaimer } from "@/components/medical-disclaimer";
 import { Button } from "@/components/ui/button";
 import { DAYS } from "@/lib/diet";
 import type { Food } from "@/lib/foods";
+import { computeStreak, last7Days, slotDate } from "@/lib/plan/streak";
 
 type Props = {
   planId: string;
@@ -73,17 +74,13 @@ export function PlanBoard({
     return o;
   });
 
-  // (hafta, gün) slotunu gerçek takvim tarihine eşler (TZ-güvenli, UTC aritmetiği).
-  // Anchor: bu hafta = initialWeek, bugün = todayIdx → bugüne denk gelir.
-  function slotDate(week: number, day: number): string {
-    const [y, m, d] = todayDate.split("-").map(Number);
-    const ms =
-      Date.UTC(y, m - 1, d) +
-      ((week - initialWeek) * 7 + day - todayIdx) * 86_400_000;
-    return new Date(ms).toISOString().slice(0, 10);
-  }
-
-  const selectedDate = slotDate(selectedWeek, selectedDay);
+  const selectedDate = slotDate(
+    todayDate,
+    todayIdx,
+    initialWeek,
+    selectedWeek,
+    selectedDay,
+  );
 
   // Seçili günün öğün durumları + planlanan/gerçekleşen kalori.
   const { plannedDay, consumedDay, statusByMeal } = useMemo(() => {
@@ -127,32 +124,10 @@ export function PlanBoard({
     for (const k of Object.keys(logs)) {
       if (logs[k] === "eaten") eatenDates.add(k.slice(k.indexOf("|") + 1));
     }
-    const [y, m, d] = todayDate.split("-").map(Number);
-    const key = (offset: number) =>
-      new Date(Date.UTC(y, m - 1, d) + offset * 86_400_000)
-        .toISOString()
-        .slice(0, 10);
-    const DOW = ["Pz", "Pt", "Sa", "Ça", "Pe", "Cu", "Ct"];
-
-    let st = 0;
-    const start = eatenDates.has(key(0)) ? 0 : eatenDates.has(key(-1)) ? -1 : null;
-    if (start !== null) {
-      let o = start;
-      while (eatenDates.has(key(o))) {
-        st += 1;
-        o -= 1;
-      }
-    }
-    const days = Array.from({ length: 7 }, (_, i) => {
-      const offset = -(6 - i);
-      const k = key(offset);
-      return {
-        active: eatenDates.has(k),
-        isToday: offset === 0,
-        label: DOW[new Date(k + "T00:00:00Z").getUTCDay()],
-      };
-    });
-    return { streak: st, last7: days };
+    return {
+      streak: computeStreak(eatenDates, todayDate),
+      last7: last7Days(eatenDates, todayDate),
+    };
   }, [logs, todayDate]);
 
   // Öğün durumunu döngüyle değiştir: boş → yedim → atladım → boş.
