@@ -1,4 +1,4 @@
-import { Check, Crown, Sparkles } from "lucide-react";
+import { Check, Crown, Minus, ShieldCheck, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 
 import { CheckoutButton } from "@/components/payments/checkout-button";
@@ -16,11 +16,34 @@ const STATUS_LABEL: Record<PaymentStatus, string> = {
   refunded: "İade edildi",
 };
 
-const BENEFITS = [
-  "Sınırsız AI sohbet (ücretsiz: günde 5 mesaj)",
-  "Sınırsız fotoğraf/tabak analizi (ücretsiz: günde 1)",
-  "Hazır planını fotoğraftan sınırsız okutma",
-  "Tüm özelliklere öncelikli erişim",
+// Ücretsiz vs Premium karşılaştırması. free=null → ücretsizde yok (X).
+const COMPARE: { label: string; free: string | null; premium: string }[] = [
+  { label: "AI diyetisyen sohbeti", free: "Günde 5 mesaj", premium: "Sınırsız" },
+  { label: "Fotoğraf & tabak analizi", free: "Günde 1", premium: "Sınırsız" },
+  { label: "Hazır planı fotoğraftan okuma", free: "Günde 1", premium: "Sınırsız" },
+  { label: "Kişiye özel plan & kalori takibi", free: "Var", premium: "Var" },
+  { label: "Su, öğün, pomodoro hatırlatıcıları", free: "Var", premium: "Var" },
+  { label: "Makro & tarif detayı", free: "Var", premium: "Var" },
+  { label: "Yeni özelliklere öncelikli erişim", free: null, premium: "Var" },
+];
+
+const FAQ: { q: string; a: string }[] = [
+  {
+    q: "İstediğim zaman iptal edebilir miyim?",
+    a: "Evet. Premium tek seferlik bir ödemedir, otomatik yenilenmez; süre dolunca kendiliğinden ücretsiz plana dönersin. İstediğinde tekrar alabilirsin.",
+  },
+  {
+    q: "Ödeme güvenli mi?",
+    a: "Tüm ödemeler iyzico altyapısıyla alınır. Kart bilgilerin bizde saklanmaz.",
+  },
+  {
+    q: "Süre bitince ne olur?",
+    a: "Ücretsiz plana dönersin (günde 5 sohbet + 1 fotoğraf). Planın, kayıtların ve geçmişin korunur.",
+  },
+  {
+    q: "Aylık mı yıllık mı?",
+    a: "İkisi de var. Yıllık paket aydan çok daha avantajlı; uzun süre kullanacaksan yıllık daha ekonomik.",
+  },
 ];
 
 function formatDate(iso: string): string {
@@ -31,18 +54,24 @@ function formatDate(iso: string): string {
   });
 }
 
-/** Bir tarife kartı — fiyat, süre, (yıllıkta) tasarruf ve ödeme butonu. */
+/** Bir tarife kartı — fiyat, süre, (yıllıkta) tasarruf/ayda-eşdeğer ve ödeme butonu. */
 function PlanCard({ plan, savingTl }: { plan: Plan; savingTl?: number }) {
   const annual = plan.key === "annual";
+  const perMonth = annual ? Math.round(Number(plan.price) / 12) : null;
   return (
     <div
       className={
-        "flex flex-col rounded-3xl border p-5 shadow-[var(--shadow-soft)] " +
+        "relative flex flex-col rounded-3xl border p-5 shadow-[var(--shadow-soft)] " +
         (annual
-          ? "border-emerald-300 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-950/20"
+          ? "border-emerald-400 bg-emerald-50/70 ring-1 ring-emerald-300 dark:border-emerald-700 dark:bg-emerald-950/30"
           : "border-gray-200 bg-white/70 dark:border-gray-800 dark:bg-gray-900/50")
       }
     >
+      {annual && (
+        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-3 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase shadow">
+          ⭐ Önerilen
+        </span>
+      )}
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 font-semibold">
           <Sparkles className="h-4 w-4 text-emerald-600" /> {plan.title}
@@ -53,7 +82,7 @@ function PlanCard({ plan, savingTl }: { plan: Plan; savingTl?: number }) {
           </span>
         )}
       </div>
-      <p className="mt-2 text-2xl font-bold">
+      <p className="mt-2 text-3xl font-extrabold tracking-tight">
         {plan.price} ₺
         <span className="text-sm font-normal text-gray-500">
           {" "}
@@ -61,7 +90,9 @@ function PlanCard({ plan, savingTl }: { plan: Plan; savingTl?: number }) {
         </span>
       </p>
       <p className="mt-0.5 text-xs text-gray-500">
-        {plan.days} gün premium erişim
+        {annual
+          ? `Ayda yaklaşık ${perMonth} ₺ · ${plan.days} gün erişim`
+          : `${plan.days} gün premium erişim`}
       </p>
       <div className="mt-4">
         <CheckoutButton
@@ -95,15 +126,6 @@ export default async function AbonelikPage({
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
-      <div className="flex items-center gap-2">
-        <h1 className="text-2xl font-bold">Premium</h1>
-        {ent.isPremium && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-            <Crown className="h-3.5 w-3.5" /> Aktif
-          </span>
-        )}
-      </div>
-
       {odeme === "basarili" && (
         <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
           Ödemen başarıyla alındı. Premium aktif, teşekkürler! 🎉
@@ -115,27 +137,72 @@ export default async function AbonelikPage({
         </p>
       )}
 
-      {ent.isPremium && ent.premiumUntil && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/60 px-5 py-4 dark:border-amber-900/50 dark:bg-amber-950/20">
-          <p className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-200">
-            <Crown className="h-5 w-5" /> Premium üyeliğin aktif
-          </p>
+      {ent.isPremium && ent.premiumUntil ? (
+        /* --- Premium aktif --- */
+        <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/50 p-6 text-center shadow-[var(--shadow-soft)] dark:border-amber-900/50 dark:from-amber-950/20 dark:to-orange-950/10">
+          <Crown className="mx-auto h-9 w-9 text-amber-500" />
+          <h1 className="mt-2 text-2xl font-bold text-amber-900 dark:text-amber-100">
+            Premium üyeliğin aktif
+          </h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
             <b>{formatDate(ent.premiumUntil)}</b> tarihine kadar sınırsız erişim.
             Aşağıdan ödeme yaparsan süre uzar.
           </p>
         </div>
+      ) : (
+        /* --- Dönüşüm hero --- */
+        <div className="overflow-hidden rounded-3xl border border-emerald-300 bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white shadow-[var(--shadow-float)]">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
+            <Crown className="h-3.5 w-3.5" /> UzmanDiyet Premium
+          </span>
+          <h1 className="mt-3 text-2xl font-extrabold tracking-tight">
+            AI diyetisyenin tüm gücü, sınırsız
+          </h1>
+          <p className="mt-1.5 text-sm text-emerald-50/90">
+            Tüm takip araçları zaten ücretsiz. Premium ile AI sohbet ve fotoğraf
+            analizindeki günlük limitleri kaldırırsın — istediğin kadar sor,
+            istediğin kadar tabak analiz et.
+          </p>
+        </div>
       )}
 
+      {/* Karşılaştırma tablosu */}
       {!ent.isPremium && (
-        <ul className="space-y-2">
-          {BENEFITS.map((b) => (
-            <li key={b} className="flex items-start gap-2 text-sm">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-              <span className="text-gray-700 dark:text-gray-200">{b}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800">
+          <div className="grid grid-cols-[1.5fr_1fr_1fr] bg-gray-50 text-xs font-semibold dark:bg-gray-800/50">
+            <span className="px-4 py-2.5">Özellik</span>
+            <span className="px-3 py-2.5 text-center text-gray-500">Ücretsiz</span>
+            <span className="px-3 py-2.5 text-center text-emerald-700 dark:text-emerald-300">
+              Premium
+            </span>
+          </div>
+          <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+            {COMPARE.map((row) => (
+              <li
+                key={row.label}
+                className="grid grid-cols-[1.5fr_1fr_1fr] items-center text-sm"
+              >
+                <span className="px-4 py-2.5 text-gray-700 dark:text-gray-200">
+                  {row.label}
+                </span>
+                <span className="px-3 py-2.5 text-center text-xs text-gray-500">
+                  {row.free === null ? (
+                    <X className="mx-auto h-4 w-4 text-gray-300" />
+                  ) : (
+                    row.free
+                  )}
+                </span>
+                <span className="bg-emerald-50/40 px-3 py-2.5 text-center text-xs font-medium text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-300">
+                  {row.premium === "Var" ? (
+                    <Check className="mx-auto h-4 w-4" />
+                  ) : (
+                    row.premium
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {/* Tarife kartları — aylık + yıllık */}
@@ -144,6 +211,23 @@ export default async function AbonelikPage({
         <PlanCard plan={pricing.annual} savingTl={saving} />
       </div>
 
+      {/* Güven sinyalleri */}
+      {!ent.isPremium && (
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-gray-500">
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="h-4 w-4 text-emerald-600" /> iyzico ile güvenli
+            ödeme
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Minus className="h-3 w-3 rotate-90" /> Otomatik yenileme yok
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Check className="h-4 w-4 text-emerald-600" /> İstediğin an vazgeç
+          </span>
+        </div>
+      )}
+
+      {/* Bugünkü ücretsiz kullanım */}
       {!ent.isPremium && (
         <div className="rounded-2xl bg-gray-50 px-4 py-3 text-sm dark:bg-gray-800/50">
           <p className="text-gray-600 dark:text-gray-300">
@@ -156,6 +240,30 @@ export default async function AbonelikPage({
         </div>
       )}
 
+      {/* SSS */}
+      {!ent.isPremium && (
+        <div className="space-y-2">
+          <h2 className="font-semibold">Sıkça sorulanlar</h2>
+          {FAQ.map((item) => (
+            <details
+              key={item.q}
+              className="group rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-800"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
+                {item.q}
+                <span className="text-gray-400 transition-transform group-open:rotate-45">
+                  +
+                </span>
+              </summary>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                {item.a}
+              </p>
+            </details>
+          ))}
+        </div>
+      )}
+
+      {/* Ödeme geçmişi */}
       <div className="space-y-3">
         <h2 className="font-semibold">Ödeme geçmişi</h2>
         {payments && payments.length > 0 ? (
