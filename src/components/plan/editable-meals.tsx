@@ -7,7 +7,6 @@ import {
   Minus,
   Pencil,
   Plus,
-  RotateCcw,
   Trash2,
   X,
 } from "lucide-react";
@@ -18,11 +17,9 @@ import {
   addFoodMeal,
   applyMealFromItems,
   deleteMealItem,
-  resetMealChecks,
   scanPlatePhoto,
   setMealQuantity,
   swapMealFood,
-  toggleMealChecked,
   updateMeal,
 } from "@/app/(app)/plan/actions";
 import { FoodPicker } from "@/components/plan/food-picker";
@@ -101,6 +98,8 @@ export function EditableMeals({
   selectedDay,
   setSelectedDay,
   selectedWeek,
+  statusByMeal,
+  onCycleStatus,
 }: {
   meals: Meal[];
   setMeals: Dispatch<SetStateAction<Meal[]>>;
@@ -109,6 +108,8 @@ export function EditableMeals({
   selectedDay: number;
   setSelectedDay: Dispatch<SetStateAction<number>>;
   selectedWeek: number;
+  statusByMeal: Record<string, "eaten" | "skipped">;
+  onCycleStatus: (mealId: string) => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -169,16 +170,6 @@ export function EditableMeals({
     });
   }
 
-  async function toggleChecked(meal: Meal) {
-    const next = !meal.checked;
-    patch(meal.id, { checked: next });
-    const res = await toggleMealChecked({ mealId: meal.id, checked: next });
-    if ("error" in res) {
-      patch(meal.id, { checked: meal.checked });
-      setError(res.error);
-    }
-  }
-
   async function doDelete(id: string) {
     setBusy(true);
     const res = await deleteMealItem({ mealId: id });
@@ -186,22 +177,6 @@ export function EditableMeals({
     if (!("error" in res)) {
       setMeals((prev) => prev.filter((m) => m.id !== id));
       setEditing(null);
-    }
-  }
-
-  async function doReset() {
-    if (
-      !window.confirm(
-        "Tüm günlerdeki işaretlemeler (ilerleme) sıfırlanacak. Devam edilsin mi?",
-      )
-    )
-      return;
-    const before = meals;
-    setMeals((prev) => prev.map((m) => ({ ...m, checked: false })));
-    const res = await resetMealChecks({ planId });
-    if ("error" in res) {
-      setMeals(before);
-      setError(res.error);
     }
   }
 
@@ -355,16 +330,10 @@ export function EditableMeals({
         ))}
       </div>
 
-      {/* İlerlemeyi sıfırla */}
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={doReset}
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-gray-500 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
-        >
-          <RotateCcw className="h-3.5 w-3.5" /> İlerlemeyi sıfırla
-        </button>
-      </div>
+      <p className="text-center text-[11px] text-gray-400">
+        Öğünün yanındaki yuvarlağa dokun: bir kez <b>yedim</b> ✓, tekrar{" "}
+        <b>atladım</b>, tekrar boş. Gün otomatik sıfırlanır.
+      </p>
 
       {/* Öğün accordion'ları */}
       <div className="space-y-2.5">
@@ -409,28 +378,38 @@ export function EditableMeals({
                         Henüz öğe yok.
                       </li>
                     )}
-                    {items.map((m) => (
+                    {items.map((m) => {
+                      const st = statusByMeal[m.id];
+                      const eaten = st === "eaten";
+                      const skipped = st === "skipped";
+                      const struck = eaten || skipped;
+                      return (
                       <li
                         key={m.id}
                         className="flex items-center gap-3 px-4 py-2.5"
                       >
                         <button
                           type="button"
-                          onClick={() => toggleChecked(m)}
-                          aria-pressed={m.checked}
+                          onClick={() => onCycleStatus(m.id)}
                           aria-label={
-                            m.checked
-                              ? "İşareti kaldır"
-                              : "Yapıldı olarak işaretle"
+                            eaten
+                              ? "Yedim — atladım'a çevir"
+                              : skipped
+                                ? "Atladım — işareti kaldır"
+                                : "Yedim olarak işaretle"
                           }
+                          title={eaten ? "Yedim" : skipped ? "Atladım" : "İşaretle"}
                           className={cn(
-                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition",
-                            m.checked
+                            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition active:scale-90",
+                            eaten
                               ? "border-emerald-600 bg-emerald-600 text-white"
-                              : "border-gray-300 hover:border-emerald-400 dark:border-gray-600",
+                              : skipped
+                                ? "border-gray-300 bg-gray-200 text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                                : "border-gray-300 hover:border-emerald-400 dark:border-gray-600",
                           )}
                         >
-                          {m.checked && <Check className="h-3 w-3" />}
+                          {eaten && <Check className="h-3.5 w-3.5" />}
+                          {skipped && <X className="h-3.5 w-3.5" />}
                         </button>
 
                         {(() => {
@@ -450,7 +429,7 @@ export function EditableMeals({
                               <p
                                 className={cn(
                                   "truncate text-sm font-medium transition",
-                                  m.checked && "text-gray-400 line-through",
+                                  struck && "text-gray-400 line-through",
                                 )}
                               >
                                 {nameLine}
@@ -459,7 +438,7 @@ export function EditableMeals({
                                 <p
                                   className={cn(
                                     "text-xs text-gray-400",
-                                    m.checked && "line-through",
+                                    struck && "line-through",
                                   )}
                                 >
                                   {amountLine}
@@ -472,7 +451,7 @@ export function EditableMeals({
                         <span
                           className={cn(
                             "shrink-0 text-xs tabular-nums text-gray-500",
-                            m.checked && "text-gray-300 line-through",
+                            struck && "text-gray-300 line-through",
                           )}
                         >
                           {m.calories ?? 0} kcal
@@ -486,7 +465,8 @@ export function EditableMeals({
                           <Pencil className="h-4 w-4" />
                         </button>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
 
                   <div className="space-y-2 border-t border-gray-100/70 px-4 py-3 dark:border-gray-800/70">

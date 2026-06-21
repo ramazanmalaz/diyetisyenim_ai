@@ -4,7 +4,11 @@ import { LineChart, MessageCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { resetPlan, regeneratePlan } from "@/app/(app)/plan/actions";
+import {
+  resetPlan,
+  regeneratePlan,
+  setMealStatus,
+} from "@/app/(app)/plan/actions";
 import { openAssistant } from "@/app/(app)/sohbet/actions";
 import { CalorieFigure } from "@/components/plan/calorie-figure";
 import { CalorieHero } from "@/components/plan/calorie-hero";
@@ -29,7 +33,11 @@ type Props = {
   totalWeeks: number;
   validTo: string | null;
   userName: string | null;
+  todayDate: string; // bugünün ISO tarihi (yyyy-mm-dd, sunucudan)
+  initialLogs: { meal_id: string; log_date: string; status: string }[];
 };
+
+type MealStatus = "eaten" | "skipped";
 
 export function PlanBoard({
   planId,
@@ -45,6 +53,8 @@ export function PlanBoard({
   totalWeeks,
   validTo,
   userName,
+  todayDate,
+  initialLogs,
 }: Props) {
   const [meals, setMeals] = useState<Meal[]>(initialMeals);
   const [selectedDay, setSelectedDay] = useState<number>(todayIdx);
@@ -52,19 +62,75 @@ export function PlanBoard({
     Math.min(initialWeek, Math.max(0, weekCount - 1)),
   );
 
-  // Özet, SEÇİLİ hafta+günün canlı öğün state'inden hesaplanır.
-  const { plannedDay, consumedDay } = useMemo(() => {
+  // Öğün günlüğü: `${mealId}|${date}` → 'eaten' | 'skipped'.
+  const [logs, setLogs] = useState<Record<string, MealStatus>>(() => {
+    const o: Record<string, MealStatus> = {};
+    for (const l of initialLogs) {
+      o[`${l.meal_id}|${l.log_date}`] =
+        l.status === "skipped" ? "skipped" : "eaten";
+    }
+    return o;
+  });
+
+  // (hafta, gün) slotunu gerçek takvim tarihine eşler (TZ-güvenli, UTC aritmetiği).
+  // Anchor: bu hafta = initialWeek, bugün = todayIdx → bugüne denk gelir.
+  function slotDate(week: number, day: number): string {
+    const [y, m, d] = todayDate.split("-").map(Number);
+    const ms =
+      Date.UTC(y, m - 1, d) +
+      ((week - initialWeek) * 7 + day - todayIdx) * 86_400_000;
+    return new Date(ms).toISOString().slice(0, 10);
+  }
+
+  const selectedDate = slotDate(selectedWeek, selectedDay);
+
+  // Seçili günün öğün durumları + planlanan/gerçekleşen kalori.
+  const { plannedDay, consumedDay, statusByMeal } = useMemo(() => {
     const dayRows = meals.filter(
       (m) =>
         (m.week_index ?? 0) === selectedWeek && m.day_of_week === selectedDay,
     );
+    const byMeal: Record<string, MealStatus> = {};
+    let consumed = 0;
+    for (const m of dayRows) {
+      const s = logs[`${m.id}|${selectedDate}`];
+      if (s) byMeal[m.id] = s;
+      if (s === "eaten") consumed += m.calories ?? 0;
+    }
     return {
       plannedDay: dayRows.reduce((s, m) => s + (m.calories ?? 0), 0),
-      consumedDay: dayRows
-        .filter((m) => m.checked)
-        .reduce((s, m) => s + (m.calories ?? 0), 0),
+      consumedDay: consumed,
+      statusByMeal: byMeal,
     };
-  }, [meals, selectedDay, selectedWeek]);
+  }, [meals, selectedDay, selectedWeek, logs, selectedDate]);
+
+  // Öğün durumunu döngüyle değiştir: boş → yedim → atladım → boş.
+  async function cycleStatus(mealId: string) {
+    const key = `${mealId}|${selectedDate}`;
+    const cur = logs[key];
+    const next: MealStatus | undefined =
+      cur === undefined ? "eaten" : cur === "eaten" ? "skipped" : undefined;
+    setLogs((prev) => {
+      const n = { ...prev };
+      if (next) n[key] = next;
+      else delete n[key];
+      return n;
+    });
+    const res = await setMealStatus({
+      mealId,
+      date: selectedDate,
+      status: next ?? "clear",
+    });
+    if (res && "error" in res) {
+      // geri al
+      setLogs((prev) => {
+        const n = { ...prev };
+        if (cur) n[key] = cur;
+        else delete n[key];
+        return n;
+      });
+    }
+  }
 
   const heroTitle =
     selectedDay === todayIdx ? "Bugünün özeti" : `${DAYS[selectedDay]} özeti`;
@@ -155,6 +221,8 @@ export function PlanBoard({
         selectedDay={selectedDay}
         setSelectedDay={setSelectedDay}
         selectedWeek={selectedWeek}
+        statusByMeal={statusByMeal}
+        onCycleStatus={cycleStatus}
       />
 
       {/* İlerlemeye göre programı güncelle (AI planları için) */}
@@ -210,6 +278,7 @@ export function PlanBoard({
         meals={meals}
         selectedDay={selectedDay}
         selectedWeek={selectedWeek}
+        statusByMeal={statusByMeal}
         userName={userName}
       />
     </div>

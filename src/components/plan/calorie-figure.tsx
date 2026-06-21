@@ -256,6 +256,7 @@ export function CalorieFigure({
   meals,
   selectedDay,
   selectedWeek = 0,
+  statusByMeal = {},
   userName = null,
 }: {
   consumed: number;
@@ -263,6 +264,7 @@ export function CalorieFigure({
   meals: Meal[];
   selectedDay: number;
   selectedWeek?: number;
+  statusByMeal?: Record<string, "eaten" | "skipped">;
   userName?: string | null;
 }) {
   const t = target ?? 0;
@@ -279,7 +281,9 @@ export function CalorieFigure({
   const dayItems = meals.filter(
     (m) => (m.week_index ?? 0) === selectedWeek && m.day_of_week === selectedDay,
   );
-  const allChecked = dayItems.length > 0 && dayItems.every((m) => m.checked);
+  const allChecked =
+    dayItems.length > 0 &&
+    dayItems.every((m) => statusByMeal[m.id] === "eaten");
   const hasSweet = dayItems.some((m) => isSweet(m.content));
 
   // Öncelik: kalori aşımı (şişman+kızgın) her şeyin önünde → sonra doyduk → şekerli.

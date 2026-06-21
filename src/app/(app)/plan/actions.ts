@@ -177,6 +177,54 @@ async function fetchFood(
   return data;
 }
 
+/**
+ * Bir öğünün BELİRLİ BİR TARİHTEKİ durumunu kaydeder: yedim ('eaten'),
+ * atladım ('skipped') veya işareti kaldır ('clear'). Tarih-bazlı olduğu için
+ * her gün otomatik temiz başlar ve geçmiş saklanır (meal_logs).
+ */
+export async function setMealStatus(values: unknown): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const parsed = z
+    .object({
+      mealId: z.string().uuid(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      status: z.enum(["eaten", "skipped", "clear"]),
+    })
+    .safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz veri." };
+
+  const admin = createAdminClient();
+  if (!(await assertOwnership(admin, parsed.data.mealId, user.id))) {
+    return { error: "Yetkin yok." };
+  }
+
+  if (parsed.data.status === "clear") {
+    const { error } = await admin
+      .from("meal_logs")
+      .delete()
+      .eq("client_id", user.id)
+      .eq("meal_id", parsed.data.mealId)
+      .eq("log_date", parsed.data.date);
+    if (error) return { error: "Güncellenemedi." };
+  } else {
+    const { error } = await admin.from("meal_logs").upsert(
+      {
+        client_id: user.id,
+        meal_id: parsed.data.mealId,
+        log_date: parsed.data.date,
+        status: parsed.data.status,
+      },
+      { onConflict: "client_id,meal_id,log_date" },
+    );
+    if (error) return { error: "Güncellenemedi." };
+  }
+
+  revalidatePath("/plan");
+  return { success: true };
+}
+
 export async function toggleMealChecked(
   values: unknown,
 ): Promise<ActionResult> {

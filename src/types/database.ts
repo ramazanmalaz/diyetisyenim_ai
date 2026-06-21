@@ -557,6 +557,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      meal_logs: {
+        Row: {
+          id: string;
+          client_id: string;
+          meal_id: string;
+          log_date: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          meal_id: string;
+          log_date: string;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          meal_id?: string;
+          log_date?: string;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       pomodoro_plans: {
         Row: {
           client_id: string;

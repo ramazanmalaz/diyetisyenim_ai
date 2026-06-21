@@ -42,6 +42,17 @@ export default async function PlanPage() {
     .eq("day", todayKey)
     .maybeSingle();
 
+  // Son ~30 günün öğün günlüğü (tarih-bazlı yedim/atladım; RLS: kendi kaydı).
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const sinceKey = since.toISOString().slice(0, 10);
+  const { data: mealLogs } = plan
+    ? await supabase
+        .from("meal_logs")
+        .select("meal_id, log_date, status")
+        .gte("log_date", sinceKey)
+    : { data: [] };
+
   const todayIdx = (new Date().getDay() + 6) % 7; // 0=Pzt ... 6=Paz
 
   // Çok-haftalık: saklanan farklı hafta sayısı + bugünün denk geldiği hafta.
@@ -115,6 +126,8 @@ export default async function PlanPage() {
         totalWeeks={totalWeeks}
         validTo={plan.valid_to}
         userName={profile.full_name}
+        todayDate={todayKey}
+        initialLogs={mealLogs ?? []}
       />
     </div>
   );
