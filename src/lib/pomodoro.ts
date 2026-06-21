@@ -106,6 +106,84 @@ export function resumeIndex(schedule: Schedule, completedSessions: number): numb
   return idx === -1 ? schedule.segments.length : idx;
 }
 
+// ---------------------------------------------------------------------------
+// Klasik Pomodoro (canlı geri-sayım) modeli — Pomofocus tarzı.
+// 25 dk odak + 5 dk mola × N periyot, sonunda uzun mola; opsiyonel öğle arası.
+// ---------------------------------------------------------------------------
+
+export type PomoMode = "focus" | "short" | "long" | "lunch";
+
+export type PomodoroConfig = {
+  focusMin: number; // odak süresi (vars. 25)
+  shortBreakMin: number; // kısa mola (vars. 5)
+  longBreakMin: number; // uzun mola (vars. 15)
+  periods: number; // uzun moladan önceki odak sayısı (vars. 4)
+  lunchEnabled: boolean;
+  lunchAfter: number; // kaçıncı odaktan sonra öğle arası (1..periods-1)
+  lunchMin: number; // öğle arası süresi (vars. 45)
+};
+
+export const DEFAULT_POMODORO_CONFIG: PomodoroConfig = {
+  focusMin: 25,
+  shortBreakMin: 5,
+  longBreakMin: 15,
+  periods: 4,
+  lunchEnabled: false,
+  lunchAfter: 2,
+  lunchMin: 45,
+};
+
+export type Phase = { kind: PomoMode; min: number; pomodoro: number };
+
+/** Yapılandırmadan bir tam döngünün faz dizisini üretir (plan görseli için). */
+export function buildPhases(c: PomodoroConfig): Phase[] {
+  const periods = Math.max(1, Math.round(c.periods));
+  const phases: Phase[] = [];
+  for (let i = 1; i <= periods; i += 1) {
+    phases.push({ kind: "focus", min: c.focusMin, pomodoro: i });
+    const isLast = i === periods;
+    phases.push({
+      kind: isLast ? "long" : "short",
+      min: isLast ? c.longBreakMin : c.shortBreakMin,
+      pomodoro: i,
+    });
+    if (c.lunchEnabled && i === c.lunchAfter && !isLast) {
+      phases.push({ kind: "lunch", min: c.lunchMin, pomodoro: i });
+    }
+  }
+  return phases;
+}
+
+/** Süresi (dk) — moda göre. */
+export function modeMinutes(c: PomodoroConfig, mode: PomoMode): number {
+  switch (mode) {
+    case "focus":
+      return c.focusMin;
+    case "short":
+      return c.shortBreakMin;
+    case "long":
+      return c.longBreakMin;
+    case "lunch":
+      return c.lunchMin;
+  }
+}
+
+/**
+ * Mevcut faz bitince sıradaki modu belirler.
+ * Odak bittiğinde: tamamlanan odak sayısı (count) öğle arasına denk geliyorsa
+ * öğle, periyot katıysa uzun mola, değilse kısa mola. Mola bittiğinde: odak.
+ */
+export function nextMode(
+  c: PomodoroConfig,
+  current: PomoMode,
+  completedFocus: number,
+): PomoMode {
+  if (current !== "focus") return "focus";
+  if (c.lunchEnabled && completedFocus === c.lunchAfter) return "lunch";
+  if (completedFocus % Math.max(1, c.periods) === 0) return "long";
+  return "short";
+}
+
 /** "5 sa 25 dk" gibi okunaklı süre. */
 export function humanMinutes(total: number): string {
   const h = Math.floor(total / 60);

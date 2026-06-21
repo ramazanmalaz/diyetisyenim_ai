@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildPhases,
   buildSchedule,
+  DEFAULT_POMODORO_CONFIG,
   hhmmToMin,
   humanMinutes,
   minToHHMM,
+  nextMode,
   resumeIndex,
 } from "@/lib/pomodoro";
 
@@ -92,5 +95,49 @@ describe("humanMinutes", () => {
     expect(humanMinutes(25)).toBe("25 dk");
     expect(humanMinutes(60)).toBe("1 sa");
     expect(humanMinutes(115)).toBe("1 sa 55 dk");
+  });
+});
+
+describe("buildPhases (klasik pomodoro)", () => {
+  it("varsayılan: 4 odak + 3 kısa + 1 uzun = 8 faz", () => {
+    const ph = buildPhases(DEFAULT_POMODORO_CONFIG);
+    expect(ph).toHaveLength(8);
+    expect(ph.filter((p) => p.kind === "focus")).toHaveLength(4);
+    expect(ph.filter((p) => p.kind === "short")).toHaveLength(3);
+    expect(ph.filter((p) => p.kind === "long")).toHaveLength(1);
+    expect(ph[0]).toMatchObject({ kind: "focus", min: 25 });
+    expect(ph[ph.length - 1]).toMatchObject({ kind: "long", min: 15 });
+  });
+
+  it("öğle arası 2. odaktan sonra eklenir", () => {
+    const ph = buildPhases({
+      ...DEFAULT_POMODORO_CONFIG,
+      lunchEnabled: true,
+      lunchAfter: 2,
+      lunchMin: 45,
+    });
+    const lunch = ph.filter((p) => p.kind === "lunch");
+    expect(lunch).toHaveLength(1);
+    expect(lunch[0].min).toBe(45);
+  });
+});
+
+describe("nextMode (geçiş mantığı)", () => {
+  const c = DEFAULT_POMODORO_CONFIG;
+  it("odak sonrası kısa mola (periyot katı değilse)", () => {
+    expect(nextMode(c, "focus", 1)).toBe("short");
+    expect(nextMode(c, "focus", 3)).toBe("short");
+  });
+  it("4. odaktan sonra uzun mola", () => {
+    expect(nextMode(c, "focus", 4)).toBe("long");
+    expect(nextMode(c, "focus", 8)).toBe("long");
+  });
+  it("mola sonrası odak", () => {
+    expect(nextMode(c, "short", 2)).toBe("focus");
+    expect(nextMode(c, "long", 4)).toBe("focus");
+  });
+  it("öğle arası açıksa ilgili odaktan sonra öğle", () => {
+    const lc = { ...c, lunchEnabled: true, lunchAfter: 2 };
+    expect(nextMode(lc, "focus", 2)).toBe("lunch");
   });
 });
