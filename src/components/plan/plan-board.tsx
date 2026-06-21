@@ -12,6 +12,7 @@ import {
 import { openAssistant } from "@/app/(app)/sohbet/actions";
 import { CalorieFigure } from "@/components/plan/calorie-figure";
 import { CalorieHero } from "@/components/plan/calorie-hero";
+import { DailySummary } from "@/components/plan/daily-summary";
 import { WaterTracker } from "@/components/plan/water-tracker";
 import { EditableMeals, type Meal } from "@/components/plan/editable-meals";
 import { MedicalDisclaimer } from "@/components/medical-disclaimer";
@@ -104,6 +105,56 @@ export function PlanBoard({
     };
   }, [meals, selectedDay, selectedWeek, logs, selectedDate]);
 
+  // Bugünün öğünleri (canlı) — günlük özet için.
+  const todayStats = useMemo(() => {
+    const rows = meals.filter(
+      (m) => (m.week_index ?? 0) === initialWeek && m.day_of_week === todayIdx,
+    );
+    let eaten = 0;
+    let cal = 0;
+    for (const m of rows) {
+      if (logs[`${m.id}|${todayDate}`] === "eaten") {
+        eaten += 1;
+        cal += m.calories ?? 0;
+      }
+    }
+    return { eaten, planned: rows.length, cal };
+  }, [meals, logs, initialWeek, todayIdx, todayDate]);
+
+  // Seri (streak) + son 7 gün — canlı logs'tan yenen tarih kümesi üzerinden.
+  const { streak, last7 } = useMemo(() => {
+    const eatenDates = new Set<string>();
+    for (const k of Object.keys(logs)) {
+      if (logs[k] === "eaten") eatenDates.add(k.slice(k.indexOf("|") + 1));
+    }
+    const [y, m, d] = todayDate.split("-").map(Number);
+    const key = (offset: number) =>
+      new Date(Date.UTC(y, m - 1, d) + offset * 86_400_000)
+        .toISOString()
+        .slice(0, 10);
+    const DOW = ["Pz", "Pt", "Sa", "Ça", "Pe", "Cu", "Ct"];
+
+    let st = 0;
+    const start = eatenDates.has(key(0)) ? 0 : eatenDates.has(key(-1)) ? -1 : null;
+    if (start !== null) {
+      let o = start;
+      while (eatenDates.has(key(o))) {
+        st += 1;
+        o -= 1;
+      }
+    }
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const offset = -(6 - i);
+      const k = key(offset);
+      return {
+        active: eatenDates.has(k),
+        isToday: offset === 0,
+        label: DOW[new Date(k + "T00:00:00Z").getUTCDay()],
+      };
+    });
+    return { streak: st, last7: days };
+  }, [logs, todayDate]);
+
   // Öğün durumunu döngüyle değiştir: boş → yedim → atladım → boş.
   async function cycleStatus(mealId: string) {
     const key = `${mealId}|${selectedDate}`;
@@ -189,6 +240,15 @@ export function PlanBoard({
         estimatedWeeks={estimatedWeeks}
         plannedToday={plannedDay}
         consumedToday={consumedDay}
+      />
+
+      <DailySummary
+        streak={streak}
+        days={last7}
+        eatenToday={todayStats.eaten}
+        plannedToday={todayStats.planned}
+        consumedCal={todayStats.cal}
+        target={dailyTarget}
       />
 
       <WaterTracker initialMl={initialWaterMl} />
