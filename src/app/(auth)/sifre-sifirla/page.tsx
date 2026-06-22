@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { requestPasswordReset } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createClient } from "@/lib/supabase/client";
 import {
   resetRequestSchema,
   type ResetRequestInput,
@@ -25,9 +25,14 @@ export default function ResetPasswordPage() {
 
   async function onSubmit(values: ResetRequestInput) {
     setServerError(null);
-    const result = await requestPasswordReset(values);
-    if (result && "error" in result) {
-      setServerError(result.error);
+    // İstek TARAYICIDA yapılır: PKCE code_verifier'ı tarayıcı kendi çerezine
+    // yazar; böylece /auth/confirm exchange sırasında verifier bulunur.
+    const supabase = createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+      redirectTo: `${window.location.origin}/auth/confirm?next=/sifre-yenile`,
+    });
+    if (error) {
+      setServerError("İşlem başarısız. Lütfen tekrar deneyin.");
       return;
     }
     setDone(true);
