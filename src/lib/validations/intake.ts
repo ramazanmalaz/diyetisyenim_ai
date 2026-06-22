@@ -1,11 +1,55 @@
 import { z } from "zod";
 
+export const DIET_TYPES = [
+  "balanced",
+  "mediterranean",
+  "lowcarb",
+  "highprotein",
+  "vegetarian",
+  "intermittent",
+] as const;
+export type DietType = (typeof DIET_TYPES)[number];
+
+export const DIET_TYPE_OPTIONS: {
+  value: DietType;
+  label: string;
+  desc: string;
+}[] = [
+  { value: "balanced", label: "Dengeli beslenme", desc: "Her gruptan dengeli" },
+  {
+    value: "mediterranean",
+    label: "Akdeniz tipi",
+    desc: "Zeytinyağı, sebze, balık",
+  },
+  {
+    value: "lowcarb",
+    label: "Düşük karbonhidrat",
+    desc: "Az un/şeker, çok protein",
+  },
+  {
+    value: "highprotein",
+    label: "Yüksek protein",
+    desc: "Kas dostu, tok tutar",
+  },
+  { value: "vegetarian", label: "Vejetaryen", desc: "Et yok, bitki ağırlıklı" },
+  {
+    value: "intermittent",
+    label: "Aralıklı oruç (16:8)",
+    desc: "Belirli saat aralığında",
+  },
+];
+
+export const DIET_TYPE_LABEL: Record<DietType, string> = Object.fromEntries(
+  DIET_TYPE_OPTIONS.map((o) => [o.value, o.label]),
+) as Record<DietType, string>;
+
 export const intakeSchema = z.object({
   sex: z.enum(["female", "male"]),
   age: z.coerce.number().int().min(12).max(100),
   heightCm: z.coerce.number().min(120).max(230),
   currentWeightKg: z.coerce.number().min(30).max(400),
   activity: z.enum(["sedentary", "light", "moderate", "active"]),
+  dietType: z.enum(DIET_TYPES).optional().default("balanced"),
   goalLossKg: z.coerce.number().min(1).max(60),
   goalWeeks: z.coerce.number().int().min(1).max(104),
   healthNotes: z

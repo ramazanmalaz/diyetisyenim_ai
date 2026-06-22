@@ -8,11 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ACTIVITY_LABEL } from "@/lib/diet/calories";
-import { GOAL_OPTIONS } from "@/lib/validations/intake";
+import {
+  DIET_TYPE_OPTIONS,
+  GOAL_OPTIONS,
+  type DietType,
+} from "@/lib/validations/intake";
 import { cn } from "@/lib/utils";
 import type { ActivityLevel, Sex } from "@/types/database";
 
-const TOTAL = 8;
+const TOTAL = 9;
 
 type Answers = {
   sex?: Sex;
@@ -20,6 +24,7 @@ type Answers = {
   heightCm: string;
   currentWeightKg: string;
   activity?: ActivityLevel;
+  dietType?: DietType;
   goalLossKg?: number;
   goalWeeks?: number;
   healthNotes: string;
@@ -27,14 +32,15 @@ type Answers = {
 };
 
 const QUESTIONS = [
-  "Öncelikle, biyolojik cinsiyetin nedir? (kalori hesabı için)",
+  "Tanışalım! Biyolojik cinsiyetin nedir? (kalori hesabı için gerekli)",
   "Kaç yaşındasın?",
-  "Boyun kaç cm?",
-  "Şu anki kilon kaç kg?",
-  "Günlük hareket düzeyin nasıl?",
-  "Hedefin ne? Ne kadar sürede kaç kilo vermek istersin?",
-  "Bilmem gereken bir sağlık durumun var mı? (varsa yaz, yoksa boş geç)",
-  "Sevmediğin ya da yemediğin besinler var mı? (yoksa boş geç)",
+  "Boyun kaç santim?",
+  "Şu an kaç kilosun?",
+  "Gün içinde ne kadar hareketlisin?",
+  "Nasıl bir beslenme tarzı sana daha uygun?",
+  "Peki hedefin ne? Ne kadar sürede kaç kilo?",
+  "Bilmemiz gereken bir sağlık durumun var mı? (yoksa boş geç)",
+  "Son olarak: sevmediğin ya da yemediğin besinler? (yoksa boş geç)",
 ];
 
 const ACTIVITIES: ActivityLevel[] = [
@@ -102,6 +108,7 @@ export function IntakeWizard() {
       heightCm: a.heightCm,
       currentWeightKg: a.currentWeightKg,
       activity: a.activity,
+      dietType: a.dietType ?? "balanced",
       goalLossKg: a.goalLossKg,
       goalWeeks: a.goalWeeks,
       healthNotes: a.healthNotes,
@@ -218,6 +225,29 @@ export function IntakeWizard() {
 
           {step === 5 && (
             <div className="grid gap-2">
+              {DIET_TYPE_OPTIONS.map((d) => (
+                <Button
+                  key={d.value}
+                  variant={a.dietType === d.value ? "primary" : "outline"}
+                  className="h-auto justify-start py-2.5 text-left"
+                  onClick={() => {
+                    setA({ ...a, dietType: d.value });
+                    next();
+                  }}
+                >
+                  <span className="flex flex-col">
+                    <span className="font-medium">{d.label}</span>
+                    <span className="text-xs font-normal opacity-70">
+                      {d.desc}
+                    </span>
+                  </span>
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="grid gap-2">
               {GOAL_OPTIONS.map((g) => (
                 <Button
                   key={g.label}
@@ -282,7 +312,7 @@ export function IntakeWizard() {
             </div>
           )}
 
-          {step === 6 && (
+          {step === 7 && (
             <TextStep
               value={a.healthNotes}
               onChange={(v) => setA({ ...a, healthNotes: v })}
@@ -291,7 +321,7 @@ export function IntakeWizard() {
             />
           )}
 
-          {step === 7 && (
+          {step === 8 && (
             <div className="space-y-3">
               <textarea
                 value={a.dislikes}
@@ -309,7 +339,7 @@ export function IntakeWizard() {
         </div>
       </div>
 
-      {step > 0 && step < 7 && (
+      {step > 0 && step < 8 && (
         <button
           type="button"
           onClick={() => setStep((s) => Math.max(0, s - 1))}

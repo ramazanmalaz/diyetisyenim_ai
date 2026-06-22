@@ -14,7 +14,7 @@ import { computeCaloriePlan, ACTIVITY_LABEL } from "@/lib/diet/calories";
 import { consumeAiCredit } from "@/lib/entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { intakeSchema } from "@/lib/validations/intake";
+import { DIET_TYPE_LABEL, intakeSchema } from "@/lib/validations/intake";
 import { manualPlanSchema } from "@/lib/validations/manual-plan";
 import {
   ALLOWED_PHOTO_TYPES,
@@ -70,6 +70,7 @@ export async function generatePlan(values: unknown): Promise<GenerateResult> {
     `Boy: ${v.heightCm} cm`,
     `Kilo: ${v.currentWeightKg} kg`,
     `Aktivite: ${ACTIVITY_LABEL[v.activity]}`,
+    `Tercih edilen diyet tipi: ${DIET_TYPE_LABEL[v.dietType]} (plan bu tarza uygun olmalı)`,
     `Hedef: ${v.goalLossKg} kg / ${v.goalWeeks} hafta`,
     v.healthNotes ? `Sağlık: ${v.healthNotes}` : null,
     v.dislikes ? `Sevmedikleri: ${v.dislikes}` : null,
