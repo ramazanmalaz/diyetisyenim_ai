@@ -779,6 +779,7 @@ export async function importUsdaFood(values: unknown): Promise<{ food: Food } | 
 export type ScanItem = { name: string; calories: number };
 export type ScanResult =
   | { error: string }
+  | { quota: true }
   | { items: ScanItem[]; note: string };
 
 /** Fotoğrafı analiz edip tanınan öğeleri döndürür (kaydetmez). */
@@ -786,13 +787,10 @@ export async function scanPlatePhoto(formData: FormData): Promise<ScanResult> {
   const user = await getUser();
   if (!user) return { error: "Oturum bulunamadı." };
 
-  // Freemium: günde 1 ücretsiz foto analizi; üstü premium.
+  // Freemium: günde 1 ücretsiz foto analizi; üstü premium → popup.
   const credit = await consumeAiCredit(user.id, "vision");
   if (!credit.ok) {
-    return {
-      error:
-        "Günlük ücretsiz fotoğraf analizi hakkın doldu. Sınırsız analiz için /abonelik üzerinden Premium'a geçebilir ya da yarın tekrar deneyebilirsin.",
-    };
+    return { quota: true };
   }
 
   const photo = formData.get("photo");

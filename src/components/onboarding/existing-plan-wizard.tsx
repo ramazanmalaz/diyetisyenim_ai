@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DAYS_SHORT, MEAL_TYPES } from "@/lib/diet";
+import { triggerPremiumWall } from "@/lib/premium-wall";
 import { cn } from "@/lib/utils";
 import type { MealType } from "@/types/database";
 
@@ -103,6 +104,10 @@ export function ExistingPlanWizard() {
     setNote(null);
     const res = await extractPlanFromPhoto(buildFormData(files));
     setBusy("");
+    if ("quota" in res) {
+      triggerPremiumWall("vision");
+      return;
+    }
     if ("error" in res) {
       setError(res.error);
       return;

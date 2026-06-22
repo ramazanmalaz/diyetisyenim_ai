@@ -12,7 +12,7 @@ import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
 import { getAssistantConversationId } from "@/lib/chat/assistant";
 import { DAYS, mealTypeLabel, mealTypeOrder } from "@/lib/diet";
-import { consumeAiCredit, upgradeMessage } from "@/lib/entitlements";
+import { consumeAiCredit } from "@/lib/entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { messageSchema } from "@/lib/validations/chat";
@@ -30,7 +30,9 @@ function mediaTypeFromPath(path: string): ImageMediaType {
   return "image/jpeg";
 }
 
-export type ActionResult = { error: string } | { success: true };
+export type ActionResult =
+  | { error: string }
+  | { success: true; quota?: "chat" | "vision" };
 
 /**
  * Kullanıcının kişisel AI asistan konuşmasını açar (yoksa oluşturur).
@@ -75,7 +77,8 @@ export async function sendMessage(values: unknown): Promise<ActionResult> {
     .single();
 
   if (conversation?.ai_enabled) {
-    await respondWithAi(parsed.data.conversationId, user.id);
+    const quota = await respondWithAi(parsed.data.conversationId, user.id);
+    if (quota) return { success: true, quota };
   }
 
   return { success: true };
@@ -128,7 +131,8 @@ export async function sendPhotoMessage(
     return { error: "Mesaj eklenemedi." };
   }
 
-  await respondWithAi(conversationId, user.id);
+  const quota = await respondWithAi(conversationId, user.id);
+  if (quota) return { success: true, quota };
   return { success: true };
 }
 
@@ -196,7 +200,7 @@ async function buildPlanContext(
 async function respondWithAi(
   conversationId: string,
   userId: string,
-): Promise<void> {
+): Promise<"chat" | "vision" | null> {
   const admin = createAdminClient();
 
   const { data: recent } = await admin
@@ -206,7 +210,7 @@ async function respondWithAi(
     .order("created_at", { ascending: false })
     .limit(15);
 
-  if (!recent || recent.length === 0) return;
+  if (!recent || recent.length === 0) return null;
 
   const latest = recent[0];
 
@@ -214,13 +218,8 @@ async function respondWithAi(
   const kind = latest.type === "user" && latest.image_path ? "vision" : "chat";
   const credit = await consumeAiCredit(userId, kind);
   if (!credit.ok) {
-    await admin.from("messages").insert({
-      conversation_id: conversationId,
-      sender_id: null,
-      type: "ai",
-      content: upgradeMessage(kind),
-    });
-    return;
+    // Kota doldu → mesaj ekleme; UI premium popup'ı açar.
+    return kind;
   }
 
   const transcript = [...recent]
@@ -283,7 +282,7 @@ async function respondWithAi(
   } catch {
     answer = "Şu anda yanıt veremiyorum, lütfen biraz sonra tekrar dene.";
   }
-  if (!answer) return;
+  if (!answer) return null;
 
   await admin.from("messages").insert({
     conversation_id: conversationId,
@@ -291,4 +290,5 @@ async function respondWithAi(
     type: "ai",
     content: answer,
   });
+  return null;
 }

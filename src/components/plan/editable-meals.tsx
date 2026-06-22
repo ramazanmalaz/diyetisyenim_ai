@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { MealIcon } from "@/components/ui/meal-icon";
 import { DAYS_SHORT, MEAL_TYPES, mealTypeLabel } from "@/lib/diet";
 import type { Food } from "@/lib/foods";
+import { triggerPremiumWall } from "@/lib/premium-wall";
 import { cn } from "@/lib/utils";
 import type { MealType } from "@/types/database";
 
@@ -241,6 +242,11 @@ export function EditableMeals({
     fd.set("photo", file);
     const res = await scanPlatePhoto(fd);
     setScanning(false);
+    if ("quota" in res) {
+      setScanType(null);
+      triggerPremiumWall("vision");
+      return;
+    }
     if ("error" in res) return setError(res.error);
     setScanItems(res.items);
   }

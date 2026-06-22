@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "@/components/ui/markdown";
+import { triggerPremiumWall } from "@/lib/premium-wall";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { MessageType } from "@/types/database";
@@ -149,6 +150,9 @@ export function MessageThread({
     await refetch();
     setSending(false);
     if (result && "error" in result) setInput(text);
+    else if (result && "quota" in result && result.quota) {
+      triggerPremiumWall(result.quota);
+    }
   }
 
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
@@ -170,9 +174,12 @@ export function MessageThread({
     const fd = new FormData();
     fd.set("conversationId", conversationId);
     fd.set("photo", file);
-    await sendPhotoMessage(fd);
+    const result = await sendPhotoMessage(fd);
     await refetch();
     setSending(false);
+    if (result && "quota" in result && result.quota) {
+      triggerPremiumWall(result.quota);
+    }
   }
 
   return (

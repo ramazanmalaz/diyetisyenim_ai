@@ -196,6 +196,7 @@ export async function uploadPlanPhotos(
 
 export type ExtractResult =
   | { error: string }
+  | { quota: true }
   | { photoPaths: string[]; meals: PlanPhotoScan["meals"]; note: string };
 
 /** Plan görsellerini yükler VE AI (vision) ile öğün şablonuna dönüştürür. */
@@ -211,13 +212,10 @@ export async function extractPlanFromPhoto(
   );
   if (files.length === 0) return { error: "Önce bir görsel seç." };
 
-  // Freemium: günde 1 ücretsiz foto analizi; üstü premium. (Elle giriş hep ücretsiz.)
+  // Freemium: günde 1 ücretsiz foto analizi; üstü premium → popup. (Elle giriş hep ücretsiz.)
   const credit = await consumeAiCredit(user.id, "vision");
   if (!credit.ok) {
-    return {
-      error:
-        "Günlük ücretsiz fotoğraf okuma hakkın doldu. Öğünleri elle girebilir, /abonelik üzerinden Premium'a geçebilir ya da yarın tekrar deneyebilirsin.",
-    };
+    return { quota: true };
   }
 
   // Vision için base64 hazırla (yüklemeden önce; aynı File buffer'ları).
