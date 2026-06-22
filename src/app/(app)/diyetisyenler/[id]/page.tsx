@@ -43,7 +43,7 @@ export default async function DietitianProfilePage({
   return (
     <div className="mx-auto w-full max-w-2xl space-y-5 px-4 py-8">
       <Link
-        href="/diyetisyenler"
+        href="/diyetisyen-bul"
         className="text-sm text-gray-400 hover:underline"
       >
         ← Diyetisyenler
