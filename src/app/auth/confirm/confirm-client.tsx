@@ -10,10 +10,9 @@ import { createClient } from "@/lib/supabase/client";
  * E-posta onay / şifre sıfırlama bağlantısının indiği client handler.
  * Üç olası formatı da ele alır:
  *  - implicit: token URL FRAGMENT'ında (#access_token=...) → setSession
- *    (fragment sunucuya ulaşmaz; bu yüzden işlem client'ta yapılır)
- *  - PKCE: ?code=... → exchangeCodeForSession (verifier tarayıcı çerezinde)
+ *  - PKCE: ?code=... → exchangeCodeForSession
  *  - OTP: ?token_hash=...&type=... → verifyOtp
- * Başarılı olursa `next`e, olmazsa /giris'e yönlendirir.
+ * Başarılı olursa `next`e gider; olmazsa tanılama bilgisini gösterir.
  */
 export function ConfirmClient({
   code,
@@ -28,7 +27,7 @@ export function ConfirmClient({
 }) {
   const router = useRouter();
   const ran = useRef(false);
-  const [error, setError] = useState(false);
+  const [diag, setDiag] = useState<string | null>(null);
 
   useEffect(() => {
     if (ran.current) return;
@@ -36,15 +35,34 @@ export function ConfirmClient({
     const supabase = createClient();
 
     (async () => {
+      const hashRaw =
+        typeof window !== "undefined" && window.location.hash.startsWith("#")
+          ? window.location.hash.slice(1)
+          : "";
+      const hp = new URLSearchParams(hashRaw);
+      const qp =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search)
+          : new URLSearchParams();
+
+      // Supabase hata yollamış mı? (fragment ya da query)
+      const errDesc =
+        hp.get("error_description") ||
+        qp.get("error_description") ||
+        hp.get("error") ||
+        qp.get("error");
+
+      const accessToken = hp.get("access_token");
+      const refreshToken = hp.get("refresh_token");
+
+      // Tanılama özeti
+      const seen = `code=${code ? "var" : "yok"} · token_hash=${
+        tokenHash ? "var" : "yok"
+      } · fragment=[${[...hp.keys()].join(",") || "boş"}]`;
+
       try {
-        // 1) Implicit akış — token'lar URL fragment'ında.
-        const hash =
-          typeof window !== "undefined" && window.location.hash.startsWith("#")
-            ? window.location.hash.slice(1)
-            : "";
-        const hp = new URLSearchParams(hash);
-        const accessToken = hp.get("access_token");
-        const refreshToken = hp.get("refresh_token");
+        if (errDesc) throw new Error(errDesc);
+
         if (accessToken && refreshToken) {
           const { error: e } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -54,30 +72,25 @@ export function ConfirmClient({
           router.replace(next);
           return;
         }
-
-        // 2) PKCE akış — ?code=...
         if (code) {
           const { error: e } = await supabase.auth.exchangeCodeForSession(code);
-          if (e) throw e;
+          if (e) throw new Error(`code: ${e.message}`);
           router.replace(next);
           return;
         }
-
-        // 3) OTP akış — ?token_hash=...&type=...
         if (tokenHash && type) {
           const { error: e } = await supabase.auth.verifyOtp({
             type: type as EmailOtpType,
             token_hash: tokenHash,
           });
-          if (e) throw e;
+          if (e) throw new Error(`otp: ${e.message}`);
           router.replace(next);
           return;
         }
-
-        throw new Error("Doğrulama bilgisi yok.");
-      } catch {
-        setError(true);
-        setTimeout(() => router.replace("/giris?hata=onay"), 1800);
+        throw new Error("Bağlantıda doğrulama bilgisi bulunamadı.");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "bilinmeyen hata";
+        setDiag(`${msg}\n${seen}`);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,13 +98,21 @@ export function ConfirmClient({
 
   return (
     <div className="glass space-y-3 rounded-3xl p-8 text-center shadow-[var(--shadow-float)]">
-      {error ? (
+      {diag ? (
         <>
           <h1 className="text-lg font-semibold">Bağlantı doğrulanamadı</h1>
           <p className="text-sm text-gray-500">
-            Bağlantının süresi dolmuş olabilir. Giriş sayfasına
-            yönlendiriliyorsun…
+            Bağlantının süresi dolmuş ya da geçersiz olabilir.
           </p>
+          <pre className="mt-2 overflow-x-auto rounded-lg bg-gray-100 p-2 text-left text-[11px] whitespace-pre-wrap text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+            {diag}
+          </pre>
+          <a
+            href="/sifre-sifirla"
+            className="inline-block text-sm text-emerald-600 hover:underline"
+          >
+            Yeni bağlantı iste
+          </a>
         </>
       ) : (
         <>
