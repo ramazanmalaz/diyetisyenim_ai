@@ -2,12 +2,12 @@
 
 import { Check, Crown, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import {
-  PREMIUM_WALL_EVENT,
-  type PremiumWallKind,
-} from "@/lib/premium-wall";
+import { SignupUpsell } from "@/components/onboarding/signup-upsell";
+import { PREMIUM_WALL_EVENT, type PremiumWallKind } from "@/lib/premium-wall";
+import { createClient } from "@/lib/supabase/client";
 
 const BENEFITS = [
   "Sınırsız AI diyetisyen sohbeti",
@@ -17,14 +17,20 @@ const BENEFITS = [
 ];
 
 export function PremiumWall({ monthlyPrice }: { monthlyPrice?: string }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<PremiumWallKind>("chat");
+  const [anon, setAnon] = useState(false);
 
   useEffect(() => {
     function onTrigger(e: Event) {
       const detail = (e as CustomEvent<{ kind?: PremiumWallKind }>).detail;
       setKind(detail?.kind ?? "chat");
       setOpen(true);
+      // Anonim mi? Anonimse önce hesap oluşturmaya yönlendir.
+      void createClient()
+        .auth.getUser()
+        .then(({ data }) => setAnon(Boolean(data.user?.is_anonymous)));
     }
     window.addEventListener(PREMIUM_WALL_EVENT, onTrigger);
     return () => window.removeEventListener(PREMIUM_WALL_EVENT, onTrigger);
@@ -40,6 +46,22 @@ export function PremiumWall({ monthlyPrice }: { monthlyPrice?: string }) {
   }, [open]);
 
   if (!open) return null;
+
+  // Anonim kullanıcı: premium gerektiren işlem → önce ücretsiz hesap oluştur.
+  if (anon) {
+    return (
+      <SignupUpsell
+        title="Devam etmek için üyelik oluştur"
+        desc="Sınırsız kullanım ve Premium için ücretsiz bir hesap oluştur. Planın ve geçmişin korunur."
+        skipLabel="Vazgeç"
+        onContinue={() => {
+          setOpen(false);
+          router.push("/abonelik");
+        }}
+        onSkip={() => setOpen(false)}
+      />
+    );
+  }
 
   const headline =
     kind === "vision"

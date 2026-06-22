@@ -4,10 +4,12 @@ import { Pencil } from "lucide-react";
 import { useState } from "react";
 
 import { generatePlan } from "@/app/(app)/baslangic/actions";
+import { SignupUpsell } from "@/components/onboarding/signup-upsell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ACTIVITY_LABEL } from "@/lib/diet/calories";
+import { createClient } from "@/lib/supabase/client";
 import {
   DIET_TYPE_OPTIONS,
   GOAL_OPTIONS,
@@ -61,6 +63,19 @@ export function IntakeWizard() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showUpsell, setShowUpsell] = useState(false);
+
+  // Son adım: anonim kullanıcıya önce üyelik popup'ı; üye/girişli ise direkt üret.
+  async function finish() {
+    if (a.goalLossKg === undefined || a.goalWeeks === undefined) return;
+    const supabase = createClient();
+    const { data } = await supabase.auth.getUser();
+    if (data.user?.is_anonymous) {
+      setShowUpsell(true);
+      return;
+    }
+    void submit();
+  }
 
   // "Kendim belirleyeyim" — hedef tarih + kilo
   const [custom, setCustom] = useState(false);
@@ -331,7 +346,7 @@ export function IntakeWizard() {
                 className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm dark:border-gray-700 dark:bg-gray-950"
               />
               {error && <p className="text-sm text-red-600">{error}</p>}
-              <Button onClick={submit} className="w-full">
+              <Button onClick={finish} className="w-full">
                 Planımı oluştur →
               </Button>
             </div>
@@ -347,6 +362,19 @@ export function IntakeWizard() {
         >
           ← Geri
         </button>
+      )}
+
+      {showUpsell && (
+        <SignupUpsell
+          onContinue={() => {
+            setShowUpsell(false);
+            void submit();
+          }}
+          onSkip={() => {
+            setShowUpsell(false);
+            void submit();
+          }}
+        />
       )}
     </div>
   );
