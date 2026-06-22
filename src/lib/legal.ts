@@ -7,7 +7,6 @@
 export const COMPANY = {
   /** Ticari unvan ya da şahıs işletmesinde Ad Soyad */
   name: "UzmanDiyet",
-  
   /** Şahıs Şirketi / Limited Şirket / A.Ş. */
   type: "Şahıs Şirketi",
   /** Açık adres (cadde, no, ilçe, il) */
