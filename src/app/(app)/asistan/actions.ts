@@ -10,14 +10,17 @@ import {
   getAssistantConversationId,
   logAssistantMessage,
 } from "@/lib/chat/assistant";
-import { consumeAiCredit, upgradeMessage } from "@/lib/entitlements";
+import { consumeAiCredit } from "@/lib/entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ALLOWED_PHOTO_TYPES,
   MAX_PHOTO_BYTES,
 } from "@/lib/validations/progress";
 
-export type PhotoAnswer = { error: string } | { answer: string };
+export type PhotoAnswer =
+  | { error: string }
+  | { answer: string }
+  | { quota: true };
 
 /**
  * Asistan sohbetinde paylaşılan fotoğrafı BELLEKTE (Storage'a yazmadan) analiz
@@ -43,8 +46,8 @@ export async function analyzeAssistantPhoto(
   // Freemium: günde 1 ücretsiz foto analizi; üstü premium.
   const credit = await consumeAiCredit(user.id, "vision");
   if (!credit.ok) {
-    // Yükseltme mesajını normal yanıt olarak göster (Markdown link içerir).
-    return { answer: upgradeMessage("vision") };
+    // Kota doldu → istemci premium popup'ını açar.
+    return { quota: true };
   }
 
   const base64 = Buffer.from(await photo.arrayBuffer()).toString("base64");

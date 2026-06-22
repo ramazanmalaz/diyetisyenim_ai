@@ -4,9 +4,11 @@ import Link from "next/link";
 import { logout } from "@/app/(auth)/actions";
 import { AudioArmer } from "@/components/app/audio-armer";
 import { BottomNav } from "@/components/app/bottom-nav";
+import { PremiumWall } from "@/components/app/premium-wall";
 import { PushSetup } from "@/components/app/push-setup";
 import { WaterReminder } from "@/components/app/water-reminder";
 import { requireProfile } from "@/lib/auth";
+import { getPricing } from "@/lib/settings";
 
 export default async function AppLayout({
   children,
@@ -16,6 +18,7 @@ export default async function AppLayout({
   const profile = await requireProfile();
   const name = profile.full_name ?? "Danışan";
   const initial = name.trim().charAt(0).toUpperCase() || "D";
+  const pricing = await getPricing();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -73,6 +76,7 @@ export default async function AppLayout({
       <WaterReminder />
       <PushSetup />
       <AudioArmer />
+      <PremiumWall monthlyPrice={pricing.monthly.price} />
     </div>
   );
 }

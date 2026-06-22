@@ -8,6 +8,7 @@ import { PlateCamera } from "@/components/plan/plate-camera";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "@/components/ui/markdown";
+import { triggerPremiumWall } from "@/lib/premium-wall";
 import { cn } from "@/lib/utils";
 
 type Msg = { role: "user" | "assistant"; content: string; image?: string };
@@ -41,14 +42,11 @@ export function AssistantChat() {
           messages: history.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
-      // Günlük ücretsiz hak doldu → yükseltme mesajını göster.
+      // Günlük ücretsiz hak doldu → premium popup'ı aç, boş baloncuğu kaldır.
       if (res.status === 402) {
-        const msg = await res.text();
-        setMessages((prev) => {
-          const copy = [...prev];
-          copy[copy.length - 1] = { role: "assistant", content: msg };
-          return copy;
-        });
+        setMessages((prev) => prev.slice(0, -1));
+        setInput(text);
+        triggerPremiumWall("chat");
         return;
       }
       if (!res.ok || !res.body) throw new Error("İstek başarısız");
@@ -99,6 +97,12 @@ export function AssistantChat() {
       fd.set("photo", file);
       fd.set("transcript", transcript);
       const res = await analyzeAssistantPhoto(fd);
+      if ("quota" in res) {
+        // Vision kotası doldu → fotoğraf + boş baloncuğu kaldır, popup aç.
+        setMessages((prev) => prev.slice(0, -2));
+        triggerPremiumWall("vision");
+        return;
+      }
       const answer =
         "answer" in res
           ? res.answer
