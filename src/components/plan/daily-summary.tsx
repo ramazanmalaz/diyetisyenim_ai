@@ -9,15 +9,11 @@ export function DailySummary({
   days,
   eatenToday,
   plannedToday,
-  consumedCal,
-  target,
 }: {
   streak: number;
   days: Day[];
   eatenToday: number;
   plannedToday: number;
-  consumedCal: number;
-  target: number | null;
 }) {
   const streakMsg =
     streak === 0
@@ -80,25 +76,13 @@ export function DailySummary({
       </div>
 
       {/* Bugünün kısa özeti */}
-      <div className="mt-4 flex items-center justify-between rounded-xl bg-white/60 px-3 py-2 text-sm ring-1 ring-amber-100 dark:bg-white/5 dark:ring-amber-900/30">
-        <span className="flex items-center gap-1.5 text-amber-900/80 dark:text-amber-100/80">
-          <UtensilsCrossed className="h-4 w-4 text-amber-600" strokeWidth={2} />
-          Bugün{" "}
-          <b className="tabular-nums">
-            {eatenToday}/{plannedToday}
-          </b>{" "}
-          öğün
-        </span>
-        {target ? (
-          <span className="tabular-nums text-amber-900/80 dark:text-amber-100/80">
-            <b>{consumedCal}</b>
-            <span className="text-amber-700/60"> / {target} kcal</span>
-          </span>
-        ) : (
-          <span className="tabular-nums font-semibold text-amber-900/80 dark:text-amber-100/80">
-            {consumedCal} kcal
-          </span>
-        )}
+      <div className="mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-white/60 px-3 py-2 text-sm text-amber-900/80 ring-1 ring-amber-100 dark:bg-white/5 dark:text-amber-100/80 dark:ring-amber-900/30">
+        <UtensilsCrossed className="h-4 w-4 text-amber-600" strokeWidth={2} />
+        Bugün{" "}
+        <b className="tabular-nums">
+          {eatenToday}/{plannedToday}
+        </b>{" "}
+        öğün işaretlendi
       </div>
     </section>
   );

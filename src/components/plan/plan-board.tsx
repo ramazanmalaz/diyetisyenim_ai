@@ -219,32 +219,8 @@ export function PlanBoard({
         consumedToday={consumedDay}
       />
 
-      <DailySummary
-        streak={streak}
-        days={last7}
-        eatenToday={todayStats.eaten}
-        plannedToday={todayStats.planned}
-        consumedCal={todayStats.cal}
-        target={dailyTarget}
-      />
-
-      <WaterTracker initialMl={initialWaterMl} goalMl={waterGoalMl} />
-
-      {/* Hızlı erişim */}
-      <div className="grid gap-2 sm:grid-cols-2">
-        <form action={openAssistant}>
-          <Button type="submit" variant="outline" className="w-full gap-2">
-            <MessageCircle className="h-4 w-4" /> Asistana soru sor
-          </Button>
-        </form>
-        <Button asChild variant="outline" className="w-full gap-2">
-          <Link href="/ilerleme">
-            <LineChart className="h-4 w-4" /> Kilo & ilerleme takibi
-          </Link>
-        </Button>
-      </div>
-
-      <p className="text-xs text-gray-400">
+      {/* Öğünler — ekranın özü, hemen özetin altında */}
+      <p className="px-1 text-xs text-gray-400">
         Öğünü açmak için başlığa dokun. Bir besine dokununca miktarını/içeriğini
         değiştirebilir, her öğünün tabağını fotoğrafla paylaşabilirsin. Kalori
         otomatik güncellenir.
@@ -261,6 +237,30 @@ export function PlanBoard({
         statusByMeal={statusByMeal}
         onCycleStatus={cycleStatus}
       />
+
+      {/* Yardımcı takip kartları */}
+      <WaterTracker initialMl={initialWaterMl} goalMl={waterGoalMl} />
+
+      <DailySummary
+        streak={streak}
+        days={last7}
+        eatenToday={todayStats.eaten}
+        plannedToday={todayStats.planned}
+      />
+
+      {/* Hızlı erişim */}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <form action={openAssistant}>
+          <Button type="submit" variant="outline" className="w-full gap-2">
+            <MessageCircle className="h-4 w-4" /> Asistana soru sor
+          </Button>
+        </form>
+        <Button asChild variant="outline" className="w-full gap-2">
+          <Link href="/ilerleme">
+            <LineChart className="h-4 w-4" /> Kilo & ilerleme takibi
+          </Link>
+        </Button>
+      </div>
 
       {/* İlerlemeye göre programı güncelle (AI planları için) */}
       <form
