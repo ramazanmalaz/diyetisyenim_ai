@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
+import { createImplicitClient } from "@/lib/supabase/client";
 import {
   resetRequestSchema,
   type ResetRequestInput,
@@ -25,9 +25,9 @@ export default function ResetPasswordPage() {
 
   async function onSubmit(values: ResetRequestInput) {
     setServerError(null);
-    // İstek TARAYICIDA yapılır: PKCE code_verifier'ı tarayıcı kendi çerezine
-    // yazar; böylece /auth/confirm exchange sırasında verifier bulunur.
-    const supabase = createClient();
+    // Implicit akış: link `#access_token=...` ile döner (PKCE verifier yok),
+    // böylece e-posta farklı tarayıcıda/cihazda açılsa bile çalışır.
+    const supabase = createImplicitClient();
     const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
       redirectTo: `${window.location.origin}/auth/confirm?next=/sifre-yenile`,
     });
