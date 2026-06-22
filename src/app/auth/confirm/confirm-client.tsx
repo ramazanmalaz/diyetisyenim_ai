@@ -27,7 +27,7 @@ export function ConfirmClient({
 }) {
   const router = useRouter();
   const ran = useRef(false);
-  const [diag, setDiag] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (ran.current) return;
@@ -45,7 +45,6 @@ export function ConfirmClient({
           ? new URLSearchParams(window.location.search)
           : new URLSearchParams();
 
-      // Supabase hata yollamış mı? (fragment ya da query)
       const errDesc =
         hp.get("error_description") ||
         qp.get("error_description") ||
@@ -54,11 +53,6 @@ export function ConfirmClient({
 
       const accessToken = hp.get("access_token");
       const refreshToken = hp.get("refresh_token");
-
-      // Tanılama özeti
-      const seen = `code=${code ? "var" : "yok"} · token_hash=${
-        tokenHash ? "var" : "yok"
-      } · fragment=[${[...hp.keys()].join(",") || "boş"}]`;
 
       try {
         if (errDesc) throw new Error(errDesc);
@@ -74,7 +68,7 @@ export function ConfirmClient({
         }
         if (code) {
           const { error: e } = await supabase.auth.exchangeCodeForSession(code);
-          if (e) throw new Error(`code: ${e.message}`);
+          if (e) throw e;
           router.replace(next);
           return;
         }
@@ -83,14 +77,13 @@ export function ConfirmClient({
             type: type as EmailOtpType,
             token_hash: tokenHash,
           });
-          if (e) throw new Error(`otp: ${e.message}`);
+          if (e) throw e;
           router.replace(next);
           return;
         }
         throw new Error("Bağlantıda doğrulama bilgisi bulunamadı.");
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "bilinmeyen hata";
-        setDiag(`${msg}\n${seen}`);
+      } catch {
+        setError(true);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -98,20 +91,18 @@ export function ConfirmClient({
 
   return (
     <div className="glass space-y-3 rounded-3xl p-8 text-center shadow-[var(--shadow-float)]">
-      {diag ? (
+      {error ? (
         <>
           <h1 className="text-lg font-semibold">Bağlantı doğrulanamadı</h1>
           <p className="text-sm text-gray-500">
-            Bağlantının süresi dolmuş ya da geçersiz olabilir.
+            Bağlantının süresi dolmuş ya da daha önce kullanılmış olabilir.
+            Yeni bir bağlantı iste.
           </p>
-          <pre className="mt-2 overflow-x-auto rounded-lg bg-gray-100 p-2 text-left text-[11px] whitespace-pre-wrap text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-            {diag}
-          </pre>
           <a
             href="/sifre-sifirla"
-            className="inline-block text-sm text-emerald-600 hover:underline"
+            className="inline-block text-sm font-medium text-emerald-600 hover:underline"
           >
-            Yeni bağlantı iste
+            Yeni bağlantı iste →
           </a>
         </>
       ) : (
