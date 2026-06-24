@@ -95,7 +95,9 @@ Seviye/Hedef bilgisi prompt'ta verildi. Programı save_workout ile döndür.`;
 
   const res = await anthropic.messages.create({
     model: DEFAULT_MODEL,
-    max_tokens: 4096,
+    // 5-7 günlük programlar 4096'yı aşıp JSON kesiliyordu (parse hatası →
+    // "program oluşturulamadı"). 8192 ile güvenli pay bırakılır.
+    max_tokens: 8192,
     system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
     tools: [{ name: "save_workout", description: "Antrenman programını kaydeder.", input_schema: PROGRAM_TOOL }],
     tool_choice: { type: "tool", name: "save_workout" },
