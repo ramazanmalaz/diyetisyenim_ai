@@ -6,7 +6,6 @@ import { requireProfile } from "@/lib/auth";
 import {
   PUBLIC_DIETITIAN_COLUMNS,
   type PublicDietitian,
-  type Slot,
 } from "@/lib/dietitians";
 import { createClient } from "@/lib/supabase/server";
 
@@ -29,17 +28,6 @@ export default async function DietitianProfilePage({
   if (!data) notFound();
   const d = data as PublicDietitian;
 
-  // Açık + gelecekteki slotlar.
-  const { data: slotData } = await supabase
-    .from("dietitian_slots")
-    .select("id, dietitian_id, start_at, duration_min, status")
-    .eq("dietitian_id", id)
-    .eq("status", "open")
-    .gt("start_at", new Date().toISOString())
-    .order("start_at");
-
-  const slots = (slotData ?? []) as Slot[];
-
   return (
     <div className="mx-auto w-full max-w-2xl space-y-5 px-4 py-8">
       <Link
@@ -49,7 +37,7 @@ export default async function DietitianProfilePage({
         ← Diyetisyenler
       </Link>
 
-      <DietitianProfile d={d} slots={slots} />
+      <DietitianProfile d={d} />
     </div>
   );
 }

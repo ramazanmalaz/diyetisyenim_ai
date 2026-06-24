@@ -526,6 +526,7 @@ export type Database = {
           photo_url: string | null;
           years_experience: number | null;
           is_active: boolean;
+          featured: boolean;
           sort_order: number;
           contact_phone: string | null;
           contact_email: string | null;
@@ -547,6 +548,7 @@ export type Database = {
           photo_url?: string | null;
           years_experience?: number | null;
           is_active?: boolean;
+          featured?: boolean;
           sort_order?: number;
           contact_phone?: string | null;
           contact_email?: string | null;
@@ -568,6 +570,7 @@ export type Database = {
           photo_url?: string | null;
           years_experience?: number | null;
           is_active?: boolean;
+          featured?: boolean;
           sort_order?: number;
           contact_phone?: string | null;
           contact_email?: string | null;

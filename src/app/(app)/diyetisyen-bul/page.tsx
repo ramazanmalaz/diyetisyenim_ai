@@ -1,9 +1,19 @@
-import { CalendarClock, ChevronRight, MapPin } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronRight,
+  MapPin,
+  MessageCircle,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 
 import { DietitianAvatar } from "@/components/dietitians/dietitian-avatar";
 import { requireProfile } from "@/lib/auth";
-import { PUBLIC_DIETITIAN_COLUMNS, type PublicDietitian } from "@/lib/dietitians";
+import {
+  appointmentWhatsappUrl,
+  PUBLIC_DIETITIAN_COLUMNS,
+  type PublicDietitian,
+} from "@/lib/dietitians";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DiyetisyenBulPage() {
@@ -15,6 +25,7 @@ export default async function DiyetisyenBulPage() {
       .from("dietitians")
       .select(PUBLIC_DIETITIAN_COLUMNS)
       .eq("is_active", true)
+      .order("featured", { ascending: false })
       .order("sort_order"),
     supabase
       .from("appointments")
@@ -76,10 +87,18 @@ export default async function DiyetisyenBulPage() {
         ) : (
           <ul className="space-y-3">
             {dietitians.map((d) => (
-              <li key={d.id}>
+              <li
+                key={d.id}
+                className={
+                  "overflow-hidden rounded-3xl border bg-white shadow-[var(--shadow-soft)] dark:bg-gray-900 " +
+                  (d.featured
+                    ? "border-emerald-300 ring-1 ring-emerald-200 dark:border-emerald-800"
+                    : "border-gray-200 dark:border-gray-800")
+                }
+              >
                 <Link
                   href={`/diyetisyenler/${d.id}`}
-                  className="group flex items-start gap-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-[var(--shadow-soft)] transition-[transform,box-shadow] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-float)] dark:border-gray-800 dark:bg-gray-900"
+                  className="flex items-start gap-4 p-4 transition hover:bg-gray-50/60 dark:hover:bg-gray-800/40"
                 >
                   <DietitianAvatar
                     name={d.full_name}
@@ -87,7 +106,14 @@ export default async function DiyetisyenBulPage() {
                     className="h-16 w-16"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold">{d.full_name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">{d.full_name}</p>
+                      {d.featured && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
+                          <Sparkles className="h-3 w-3" /> Öne çıkan
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-emerald-700 dark:text-emerald-400">
                       {d.title}
                       {d.years_experience
@@ -112,10 +138,15 @@ export default async function DiyetisyenBulPage() {
                       </div>
                     )}
                   </div>
-                  <span className="self-center text-gray-300 transition-transform duration-200 ease-[var(--ease-out)] group-hover:translate-x-0.5 dark:text-gray-600">
-                    <ChevronRight className="h-5 w-5" />
-                  </span>
                 </Link>
+                <a
+                  href={appointmentWhatsappUrl(d.full_name)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 border-t border-gray-100 bg-emerald-50/60 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100/70 dark:border-gray-800 dark:bg-emerald-950/20 dark:text-emerald-300"
+                >
+                  <MessageCircle className="h-4 w-4" /> WhatsApp&apos;tan randevu al
+                </a>
               </li>
             ))}
           </ul>

@@ -10,13 +10,12 @@ import {
 import { useId, useRef, useState } from "react";
 
 import { DietitianAvatar } from "@/components/dietitians/dietitian-avatar";
-import { SlotPicker } from "@/components/dietitians/slot-picker";
 import {
+  appointmentWhatsappUrl,
   isOpenHours,
   todayDayKey,
   WORKING_DAYS,
   type PublicDietitian,
-  type Slot,
 } from "@/lib/dietitians";
 import { cn } from "@/lib/utils";
 
@@ -26,13 +25,7 @@ type TabKey = "hizmetler" | "hakkinda" | "saatler" | "iletisim" | "randevu";
  * Diyetisyen profilini gruplandırılmış, erişilebilir sekmeler içinde gösterir.
  * Tüm bilgiler tek ekranda kalabalık yapmadan; içeriği olmayan sekme gizlenir.
  */
-export function DietitianProfile({
-  d,
-  slots,
-}: {
-  d: PublicDietitian;
-  slots: Slot[];
-}) {
+export function DietitianProfile({ d }: { d: PublicDietitian }) {
   const tabs = (
     [
       { key: "hizmetler", label: "Hizmetler", show: d.services.length > 0 },
@@ -305,10 +298,20 @@ export function DietitianProfile({
             {t.key === "randevu" && (
               <div className="space-y-3">
                 <p className="flex items-center gap-2 text-sm font-semibold">
-                  <CalendarDays className="h-4 w-4 text-emerald-600" /> Uygun
-                  randevu saatleri
+                  <CalendarDays className="h-4 w-4 text-emerald-600" /> Randevu al
                 </p>
-                <SlotPicker dietitianId={d.id} slots={slots} />
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Randevunu WhatsApp üzerinden hızlıca oluşturabilirsin. Sana en
+                  uygun saati birlikte ayarlayalım.
+                </p>
+                <a
+                  href={appointmentWhatsappUrl(d.full_name)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgba(5,150,105,0.7)] transition hover:brightness-105 active:scale-[0.98]"
+                >
+                  <MessageCircle className="h-4 w-4" /> WhatsApp&apos;tan randevu al
+                </a>
               </div>
             )}
           </div>

@@ -63,6 +63,7 @@ export async function createDietitian(formData: FormData): Promise<ActionResult>
       contact_phone: parsed.data.contact_phone,
       contact_email: parsed.data.contact_email,
       is_active: formData.get("is_active") === "on",
+      featured: formData.get("featured") === "on",
       sort_order: num(formData.get("sort_order")) ?? 0,
     })
     .select("id")
@@ -94,6 +95,7 @@ export async function updateDietitian(formData: FormData): Promise<ActionResult>
       contact_phone: parsed.data.contact_phone,
       contact_email: parsed.data.contact_email,
       is_active: formData.get("is_active") === "on",
+      featured: formData.get("featured") === "on",
       sort_order: num(formData.get("sort_order")) ?? 0,
     })
     .eq("id", id.data);

@@ -60,6 +60,7 @@ export default async function AdminDietitianEditPage({
             photo_url: d.photo_url,
             years_experience: d.years_experience,
             is_active: d.is_active,
+            featured: d.featured,
             sort_order: d.sort_order,
             contact_phone: d.contact_phone,
             contact_email: d.contact_email,

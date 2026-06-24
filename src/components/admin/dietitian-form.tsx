@@ -21,6 +21,7 @@ export type DietitianFormValues = {
   photo_url?: string | null;
   years_experience?: number | null;
   is_active?: boolean;
+  featured?: boolean;
   sort_order?: number;
   contact_phone?: string | null;
   contact_email?: string | null;
@@ -145,6 +146,16 @@ export function DietitianForm({
           className="h-4 w-4 rounded border-gray-300"
         />
         Aktif (danışanlara görünür)
+      </label>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="featured"
+          defaultChecked={initial?.featured ?? false}
+          className="h-4 w-4 rounded border-gray-300"
+        />
+        Öne çıkan (listede üstte + rozet — ücretli)
       </label>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

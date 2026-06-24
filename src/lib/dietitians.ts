@@ -7,7 +7,19 @@ import type { SlotStatus } from "@/types/database";
  * adres, instagram, whatsapp) profilde gösterilir.
  */
 export const PUBLIC_DIETITIAN_COLUMNS =
-  "id, full_name, title, bio, specialties, city, photo_url, years_experience, is_active, sort_order, slogan, services, working_hours, address, instagram, whatsapp";
+  "id, full_name, title, bio, specialties, city, photo_url, years_experience, is_active, sort_order, featured, slogan, services, working_hours, address, instagram, whatsapp";
+
+/**
+ * Randevu/iletişim için tek WhatsApp hattı (tüm diyetisyenler için ortak).
+ * 0553 915 12 78 → uluslararası: +90 553 915 1278.
+ */
+export const APPOINTMENT_WHATSAPP = "905539151278";
+
+/** Diyetisyen için önceden doldurulmuş WhatsApp randevu bağlantısı. */
+export function appointmentWhatsappUrl(dietitianName: string): string {
+  const text = `Merhaba, ${dietitianName} ile randevu almak istiyorum.`;
+  return `https://wa.me/${APPOINTMENT_WHATSAPP}?text=${encodeURIComponent(text)}`;
+}
 
 export type WorkingHours = Record<string, string>;
 
@@ -22,6 +34,7 @@ export type PublicDietitian = {
   years_experience: number | null;
   is_active: boolean;
   sort_order: number;
+  featured: boolean;
   slogan: string | null;
   services: string[];
   working_hours: WorkingHours | null;
