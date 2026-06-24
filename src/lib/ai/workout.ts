@@ -124,7 +124,7 @@ const EQUIP_TOOL: AnthropicNS.Tool.InputSchema = {
 };
 
 const equipResultSchema = z.object({
-  equipment: z.array(z.string().min(1).max(80)).max(40),
+  equipment: z.array(z.string().min(1).max(160)).max(40),
   note: z.string().max(400).optional().default(""),
 });
 

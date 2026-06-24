@@ -28,7 +28,7 @@ const genSchema = z.object({
   level: z.string().max(20),
   goal: z.string().max(20),
   daysPerWeek: z.coerce.number().int().min(1).max(7),
-  equipment: z.array(z.string().max(80)).max(40).optional().default([]),
+  equipment: z.array(z.string().max(160)).max(40).optional().default([]),
   sex: z.enum(["female", "male"]).optional(),
   sessionMin: z.coerce.number().int().min(15).max(180).optional(),
   style: z.string().max(20).optional(),
