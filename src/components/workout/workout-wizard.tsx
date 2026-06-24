@@ -21,12 +21,18 @@ import {
   EQUIPMENT_OPTIONS,
   GOAL_OPTIONS,
   LEVEL_OPTIONS,
+  SESSION_OPTIONS,
+  STYLE_OPTIONS,
 } from "@/lib/workout";
 
 type Step =
   | "level"
   | "goal"
+  | "sex"
   | "days"
+  | "session"
+  | "style"
+  | "injuries"
   | "mode"
   | "gympath"
   | "equipment"
@@ -37,7 +43,11 @@ export function WorkoutWizard() {
   const [step, setStep] = useState<Step>("level");
   const [level, setLevel] = useState("");
   const [goal, setGoal] = useState("");
+  const [sex, setSex] = useState<"female" | "male" | null>(null);
   const [days, setDays] = useState(3);
+  const [sessionMin, setSessionMin] = useState(60);
+  const [style, setStyle] = useState("any");
+  const [injuries, setInjuries] = useState("");
   const [mode, setMode] = useState<"bodyweight" | "gym" | null>(null);
   const [equipment, setEquipment] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
@@ -61,6 +71,10 @@ export function WorkoutWizard() {
       goal,
       daysPerWeek: days,
       equipment: eq,
+      sex: sex ?? undefined,
+      sessionMin,
+      style,
+      injuries: injuries.trim() || undefined,
     });
     if ("ok" in res) {
       router.push("/spor");
@@ -155,7 +169,7 @@ export function WorkoutWizard() {
               active={goal === o.value}
               onClick={() => {
                 setGoal(o.value);
-                setStep("days");
+                setStep("sex");
               }}
             >
               {o.label}
@@ -164,8 +178,27 @@ export function WorkoutWizard() {
         </Question>
       )}
 
+      {step === "sex" && (
+        <Question title="Biyolojik cinsiyetin?" onBack={() => setStep("goal")}>
+          <div className="grid grid-cols-2 gap-2">
+            {(["female", "male"] as const).map((s) => (
+              <Choice
+                key={s}
+                active={sex === s}
+                onClick={() => {
+                  setSex(s);
+                  setStep("days");
+                }}
+              >
+                {s === "female" ? "Kadın" : "Erkek"}
+              </Choice>
+            ))}
+          </div>
+        </Question>
+      )}
+
       {step === "days" && (
-        <Question title="Haftada kaç gün antrenman?" onBack={() => setStep("goal")}>
+        <Question title="Haftada kaç gün antrenman?" onBack={() => setStep("sex")}>
           <div className="grid grid-cols-5 gap-2">
             {DAYS_OPTIONS.map((d) => (
               <button
@@ -173,7 +206,7 @@ export function WorkoutWizard() {
                 type="button"
                 onClick={() => {
                   setDays(d);
-                  setStep("mode");
+                  setStep("session");
                 }}
                 className={cn(
                   "rounded-xl border py-3 text-lg font-bold transition active:scale-95",
@@ -189,9 +222,78 @@ export function WorkoutWizard() {
         </Question>
       )}
 
+      {step === "session" && (
+        <Question
+          title="Bir antrenman ne kadar sürsün?"
+          onBack={() => setStep("days")}
+        >
+          {SESSION_OPTIONS.map((o) => (
+            <Choice
+              key={o.value}
+              active={sessionMin === o.value}
+              onClick={() => {
+                setSessionMin(o.value);
+                setStep("style");
+              }}
+            >
+              {o.label}
+            </Choice>
+          ))}
+        </Question>
+      )}
+
+      {step === "style" && (
+        <Question
+          title="Nasıl bir antrenman tarzı?"
+          onBack={() => setStep("session")}
+        >
+          {STYLE_OPTIONS.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => {
+                setStyle(o.value);
+                setStep("injuries");
+              }}
+              className={cn(
+                "w-full rounded-xl border px-4 py-3 text-left transition active:scale-[0.98]",
+                style === o.value
+                  ? "border-lime-400 bg-lime-400/15"
+                  : "border-zinc-700 bg-zinc-900 hover:border-zinc-500",
+              )}
+            >
+              <span className="block text-sm font-medium">{o.label}</span>
+              <span className="block text-xs text-zinc-400">{o.desc}</span>
+            </button>
+          ))}
+        </Question>
+      )}
+
+      {step === "injuries" && (
+        <Question
+          title="Dikkat etmemiz gereken bir sakatlık/kısıt var mı?"
+          onBack={() => setStep("style")}
+        >
+          <textarea
+            value={injuries}
+            onChange={(e) => setInjuries(e.target.value)}
+            rows={2}
+            placeholder="Örn. diz ağrısı, bel fıtığı… (yoksa boş geç)"
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-900 p-3 text-sm text-zinc-100 placeholder:text-zinc-500"
+          />
+          <button
+            type="button"
+            onClick={() => setStep("mode")}
+            className="w-full rounded-xl bg-lime-400 px-4 py-3 text-sm font-bold text-zinc-900 transition hover:brightness-105 active:scale-[0.98]"
+          >
+            Devam →
+          </button>
+        </Question>
+      )}
+
       {/* MOD */}
       {step === "mode" && (
-        <Question title="Nerede antrenman yapacaksın?" onBack={() => setStep("days")}>
+        <Question title="Nerede antrenman yapacaksın?" onBack={() => setStep("injuries")}>
           <BigChoice
             icon={Home}
             title="Kendi ağırlığımla (ev)"

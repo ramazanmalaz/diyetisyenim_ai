@@ -37,11 +37,31 @@ export const GOAL_OPTIONS = [
 
 export const DAYS_OPTIONS = [2, 3, 4, 5, 6] as const;
 
+export const SESSION_OPTIONS = [
+  { value: 30, label: "~30 dk (kısa)" },
+  { value: 45, label: "~45 dk" },
+  { value: 60, label: "~60 dk" },
+  { value: 90, label: "~90 dk (uzun)" },
+] as const;
+
+/** Antrenman tarzı tercihi (diyet tipinin spor karşılığı). */
+export const STYLE_OPTIONS = [
+  { value: "fullbody", label: "Tüm vücut (full body)", desc: "Her gün tüm bedeni çalış" },
+  { value: "split", label: "Bölgesel (split)", desc: "Her gün farklı kas grubu" },
+  { value: "ppl", label: "İtiş / Çekiş / Bacak", desc: "Klasik push-pull-legs" },
+  { value: "functional", label: "Fonksiyonel / atletik", desc: "Hareket kabiliyeti, denge" },
+  { value: "hiit", label: "HIIT / yağ yakım", desc: "Yoğun tempo, kardiyo ağırlıklı" },
+  { value: "any", label: "Fark etmez", desc: "Hedefe göre sen karar ver" },
+] as const;
+
 export const LEVEL_LABEL: Record<string, string> = Object.fromEntries(
   LEVEL_OPTIONS.map((o) => [o.value, o.label]),
 );
 export const GOAL_LABEL: Record<string, string> = Object.fromEntries(
   GOAL_OPTIONS.map((o) => [o.value, o.label]),
+);
+export const STYLE_LABEL: Record<string, string> = Object.fromEntries(
+  STYLE_OPTIONS.map((o) => [o.value, o.label]),
 );
 
 /** Spor salonunda sık bulunan aletler (elle seçim için). */

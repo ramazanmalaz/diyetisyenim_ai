@@ -11,7 +11,7 @@ import {
 import { getUser } from "@/lib/auth";
 import { consumeAiCredit } from "@/lib/entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { GOAL_LABEL, LEVEL_LABEL } from "@/lib/workout";
+import { GOAL_LABEL, LEVEL_LABEL, STYLE_LABEL } from "@/lib/workout";
 import {
   ALLOWED_PHOTO_TYPES,
   MAX_PHOTO_BYTES,
@@ -29,6 +29,10 @@ const genSchema = z.object({
   goal: z.string().max(20),
   daysPerWeek: z.coerce.number().int().min(1).max(7),
   equipment: z.array(z.string().max(80)).max(40).optional().default([]),
+  sex: z.enum(["female", "male"]).optional(),
+  sessionMin: z.coerce.number().int().min(15).max(180).optional(),
+  style: z.string().max(20).optional(),
+  injuries: z.string().max(300).optional(),
 });
 
 /** Antrenman programı üretir ve kaydeder (sohbet kredisi tüketir). */
@@ -46,9 +50,17 @@ export async function generateWorkout(values: unknown): Promise<WorkoutResult> {
   const intakeSummary = [
     `Seviye: ${LEVEL_LABEL[v.level] ?? v.level}`,
     `Hedef: ${GOAL_LABEL[v.goal] ?? v.goal}`,
+    v.sex ? `Cinsiyet: ${v.sex === "female" ? "Kadın" : "Erkek"}` : null,
     `Haftada ${v.daysPerWeek} gün`,
+    v.sessionMin ? `Seans süresi: ~${v.sessionMin} dk (egzersiz sayısını buna göre ayarla)` : null,
+    v.style && v.style !== "any"
+      ? `Tercih edilen antrenman tarzı: ${STYLE_LABEL[v.style] ?? v.style} (programı bu tarza göre kur)`
+      : null,
+    v.injuries ? `Sakatlık/kısıt: ${v.injuries} (bu bölgeyi zorlayan hareketlerden kaçın)` : null,
     v.mode === "gym" ? "Spor salonu" : "Kendi vücut ağırlığı (ev)",
-  ].join(", ");
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   let program;
   try {
