@@ -6,25 +6,27 @@ import type { WorkoutProgram } from "@/lib/workout";
 
 import { anthropic, DEFAULT_MODEL } from "./client";
 
+// Sınırlar geçerli AI içeriğini reddetmeyecek kadar geniş tutulur (dar cap'ler
+// "Program oluşturulamadı" hatasına yol açıyordu — özellikle uzun genel not).
 const exerciseSchema = z.object({
-  name: z.string().min(1).max(120),
-  sets: z.coerce.number().int().min(1).max(12),
-  reps: z.string().min(1).max(40),
-  rest: z.string().max(40).optional().default("60 sn"),
-  note: z.string().max(200).optional().default(""),
+  name: z.string().min(1).max(200),
+  sets: z.coerce.number().int().min(1).max(20),
+  reps: z.string().min(1).max(80),
+  rest: z.string().max(80).optional().default("60 sn"),
+  note: z.string().max(600).optional().default(""),
 });
 const programSchema = z.object({
   days: z
     .array(
       z.object({
-        day: z.string().min(1).max(60),
-        focus: z.string().max(120).optional().default(""),
-        exercises: z.array(exerciseSchema).min(1).max(12),
+        day: z.string().min(1).max(120),
+        focus: z.string().max(200).optional().default(""),
+        exercises: z.array(exerciseSchema).min(1).max(15),
       }),
     )
     .min(1)
     .max(7),
-  note: z.string().max(600).optional().default(""),
+  note: z.string().max(4000).optional().default(""),
 });
 
 const PROGRAM_TOOL: AnthropicNS.Tool.InputSchema = {
