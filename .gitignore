@@ -53,3 +53,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# geçici önizleme/screenshot dosyaları
+_preview.*
+_shot.mjs
