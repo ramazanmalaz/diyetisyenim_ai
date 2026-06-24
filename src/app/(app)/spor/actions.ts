@@ -118,6 +118,44 @@ export async function analyzeGym(formData: FormData): Promise<GymScanResult> {
   }
 }
 
+export type WorkoutLogResult = { error: string } | { ok: true };
+
+/** Bir program gününü belirli tarihte tamamlandı/işareti-kaldır olarak kaydeder. */
+export async function setWorkoutDone(values: unknown): Promise<WorkoutLogResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+  const parsed = z
+    .object({
+      dayIndex: z.coerce.number().int().min(0).max(13),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      done: z.boolean(),
+    })
+    .safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz veri." };
+
+  const admin = createAdminClient();
+  if (parsed.data.done) {
+    const { error } = await admin.from("workout_logs").upsert(
+      {
+        client_id: user.id,
+        day_index: parsed.data.dayIndex,
+        log_date: parsed.data.date,
+      },
+      { onConflict: "client_id,day_index,log_date" },
+    );
+    if (error) return { error: "Kaydedilemedi." };
+  } else {
+    const { error } = await admin
+      .from("workout_logs")
+      .delete()
+      .eq("client_id", user.id)
+      .eq("day_index", parsed.data.dayIndex)
+      .eq("log_date", parsed.data.date);
+    if (error) return { error: "Güncellenemedi." };
+  }
+  return { ok: true };
+}
+
 /** Aktif programı arşivler (baştan başla). */
 export async function resetWorkout(): Promise<void> {
   const user = await getUser();

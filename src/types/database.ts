@@ -671,6 +671,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      workout_logs: {
+        Row: {
+          id: string;
+          client_id: string;
+          day_index: number;
+          log_date: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          day_index: number;
+          log_date: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          day_index?: number;
+          log_date?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       pomodoro_plans: {
         Row: {
           client_id: string;

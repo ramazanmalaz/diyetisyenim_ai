@@ -1,9 +1,12 @@
 "use client";
 
-import { Dumbbell, Info, RotateCcw } from "lucide-react";
+import { Check, Dumbbell, Flame, Info, RotateCcw } from "lucide-react";
+import { useMemo, useState } from "react";
 
-import { resetWorkout } from "@/app/(app)/spor/actions";
+import { resetWorkout, setWorkoutDone } from "@/app/(app)/spor/actions";
+import { computeStreak, last7Days } from "@/lib/plan/streak";
 import { GOAL_LABEL, LEVEL_LABEL, type WorkoutProgram } from "@/lib/workout";
+import { cn } from "@/lib/utils";
 
 export function WorkoutBoard({
   program,
@@ -11,35 +14,149 @@ export function WorkoutBoard({
   level,
   goal,
   daysPerWeek,
+  todayDate,
+  initialLogs,
 }: {
   program: WorkoutProgram;
   mode: string;
   level: string | null;
   goal: string | null;
   daysPerWeek: number;
+  todayDate: string;
+  initialLogs: { day_index: number; log_date: string }[];
 }) {
   const days = program?.days ?? [];
+
+  // `${dayIndex}|${date}` → tamamlandı
+  const [logs, setLogs] = useState<Set<string>>(
+    () => new Set(initialLogs.map((l) => `${l.day_index}|${l.log_date}`)),
+  );
+
+  const { streak, last7, weekCount } = useMemo(() => {
+    const dates = new Set<string>();
+    for (const k of logs) dates.add(k.slice(k.indexOf("|") + 1));
+    // Bu hafta (Pazartesi başlangıç) tamamlanan farklı gün sayısı.
+    const [y, m, d] = todayDate.split("-").map(Number);
+    const todayUTC = Date.UTC(y, m - 1, d);
+    const dow = new Date(todayUTC).getUTCDay(); // 0=Pz
+    const sinceMon = (dow + 6) % 7;
+    const weekStart = todayUTC - sinceMon * 86_400_000;
+    let wc = 0;
+    for (const ds of dates) {
+      const [yy, mm, dd] = ds.split("-").map(Number);
+      if (Date.UTC(yy, mm - 1, dd) >= weekStart) wc += 1;
+    }
+    return {
+      streak: computeStreak(dates, todayDate),
+      last7: last7Days(dates, todayDate),
+      weekCount: wc,
+    };
+  }, [logs, todayDate]);
+
+  async function toggleDone(dayIndex: number) {
+    const key = `${dayIndex}|${todayDate}`;
+    const done = !logs.has(key);
+    setLogs((prev) => {
+      const n = new Set(prev);
+      if (done) n.add(key);
+      else n.delete(key);
+      return n;
+    });
+    const res = await setWorkoutDone({ dayIndex, date: todayDate, done });
+    if (res && "error" in res) {
+      // geri al
+      setLogs((prev) => {
+        const n = new Set(prev);
+        if (done) n.delete(key);
+        else n.add(key);
+        return n;
+      });
+    }
+  }
+
+  const streakMsg =
+    streak === 0
+      ? "Bugün bir antrenmanı tamamla, seriyi başlat 🔥"
+      : streak < 3
+        ? "Güzel gidiyor!"
+        : streak < 7
+          ? "Harika bir seri!"
+          : "Efsanesin! 🏆";
 
   return (
     <div className="min-h-[calc(100vh-7rem)] bg-zinc-950 text-zinc-100">
       <div className="mx-auto w-full max-w-2xl space-y-5 px-4 py-8">
         {/* Başlık */}
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-lime-400/15 px-3 py-1 text-[10px] font-semibold tracking-[0.18em] text-lime-300 uppercase">
-              <Dumbbell className="h-3.5 w-3.5" /> Spor Programı
-            </span>
-            <h1 className="mt-2 text-3xl font-extrabold tracking-tight">
-              Antrenman Planım
-            </h1>
-            <p className="mt-1 text-sm text-zinc-400">
-              {mode === "gym" ? "Spor salonu" : "Kendi vücut ağırlığı"} ·{" "}
-              {goal ? GOAL_LABEL[goal] ?? goal : "—"} ·{" "}
-              {level ? LEVEL_LABEL[level] ?? level : "—"} · haftada {daysPerWeek}{" "}
-              gün
-            </p>
-          </div>
+        <div>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-lime-400/15 px-3 py-1 text-[10px] font-semibold tracking-[0.18em] text-lime-300 uppercase">
+            <Dumbbell className="h-3.5 w-3.5" /> Spor Programı
+          </span>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight">
+            Antrenman Planım
+          </h1>
+          <p className="mt-1 text-sm text-zinc-400">
+            {mode === "gym" ? "Spor salonu" : "Kendi vücut ağırlığı"} ·{" "}
+            {goal ? GOAL_LABEL[goal] ?? goal : "—"} ·{" "}
+            {level ? LEVEL_LABEL[level] ?? level : "—"} · haftada {daysPerWeek}{" "}
+            gün
+          </p>
         </div>
+
+        {/* Seri / istatistik */}
+        <section className="rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-900/40 p-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-b from-orange-400 to-orange-600 text-white shadow-[0_6px_16px_-6px_rgba(249,115,22,0.6)]">
+              <Flame className="h-6 w-6" strokeWidth={2.25} fill="currentColor" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-extrabold tabular-nums">
+                  {streak}
+                </span>
+                <span className="text-sm font-semibold text-zinc-300">
+                  günlük seri
+                </span>
+              </p>
+              <p className="truncate text-xs text-zinc-400">{streakMsg}</p>
+            </div>
+            <div className="shrink-0 rounded-xl bg-lime-400/15 px-3 py-1.5 text-center">
+              <p className="text-lg font-extrabold tabular-nums text-lime-300">
+                {weekCount}
+              </p>
+              <p className="text-[10px] text-zinc-400">bu hafta</p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-end justify-between gap-1">
+            {last7.map((d, i) => (
+              <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                <span
+                  className={cn(
+                    "grid h-7 w-7 place-items-center rounded-full text-[11px] font-bold transition",
+                    d.active
+                      ? "bg-gradient-to-b from-orange-400 to-orange-600 text-white"
+                      : "bg-zinc-800 text-zinc-600",
+                    d.isToday && "ring-2 ring-lime-400 ring-offset-2 ring-offset-zinc-900",
+                  )}
+                >
+                  {d.active ? (
+                    <Flame className="h-3.5 w-3.5" fill="currentColor" />
+                  ) : (
+                    ""
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    "text-[10px]",
+                    d.isToday ? "font-bold text-lime-300" : "text-zinc-500",
+                  )}
+                >
+                  {d.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {program?.note && (
           <div className="flex gap-2.5 rounded-2xl border border-lime-400/20 bg-lime-400/5 p-3.5 text-sm text-lime-100/90">
@@ -50,44 +167,62 @@ export function WorkoutBoard({
 
         {/* Günler */}
         <div className="space-y-4">
-          {days.map((d, i) => (
-            <section
-              key={i}
-              className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900"
-            >
-              <div className="flex items-baseline justify-between gap-2 border-b border-zinc-800 px-4 py-3">
-                <h2 className="font-bold">{d.day}</h2>
-                {d.focus && (
-                  <span className="text-xs font-medium text-lime-300">
-                    {d.focus}
-                  </span>
-                )}
-              </div>
-              <ul className="divide-y divide-zinc-800/70">
-                {d.exercises.map((ex, j) => (
-                  <li key={j} className="flex items-start gap-3 px-4 py-3">
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-zinc-800 text-xs font-bold text-lime-300">
-                      {j + 1}
+          {days.map((d, i) => {
+            const doneToday = logs.has(`${i}|${todayDate}`);
+            return (
+              <section
+                key={i}
+                className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900"
+              >
+                <div className="flex items-baseline justify-between gap-2 border-b border-zinc-800 px-4 py-3">
+                  <h2 className="font-bold">{d.day}</h2>
+                  {d.focus && (
+                    <span className="text-xs font-medium text-lime-300">
+                      {d.focus}
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">{ex.name}</p>
-                      {ex.note && (
-                        <p className="mt-0.5 text-xs text-zinc-400">{ex.note}</p>
-                      )}
-                    </div>
-                    <div className="shrink-0 text-right text-xs tabular-nums text-zinc-300">
-                      <p className="font-semibold text-zinc-100">
-                        {ex.sets} × {ex.reps}
-                      </p>
-                      {ex.rest && (
-                        <p className="text-zinc-500">dinlenme {ex.rest}</p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+                  )}
+                </div>
+                <ul className="divide-y divide-zinc-800/70">
+                  {d.exercises.map((ex, j) => (
+                    <li key={j} className="flex items-start gap-3 px-4 py-3">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-zinc-800 text-xs font-bold text-lime-300">
+                        {j + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{ex.name}</p>
+                        {ex.note && (
+                          <p className="mt-0.5 text-xs text-zinc-400">
+                            {ex.note}
+                          </p>
+                        )}
+                      </div>
+                      <div className="shrink-0 text-right text-xs tabular-nums text-zinc-300">
+                        <p className="font-semibold text-zinc-100">
+                          {ex.sets} × {ex.reps}
+                        </p>
+                        {ex.rest && (
+                          <p className="text-zinc-500">dinlenme {ex.rest}</p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => toggleDone(i)}
+                  className={cn(
+                    "flex w-full items-center justify-center gap-2 border-t border-zinc-800 py-2.5 text-sm font-semibold transition active:scale-[0.99]",
+                    doneToday
+                      ? "bg-lime-400/15 text-lime-300"
+                      : "text-zinc-300 hover:bg-zinc-800",
+                  )}
+                >
+                  <Check className="h-4 w-4" />
+                  {doneToday ? "Bugün tamamlandı ✓" : "Bugün bu antrenmanı yaptım"}
+                </button>
+              </section>
+            );
+          })}
         </div>
 
         {/* Yeniden oluştur */}
