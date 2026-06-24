@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Dumbbell,
   Home,
   LineChart,
   MessageCircle,
@@ -22,6 +23,7 @@ const ITEMS: {
 }[] = [
   { href: "/panel", label: "Ana", icon: Home },
   { href: "/plan", label: "Plan", icon: UtensilsCrossed },
+  { href: "/spor", label: "Spor", icon: Dumbbell },
   { href: "/sohbet", label: "Sohbet", icon: MessageCircle },
   { href: "/ilerleme", label: "İlerleme", icon: LineChart },
   { href: "/pomodoro", label: "Odak", icon: Timer },

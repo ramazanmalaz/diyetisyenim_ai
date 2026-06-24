@@ -632,6 +632,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      workout_plans: {
+        Row: {
+          id: string;
+          client_id: string;
+          mode: string;
+          level: string | null;
+          goal: string | null;
+          days_per_week: number;
+          equipment: string[];
+          program: Record<string, unknown>;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          mode: string;
+          level?: string | null;
+          goal?: string | null;
+          days_per_week?: number;
+          equipment?: string[];
+          program: Record<string, unknown>;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          mode?: string;
+          level?: string | null;
+          goal?: string | null;
+          days_per_week?: number;
+          equipment?: string[];
+          program?: Record<string, unknown>;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       pomodoro_plans: {
         Row: {
           client_id: string;
