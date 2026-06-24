@@ -88,12 +88,12 @@ export async function generateWorkoutProgram(
 
   const prompt = `Aşağıdaki kişi için haftada ${p.daysPerWeek} günlük bir antrenman programı kur.
 - Yer/ekipman: ${equipLine}
-- Her gün için odak + 4-7 egzersiz (set, tekrar, dinlenme).
-- Seviyeye ve hedefe uygun olsun. Isınma/soğuma ve ilerleme önerini note alanına yaz.
-- Hedefe ulaşmak için gerçekçi, sürdürülebilir ol.
+- Her gün için odak + 4-6 egzersiz (set, tekrar, dinlenme).
+- ÖZ VE KISA yaz: egzersiz "note" alanlarını boş bırak ya da en fazla 5-6 kelimelik tek ipucu. Genel "note" en fazla 2 kısa cümle (ısınma + ilerleme).
+- Seviyeye ve hedefe uygun, gerçekçi ol.
 
 Kişi: ${p.intakeSummary}
-Seviye/Hedef bilgisi prompt'ta verildi. Programı save_workout ile döndür.`;
+Programı save_workout ile döndür.`;
 
   const res = await anthropic.messages.create({
     model: DEFAULT_MODEL,

@@ -65,28 +65,36 @@ export function WorkoutWizard() {
   async function runGenerate(eq: string[], m: "bodyweight" | "gym") {
     setGenerating(true);
     setError(null);
-    const res = await generateWorkout({
-      mode: m,
-      level,
-      goal,
-      daysPerWeek: days,
-      equipment: eq,
-      sex: sex ?? undefined,
-      sessionMin,
-      style,
-      injuries: injuries.trim() || undefined,
-    });
-    if ("ok" in res) {
-      router.push("/spor");
-      router.refresh();
-      return;
+    try {
+      const res = await generateWorkout({
+        mode: m,
+        level,
+        goal,
+        daysPerWeek: days,
+        equipment: eq,
+        sex: sex ?? undefined,
+        sessionMin,
+        style,
+        injuries: injuries.trim() || undefined,
+      });
+      if ("ok" in res) {
+        router.push("/spor");
+        router.refresh();
+        return;
+      }
+      setGenerating(false);
+      if ("quota" in res) {
+        triggerPremiumWall("chat");
+        return;
+      }
+      setError(res.error);
+    } catch {
+      // Zaman aşımı / ağ hatası → spinner'da takılı kalma.
+      setGenerating(false);
+      setError(
+        "Program hazırlanırken zaman aşımına uğradı. Lütfen tekrar dene.",
+      );
     }
-    setGenerating(false);
-    if ("quota" in res) {
-      triggerPremiumWall("chat");
-      return;
-    }
-    setError(res.error);
   }
 
   async function scanGym() {
@@ -142,6 +150,12 @@ export function WorkoutWizard() {
           Birkaç soru, sonra programını oluşturalım.
         </p>
       </div>
+
+      {error && (step === "mode" || step === "gympath") && (
+        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {error}
+        </div>
+      )}
 
       {/* SORULAR */}
       {step === "level" && (
