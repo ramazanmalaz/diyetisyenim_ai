@@ -2,6 +2,7 @@ import type AnthropicNS from "@anthropic-ai/sdk";
 import { z } from "zod";
 
 import type { ImageMediaType } from "@/lib/ai/respond";
+import { getExerciseVocabulary } from "@/lib/exercise-db";
 import type { WorkoutProgram } from "@/lib/workout";
 
 import { anthropic, DEFAULT_MODEL } from "./client";
@@ -89,17 +90,30 @@ export async function generateWorkoutProgram(
         : "Spor salonu. Tipik bir salonda bulunan serbest ağırlık + makinelerden dengeli, karışık bir program kur."
       : "Ev / kendi vücut ağırlığı. Hiçbir alet gerektirmeyen (gerekirse direnç bandı) hareketler kullan.";
 
+  // Egzersizleri yuhonas kütüphanesinden seçtir → her egzersizin görseli kesin bulunur.
+  let vocab: string[] = [];
+  try {
+    vocab = await getExerciseVocabulary(p.mode);
+  } catch {
+    vocab = [];
+  }
+
   const system =
     "Sen deneyimli bir antrenman koçusun. Güvenli, kademeli ilerleyen, kişiye uygun programlar kurarsın. Tıbbi tavsiye vermezsin; ağrı/sakatlık sinyalinde profesyonele yönlendirirsin. Yanıtı YALNIZCA save_workout aracıyla ver.";
+
+  const vocabBlock =
+    vocab.length > 0
+      ? `\n\nKULLANILABİLİR EGZERSİZLER — her egzersizin "enName" alanına AŞAĞIDAKİ LİSTEDEN BİREBİR (kopyala) bir ad yaz; listede olmayan egzersiz KULLANMA. "name" alanına o egzersizin Türkçe karşılığını yaz. Mevcut ekipmana uygun olanları seç:\n${vocab.join(", ")}`
+      : "";
 
   const prompt = `Aşağıdaki kişi için haftada ${p.daysPerWeek} günlük bir antrenman programı kur.
 - Yer/ekipman: ${equipLine}
 - Her gün için odak + 4-6 egzersiz (set, tekrar, dinlenme).
-- Her egzersiz için "enName" alanına kısa, standart İngilizce adını yaz (GIF/video araması için; örn. "incline bench press").
+- "enName": ${vocab.length > 0 ? "yukarıdaki listeden BİREBİR seç (zorunlu)" : 'kısa standart İngilizce ad (örn. "incline bench press")'}.
 - ÖZ VE KISA yaz: egzersiz "note" alanlarını boş bırak ya da en fazla 5-6 kelimelik tek ipucu. Genel "note" en fazla 2 kısa cümle (ısınma + ilerleme).
 - Seviyeye ve hedefe uygun, gerçekçi ol.
 
-Kişi: ${p.intakeSummary}
+Kişi: ${p.intakeSummary}${vocabBlock}
 Programı save_workout ile döndür.`;
 
   const res = await anthropic.messages.create({

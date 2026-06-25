@@ -10,6 +10,7 @@ import {
 } from "@/lib/ai/workout";
 import { getUser } from "@/lib/auth";
 import { consumeAiCredit } from "@/lib/entitlements";
+import { resolveExerciseFrames } from "@/lib/exercise-db";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { GOAL_LABEL, LEVEL_LABEL, STYLE_LABEL } from "@/lib/workout";
 import {
@@ -132,68 +133,16 @@ export async function analyzeGym(formData: FormData): Promise<GymScanResult> {
   }
 }
 
-// Egzersiz görsel kaynağı: yuhonas free-exercise-db (anahtarsız, limitsiz).
-// Her egzersizin 2 karesi (başlangıç/bitiş) var → UI'da animasyonla gösterilir.
-const FED_BASE =
-  "https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises/";
-type FedItem = { name: string; images: string[] };
-let fedIndex: FedItem[] | null = null;
-const demoCache = new Map<string, string[] | null>();
-
-async function loadFedIndex(): Promise<FedItem[]> {
-  if (fedIndex) return fedIndex;
-  const res = await fetch(
-    "https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/dist/exercises.json",
-    { next: { revalidate: 60 * 60 * 24 * 7 } },
-  );
-  const raw = (await res.json()) as { name?: string; images?: string[] }[];
-  fedIndex = raw
-    .filter((x) => x.name && x.images && x.images.length > 0)
-    .map((x) => ({ name: x.name as string, images: x.images as string[] }));
-  return fedIndex;
-}
-
-const tokens = (s: string) =>
-  new Set((s.toLowerCase().match(/[a-z]+/g) ?? []).filter((t) => t.length > 1));
-
 /**
- * Egzersiz için demo görsel kareleri (yuhonas). enName/ad ile en iyi eşleşme;
- * yeterli örtüşme yoksa null → UI yalnızca "video izle" gösterir.
+ * Egzersiz için demo görsel kareleri (yuhonas). AI egzersizleri aynı kaynaktan
+ * (sözlükten) seçtiği için enName birebir eşleşir; eşleşmezse token-örtüşmesi.
  */
 export async function exerciseDemo(
   query: unknown,
 ): Promise<{ frames: string[] | null }> {
-  const q = typeof query === "string" ? query.trim().toLowerCase() : "";
-  if (!q) return { frames: null };
-  if (demoCache.has(q)) return { frames: demoCache.get(q) ?? null };
+  const q = typeof query === "string" ? query : "";
   try {
-    const index = await loadFedIndex();
-    const qt = tokens(q);
-    if (qt.size === 0) return { frames: null };
-    let best: FedItem | null = null;
-    let bestScore = 0;
-    let bestLen = Infinity;
-    for (const it of index) {
-      const nt = tokens(it.name);
-      let inter = 0;
-      for (const t of qt) if (nt.has(t)) inter += 1;
-      const score = inter / qt.size;
-      if (score > bestScore || (score === bestScore && nt.size < bestLen)) {
-        best = it;
-        bestScore = score;
-        bestLen = nt.size;
-      }
-    }
-    // Sorgu kelimelerinin çoğu eşleşmiyorsa görsel gösterme (yanlış eşleşme).
-    if (!best || bestScore < 0.6) {
-      demoCache.set(q, null);
-      return { frames: null };
-    }
-    const frames = best.images
-      .slice(0, 2)
-      .map((p) => FED_BASE + encodeURI(p));
-    demoCache.set(q, frames);
-    return { frames };
+    return { frames: await resolveExerciseFrames(q) };
   } catch {
     return { frames: null };
   }
