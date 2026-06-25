@@ -94,7 +94,9 @@ export async function generateWorkout(values: unknown): Promise<WorkoutResult> {
     status: "active",
   });
   if (error) return { error: "Program kaydedilemedi." };
-  return { ok: true };
+  // Başarı: sunucudan taze yönlendir (client soft-nav bayat RSC alıp spinner'da
+  // takılıyordu). redirect() NEXT_REDIRECT atar; client navigasyonu yapar.
+  redirect("/spor");
 }
 
 /** Spor salonu fotoğraflarından aletleri tanır (vision kredisi tüketir). */

@@ -77,9 +77,9 @@ export function WorkoutWizard() {
         style,
         injuries: injuries.trim() || undefined,
       });
+      // Başarıda action sunucudan /spor'a redirect eder (buraya düşmez).
       if ("ok" in res) {
         router.push("/spor");
-        router.refresh();
         return;
       }
       setGenerating(false);
@@ -88,8 +88,19 @@ export function WorkoutWizard() {
         return;
       }
       setError(res.error);
-    } catch {
-      // Zaman aşımı / ağ hatası → spinner'da takılı kalma.
+    } catch (e) {
+      // Server redirect (NEXT_REDIRECT) bir hata gibi görünür → yeniden fırlat
+      // ki Next navigasyonu tamamlasın (başarı bu yoldan akar).
+      if (
+        e &&
+        typeof e === "object" &&
+        "digest" in e &&
+        typeof (e as { digest?: string }).digest === "string" &&
+        (e as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+      ) {
+        throw e;
+      }
+      // Gerçek zaman aşımı / ağ hatası → spinner'da takılı kalma.
       setGenerating(false);
       setError(
         "Program hazırlanırken zaman aşımına uğradı. Lütfen tekrar dene.",
