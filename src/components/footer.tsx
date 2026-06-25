@@ -17,6 +17,21 @@ export function Footer() {
             </Link>
           ))}
         </nav>
+
+        {/* iyzico ile Öde — Visa / Mastercard logo bandı (ödeme onayı kriteri) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/iyzico/logo_band_colored.svg"
+          alt="iyzico ile Öde — Visa, Mastercard ile güvenli ödeme"
+          className="h-7 w-auto dark:hidden"
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/iyzico/logo_band_white.svg"
+          alt="iyzico ile Öde — Visa, Mastercard ile güvenli ödeme"
+          className="hidden h-7 w-auto dark:block"
+        />
+
         <p className="text-xs text-gray-400">
           © {COMPANY.brand} · {COMPANY.name} · Tüm hakları saklıdır. Ödeme
           altyapısı <span className="font-medium">iyzico</span> ile sağlanır.

@@ -285,6 +285,22 @@ export default async function AbonelikPage({
         )}
       </div>
 
+      {/* iyzico ile Öde — Visa / Mastercard logo bandı (ödeme onayı kriteri) */}
+      <div className="border-t border-gray-100 pt-4 dark:border-gray-800">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/iyzico/logo_band_colored.svg"
+          alt="iyzico ile Öde — Visa, Mastercard ile güvenli ödeme"
+          className="h-7 w-auto dark:hidden"
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/iyzico/logo_band_white.svg"
+          alt="iyzico ile Öde — Visa, Mastercard ile güvenli ödeme"
+          className="hidden h-7 w-auto dark:block"
+        />
+      </div>
+
       <nav className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-gray-100 pt-4 text-xs text-gray-400 dark:border-gray-800">
         {LEGAL_LINKS.map((l) => (
           <Link
