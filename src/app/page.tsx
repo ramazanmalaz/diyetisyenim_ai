@@ -80,6 +80,25 @@ export default function Home() {
       <p className="reveal mt-6 text-xs text-gray-400">
         Ücretsiz başla · Kredi kartı gerekmez
       </p>
+
+      {/* Güvenli ödeme — iyzico / Visa / Mastercard logo bandı */}
+      <div className="reveal mt-10 flex flex-col items-center gap-2">
+        <span className="text-[11px] font-medium tracking-wide text-gray-400 uppercase">
+          iyzico güvencesiyle güvenli ödeme
+        </span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/iyzico/logo_band_colored.svg"
+          alt="iyzico ile Öde — Visa, Mastercard ile güvenli ödeme"
+          className="h-7 w-auto dark:hidden"
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/iyzico/logo_band_white.svg"
+          alt="iyzico ile Öde — Visa, Mastercard ile güvenli ödeme"
+          className="hidden h-7 w-auto dark:block"
+        />
+      </div>
     </main>
       <Footer />
     </>
