@@ -116,24 +116,36 @@ export function WorkoutWizard() {
     }
     setScanning(true);
     setError(null);
-    const fd = new FormData();
-    files.forEach((f) => fd.append("photos", f));
-    const res = await analyzeGym(fd);
-    setScanning(false);
-    if ("quota" in res) {
-      triggerPremiumWall("vision");
-      return;
+    try {
+      // Telefon fotoğrafları büyük (3-8 MB, iOS'ta HEIC) → göndermeden önce
+      // tarayıcıda küçült + JPEG'e çevir: hızlı yükleme, 5 MB altı, geçerli tip.
+      const fd = new FormData();
+      for (const f of files.slice(0, 4)) {
+        const blob = await downscaleImage(f);
+        fd.append("photos", blob, "gym.jpg");
+      }
+      const res = await analyzeGym(fd);
+      setScanning(false);
+      if ("quota" in res) {
+        triggerPremiumWall("vision");
+        return;
+      }
+      if ("error" in res) {
+        setError(res.error);
+        return;
+      }
+      setEquipment(res.equipment);
+      setScanNote(
+        res.equipment.length
+          ? "Tanınan aletleri kontrol et, ekle/çıkar, sonra programı oluştur."
+          : "Net alet tanınamadı. Aşağıdan elle ekleyebilir ya da karışık program oluşturabilirsin.",
+      );
+    } catch {
+      setScanning(false);
+      setError(
+        "Fotoğraflar işlenemedi. Daha küçük/net bir fotoğrafla tekrar dene ya da aletleri elle seç.",
+      );
     }
-    if ("error" in res) {
-      setError(res.error);
-      return;
-    }
-    setEquipment(res.equipment);
-    setScanNote(
-      res.equipment.length
-        ? "Tanınan aletleri kontrol et, ekle/çıkar, sonra programı oluştur."
-        : "Net alet tanınamadı. Aşağıdan elle ekleyebilir ya da karışık program oluşturabilirsin.",
-    );
   }
 
   if (generating) {
@@ -596,4 +608,45 @@ function Chip({
       {children}
     </button>
   );
+}
+
+/**
+ * Fotoğrafı tarayıcıda küçültüp JPEG blob'una çevirir (en uzun kenar ~1280px).
+ * Mobil büyük fotoğrafları hızlandırır, 5 MB sınırını aşmaz; iOS HEIC'i Safari
+ * <img> ile çözdüğü için JPEG'e dönüşür (sunucuya geçerli image/jpeg gider).
+ */
+function downscaleImage(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1280;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        const r = Math.min(MAX / width, MAX / height);
+        width = Math.round(width * r);
+        height = Math.round(height * r);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      URL.revokeObjectURL(url);
+      if (!ctx) {
+        reject(new Error("canvas"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("blob"))),
+        "image/jpeg",
+        0.82,
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("img"));
+    };
+    img.src = url;
+  });
 }
