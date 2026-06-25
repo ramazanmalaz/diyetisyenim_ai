@@ -13,7 +13,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import {
-  exerciseGif,
+  exerciseDemo,
   resetWorkout,
   setWorkoutDone,
 } from "@/app/(app)/spor/actions";
@@ -55,26 +55,34 @@ export function WorkoutBoard({
     () => new Set(initialLogs.map((l) => `${l.day_index}|${l.log_date}`)),
   );
   const [detail, setDetail] = useState<Exercise | null>(null);
-  const [gif, setGif] = useState<{ url: string | null; loading: boolean }>({
-    url: null,
-    loading: false,
-  });
+  const [demo, setDemo] = useState<{
+    frames: string[] | null;
+    loading: boolean;
+  }>({ frames: null, loading: false });
+  const [frameIdx, setFrameIdx] = useState(0);
 
-  // Detay açılınca egzersiz GIF'ini getir (enName önce, yoksa Türkçe ad).
+  // Detay açılınca egzersiz demo karelerini getir (enName önce, yoksa Türkçe ad).
   useEffect(() => {
     if (!detail) return;
     let active = true;
     const q = detail.enName?.trim() || detail.name;
     queueMicrotask(() => {
-      if (active) setGif({ url: null, loading: true });
+      if (active) setDemo({ frames: null, loading: true });
     });
-    exerciseGif(q).then((res) => {
-      if (active) setGif({ url: res.url, loading: false });
+    exerciseDemo(q).then((res) => {
+      if (active) setDemo({ frames: res.frames, loading: false });
     });
     return () => {
       active = false;
     };
   }, [detail]);
+
+  // 2 kareyi dönüştürerek hareket animasyonu (loop).
+  useEffect(() => {
+    if (!demo.frames || demo.frames.length < 2) return;
+    const id = setInterval(() => setFrameIdx((i) => (i + 1) % 2), 700);
+    return () => clearInterval(id);
+  }, [demo.frames]);
 
   const { streak, last7, weekCount } = useMemo(() => {
     const dates = new Set<string>();
@@ -346,19 +354,19 @@ export function WorkoutBoard({
               </button>
             </div>
 
-            {/* İnline GIF (Giphy) — anahtar varsa ve bulunduysa */}
-            {gif.loading && (
-              <div className="mt-4 grid h-44 place-items-center rounded-2xl border border-zinc-800 bg-zinc-800/40 text-sm text-zinc-500">
+            {/* İnline hareket görseli (başlangıç/bitiş kareleri animasyonlu) */}
+            {demo.loading && (
+              <div className="mt-4 grid h-48 place-items-center rounded-2xl border border-zinc-800 bg-zinc-800/40 text-sm text-zinc-500">
                 Hareket görseli yükleniyor…
               </div>
             )}
-            {!gif.loading && gif.url && (
-              <div className="mt-4 overflow-hidden rounded-2xl border border-zinc-800 bg-black">
+            {!demo.loading && demo.frames && demo.frames.length > 0 && (
+              <div className="mt-4 overflow-hidden rounded-2xl border border-zinc-800 bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={gif.url}
+                  src={demo.frames[frameIdx] ?? demo.frames[0]}
                   alt={`${detail.name} hareketi`}
-                  className="mx-auto max-h-56 w-auto"
+                  className="mx-auto max-h-60 w-auto"
                 />
               </div>
             )}
