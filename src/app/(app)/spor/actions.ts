@@ -132,6 +132,39 @@ export async function analyzeGym(formData: FormData): Promise<GymScanResult> {
   }
 }
 
+// Egzersiz GIF arama cache'i (instance ömrü). null = bulunamadı/anahtar yok.
+const gifCache = new Map<string, string | null>();
+
+/**
+ * Egzersiz için inline gösterilecek GIF URL'i (Giphy arama). GIPHY_API_KEY
+ * yoksa null döner → UI yalnızca "video izle" butonunu gösterir.
+ */
+export async function exerciseGif(query: unknown): Promise<{ url: string | null }> {
+  const q = typeof query === "string" ? query.trim().toLowerCase() : "";
+  if (!q) return { url: null };
+  const key = process.env.GIPHY_API_KEY;
+  if (!key) return { url: null };
+  if (gifCache.has(q)) return { url: gifCache.get(q) ?? null };
+  try {
+    const url = `https://api.giphy.com/v1/gifs/search?api_key=${key}&q=${encodeURIComponent(
+      `${q} exercise`,
+    )}&limit=1&rating=pg&lang=en`;
+    const res = await fetch(url, { next: { revalidate: 60 * 60 * 24 } });
+    if (!res.ok) {
+      gifCache.set(q, null);
+      return { url: null };
+    }
+    const data = (await res.json()) as {
+      data?: { images?: { fixed_height?: { url?: string } } }[];
+    };
+    const gif = data.data?.[0]?.images?.fixed_height?.url ?? null;
+    gifCache.set(q, gif);
+    return { url: gif };
+  } catch {
+    return { url: null };
+  }
+}
+
 export type WorkoutLogResult = { error: string } | { ok: true };
 
 /** Bir program gününü belirli tarihte tamamlandı/işareti-kaldır olarak kaydeder. */

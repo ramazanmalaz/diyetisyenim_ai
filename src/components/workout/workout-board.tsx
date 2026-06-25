@@ -10,9 +10,13 @@ import {
   Timer,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { resetWorkout, setWorkoutDone } from "@/app/(app)/spor/actions";
+import {
+  exerciseGif,
+  resetWorkout,
+  setWorkoutDone,
+} from "@/app/(app)/spor/actions";
 import { computeStreak, last7Days } from "@/lib/plan/streak";
 import {
   GOAL_LABEL,
@@ -51,6 +55,26 @@ export function WorkoutBoard({
     () => new Set(initialLogs.map((l) => `${l.day_index}|${l.log_date}`)),
   );
   const [detail, setDetail] = useState<Exercise | null>(null);
+  const [gif, setGif] = useState<{ url: string | null; loading: boolean }>({
+    url: null,
+    loading: false,
+  });
+
+  // Detay açılınca egzersiz GIF'ini getir (enName önce, yoksa Türkçe ad).
+  useEffect(() => {
+    if (!detail) return;
+    let active = true;
+    const q = detail.enName?.trim() || detail.name;
+    queueMicrotask(() => {
+      if (active) setGif({ url: null, loading: true });
+    });
+    exerciseGif(q).then((res) => {
+      if (active) setGif({ url: res.url, loading: false });
+    });
+    return () => {
+      active = false;
+    };
+  }, [detail]);
 
   const { streak, last7, weekCount } = useMemo(() => {
     const dates = new Set<string>();
@@ -321,6 +345,23 @@ export function WorkoutBoard({
                 <X className="h-4 w-4" />
               </button>
             </div>
+
+            {/* İnline GIF (Giphy) — anahtar varsa ve bulunduysa */}
+            {gif.loading && (
+              <div className="mt-4 grid h-44 place-items-center rounded-2xl border border-zinc-800 bg-zinc-800/40 text-sm text-zinc-500">
+                Hareket görseli yükleniyor…
+              </div>
+            )}
+            {!gif.loading && gif.url && (
+              <div className="mt-4 overflow-hidden rounded-2xl border border-zinc-800 bg-black">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={gif.url}
+                  alt={`${detail.name} hareketi`}
+                  className="mx-auto max-h-56 w-auto"
+                />
+              </div>
+            )}
 
             {detail.note && (
               <p className="mt-3 flex gap-2 rounded-xl bg-zinc-800/60 p-3 text-sm text-zinc-300">

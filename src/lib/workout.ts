@@ -4,6 +4,7 @@ export type WorkoutMode = "bodyweight" | "gym";
 
 export type Exercise = {
   name: string;
+  enName?: string; // GIF/video araması için kısa İngilizce karşılık
   sets: number;
   reps: string; // "12", "8-10", "30 sn" gibi esnek
   rest: string; // "60 sn"

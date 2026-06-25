@@ -10,6 +10,7 @@ import { anthropic, DEFAULT_MODEL } from "./client";
 // "Program oluşturulamadı" hatasına yol açıyordu — özellikle uzun genel not).
 const exerciseSchema = z.object({
   name: z.string().min(1).max(200),
+  enName: z.string().max(120).optional().default(""),
   sets: z.coerce.number().int().min(1).max(20),
   reps: z.string().min(1).max(80),
   rest: z.string().max(80).optional().default("60 sn"),
@@ -46,6 +47,11 @@ const PROGRAM_TOOL: AnthropicNS.Tool.InputSchema = {
               type: "object",
               properties: {
                 name: { type: "string", description: "Egzersiz adı (Türkçe)" },
+                enName: {
+                  type: "string",
+                  description:
+                    "Egzersizin kısa, standart İngilizce adı (GIF/video araması için). Örn. 'incline bench press', 'lat pulldown'.",
+                },
                 sets: { type: "integer", description: "Set sayısı" },
                 reps: { type: "string", description: "Tekrar, örn. '8-12' ya da '30 sn'" },
                 rest: { type: "string", description: "Setler arası dinlenme, örn. '60 sn'" },
@@ -89,6 +95,7 @@ export async function generateWorkoutProgram(
   const prompt = `Aşağıdaki kişi için haftada ${p.daysPerWeek} günlük bir antrenman programı kur.
 - Yer/ekipman: ${equipLine}
 - Her gün için odak + 4-6 egzersiz (set, tekrar, dinlenme).
+- Her egzersiz için "enName" alanına kısa, standart İngilizce adını yaz (GIF/video araması için; örn. "incline bench press").
 - ÖZ VE KISA yaz: egzersiz "note" alanlarını boş bırak ya da en fazla 5-6 kelimelik tek ipucu. Genel "note" en fazla 2 kısa cümle (ısınma + ilerleme).
 - Seviyeye ve hedefe uygun, gerçekçi ol.
 
