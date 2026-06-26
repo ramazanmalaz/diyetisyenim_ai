@@ -7,8 +7,13 @@ import { setWaterReminder } from "@/app/(app)/push/actions";
 import { updateWater } from "@/app/(app)/plan/actions";
 import { Input } from "@/components/ui/input";
 import { enablePush } from "@/lib/push-client";
+import {
+  broadcastWater,
+  WATER_GLASS_ML,
+  WATER_UPDATE_EVENT,
+} from "@/lib/water-sync";
 
-const GLASS_ML = 250; // 1 bardak (standart)
+const GLASS_ML = WATER_GLASS_ML; // 1 bardak (standart) — hatırlatıcıyla ortak
 const REMINDER_KEY = "su_reminder_enabled";
 
 export function WaterTracker({
@@ -36,6 +41,16 @@ export function WaterTracker({
     }
   }, []);
 
+  // Su hatırlatıcısı "bir bardak içtim" deyince sayacı canlı güncelle.
+  useEffect(() => {
+    const onUpdate = (e: Event) => {
+      const total = (e as CustomEvent<{ total: number }>).detail?.total;
+      if (typeof total === "number") setTotal(total);
+    };
+    window.addEventListener(WATER_UPDATE_EVENT, onUpdate);
+    return () => window.removeEventListener(WATER_UPDATE_EVENT, onUpdate);
+  }, []);
+
   const pct = Math.min(100, Math.round((total / GOAL_ML) * 100));
   const filled = Math.min(GLASSES, Math.floor(total / GLASS_ML)); // dolu bardak sayısı
   const glassesExact = Math.round((total / GLASS_ML) * 10) / 10;
@@ -51,7 +66,10 @@ export function WaterTracker({
     setTotal((t) => Math.max(0, t + deltaMl)); // iyimser
     const res = await updateWater({ deltaMl });
     setBusy(false);
-    if ("total" in res) setTotal(res.total);
+    if ("total" in res) {
+      setTotal(res.total);
+      broadcastWater(res.total); // diğer açık su bileşenleriyle senkron
+    }
   }
 
   // Bir bardağa dokununca o seviyeye ayarla (mutlak → delta).
@@ -75,7 +93,10 @@ export function WaterTracker({
     setLastAdd(0);
     const res = await updateWater({ reset: true });
     setBusy(false);
-    if ("total" in res) setTotal(res.total);
+    if ("total" in res) {
+      setTotal(res.total);
+      broadcastWater(res.total);
+    }
   }
 
   async function toggleReminder() {

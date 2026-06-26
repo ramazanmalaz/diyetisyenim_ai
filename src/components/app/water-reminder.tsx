@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { updateWater } from "@/app/(app)/plan/actions";
 import { playAlertChime } from "@/lib/alert-sound";
+import { broadcastWater, WATER_GLASS_ML } from "@/lib/water-sync";
 
 const ENABLED_KEY = "su_reminder_enabled";
 const LAST_KEY = "su_reminder_last";
@@ -79,7 +80,9 @@ export function WaterReminder() {
   async function drink() {
     setDue(false);
     setLs(LAST_KEY, String(Date.now()));
-    await updateWater({ deltaMl: 200 });
+    const res = await updateWater({ deltaMl: WATER_GLASS_ML });
+    // Açık su sayacını canlı güncelle (reload beklemeden).
+    if (res && "total" in res) broadcastWater(res.total);
   }
   function snooze() {
     setDue(false);
@@ -95,7 +98,7 @@ export function WaterReminder() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">Su molası 💧</p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Bir bardak su içmeye ne dersin?
+            Bir bardak (250 ml) su içmeye ne dersin?
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <button
