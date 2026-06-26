@@ -22,12 +22,10 @@ export default async function SporPage() {
   if (!plan) redirect("/spor/baslangic");
 
   const todayKey = new Date().toISOString().slice(0, 10);
-  const since = new Date();
-  since.setDate(since.getDate() - 30);
   const { data: logs } = await supabase
     .from("workout_logs")
-    .select("day_index, log_date")
-    .gte("log_date", since.toISOString().slice(0, 10));
+    .select("day_index, exercise_index, log_date")
+    .eq("log_date", todayKey);
 
   return (
     <WorkoutBoard

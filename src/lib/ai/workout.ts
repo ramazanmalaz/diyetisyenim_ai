@@ -103,7 +103,7 @@ export async function generateWorkoutProgram(
 
   const vocabBlock =
     vocab.length > 0
-      ? `\n\nKULLANILABİLİR EGZERSİZLER — her egzersizin "enName" alanına AŞAĞIDAKİ LİSTEDEN BİREBİR (kopyala) bir ad yaz; listede olmayan egzersiz KULLANMA. "name" alanına o egzersizin Türkçe karşılığını yaz. Mevcut ekipmana uygun olanları seç:\n${vocab.join(", ")}`
+      ? `\n\nKULLANILABİLİR EGZERSİZLER — her egzersizin "enName" alanına AŞAĞIDAKİ LİSTEDEN BİREBİR (kopyala) bir ad yaz; listede olmayan egzersiz KULLANMA. "name" alanına Türkiye'de spor salonlarında kullanılan YAYGIN adı yaz: çoğu hareket İngilizce adıyla bilinir (Bench Press, Lat Pulldown, Squat, Deadlift, Leg Press) — bunları olduğu gibi bırak, zorla Türkçeleştirme; yalnızca yaygın Türkçesi olanları çevir (şınav, mekik, barfiks, plank, lunge). Mevcut ekipmana uygun olanları seç:\n${vocab.join(", ")}`
       : "";
 
   const prompt = `Aşağıdaki kişi için haftada ${p.daysPerWeek} günlük bir antrenman programı kur.

@@ -150,13 +150,14 @@ export async function exerciseDemo(
 
 export type WorkoutLogResult = { error: string } | { ok: true };
 
-/** Bir program gününü belirli tarihte tamamlandı/işareti-kaldır olarak kaydeder. */
-export async function setWorkoutDone(values: unknown): Promise<WorkoutLogResult> {
+/** Bir egzersizi belirli tarihte tamamlandı/işareti-kaldır olarak kaydeder. */
+export async function setExerciseDone(values: unknown): Promise<WorkoutLogResult> {
   const user = await getUser();
   if (!user) return { error: "Oturum bulunamadı." };
   const parsed = z
     .object({
       dayIndex: z.coerce.number().int().min(0).max(13),
+      exerciseIndex: z.coerce.number().int().min(0).max(49),
       date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       done: z.boolean(),
     })
@@ -169,9 +170,10 @@ export async function setWorkoutDone(values: unknown): Promise<WorkoutLogResult>
       {
         client_id: user.id,
         day_index: parsed.data.dayIndex,
+        exercise_index: parsed.data.exerciseIndex,
         log_date: parsed.data.date,
       },
-      { onConflict: "client_id,day_index,log_date" },
+      { onConflict: "client_id,day_index,exercise_index,log_date" },
     );
     if (error) return { error: "Kaydedilemedi." };
   } else {
@@ -180,6 +182,7 @@ export async function setWorkoutDone(values: unknown): Promise<WorkoutLogResult>
       .delete()
       .eq("client_id", user.id)
       .eq("day_index", parsed.data.dayIndex)
+      .eq("exercise_index", parsed.data.exerciseIndex)
       .eq("log_date", parsed.data.date);
     if (error) return { error: "Güncellenemedi." };
   }

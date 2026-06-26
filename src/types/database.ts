@@ -676,6 +676,7 @@ export type Database = {
           id: string;
           client_id: string;
           day_index: number;
+          exercise_index: number;
           log_date: string;
           created_at: string;
         };
@@ -683,6 +684,7 @@ export type Database = {
           id?: string;
           client_id: string;
           day_index: number;
+          exercise_index?: number;
           log_date: string;
           created_at?: string;
         };
@@ -690,6 +692,7 @@ export type Database = {
           id?: string;
           client_id?: string;
           day_index?: number;
+          exercise_index?: number;
           log_date?: string;
           created_at?: string;
         };
