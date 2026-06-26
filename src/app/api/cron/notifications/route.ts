@@ -10,11 +10,10 @@ export const dynamic = "force-dynamic";
 // kişisel ayarına uygun su, öğün ve pomodoro bildirimleri gönderir.
 
 export async function GET(request: NextRequest) {
+  // Fail-closed: secret tanımsızsa endpoint herkese açık kalmasın.
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    if (request.headers.get("authorization") !== `Bearer ${secret}`) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+    return new NextResponse("Unauthorized", { status: 401 });
   }
 
   const ist = new Date(Date.now() + 3 * 3600 * 1000); // UTC+3
