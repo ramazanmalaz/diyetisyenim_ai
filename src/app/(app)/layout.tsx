@@ -9,6 +9,7 @@ import { PushSetup } from "@/components/app/push-setup";
 import { WaterReminder } from "@/components/app/water-reminder";
 import { requireProfile } from "@/lib/auth";
 import { getPricing } from "@/lib/settings";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function AppLayout({
   children,
@@ -19,6 +20,15 @@ export default async function AppLayout({
   const name = profile.full_name ?? "Danışan";
   const initial = name.trim().charAt(0).toUpperCase() || "D";
   const pricing = await getPricing();
+
+  // Su hatırlatıcısı program/miktar ayarları (RLS: yalnızca kendi satırı).
+  const supabase = await createClient();
+  const { data: waterCfg } = await supabase
+    .from("profiles")
+    .select(
+      "water_start_hour, water_end_hour, water_interval_hours, water_amount_ml",
+    )
+    .maybeSingle();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -73,7 +83,12 @@ export default async function AppLayout({
       <main className="flex flex-1 flex-col pb-28">{children}</main>
 
       <BottomNav />
-      <WaterReminder />
+      <WaterReminder
+        startHour={waterCfg?.water_start_hour ?? 10}
+        endHour={waterCfg?.water_end_hour ?? 20}
+        intervalHours={waterCfg?.water_interval_hours ?? 2}
+        amountMl={waterCfg?.water_amount_ml ?? 200}
+      />
       <PushSetup />
       <AudioArmer />
       <PremiumWall monthlyPrice={pricing.monthly.price} />

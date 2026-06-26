@@ -11,10 +11,7 @@ const ENABLED_KEY = "su_reminder_enabled";
 const LAST_KEY = "su_reminder_last";
 const SNOOZE_KEY = "su_reminder_snooze";
 
-const INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 saatte bir
 const SNOOZE_MS = 60 * 60 * 1000; // 1 saat ertele
-const ACTIVE_START = 8; // 08:00
-const ACTIVE_END = 22; // 22:00
 
 function getLs(key: string): string | null {
   try {
@@ -32,25 +29,40 @@ function setLs(key: string, value: string) {
 }
 
 /**
- * Gün içi su içme hatırlatıcısı. Uygulama açıkken belirli aralıklarla (aktif
- * saatlerde) uyarı gösterir; izin verilmişse OS bildirimi de gönderir.
- * Ayarlar localStorage'da; su takibi WaterTracker'daki anahtarla açılır/kapanır.
+ * Gün içi su içme hatırlatıcısı. Uygulama açıkken kullanıcının /ayarlar'daki
+ * programına göre (aktif saat aralığı + sıklık) uyarı gösterir; izin verilmişse
+ * OS bildirimi de gönderir. Eklenen miktar da ayarlardaki bardak miktarıdır.
+ * Açma/kapama localStorage'dadır (WaterTracker'daki zil ile ortak).
  */
-export function WaterReminder() {
+export function WaterReminder({
+  startHour = 10,
+  endHour = 20,
+  intervalHours = 2,
+  amountMl = 200,
+}: {
+  startHour?: number;
+  endHour?: number;
+  intervalHours?: number;
+  amountMl?: number;
+}) {
   const [due, setDue] = useState(false);
+  // Ayarlardaki bardak miktarı; geçersizse 250'ye düş.
+  const glassMl = amountMl > 0 ? amountMl : WATER_GLASS_ML;
 
   useEffect(() => {
     // İlk açılışta varsayılan: açık. 'last' yoksa şimdi (hemen tetiklenmesin).
     if (getLs(ENABLED_KEY) === null) setLs(ENABLED_KEY, "1");
     if (!getLs(LAST_KEY)) setLs(LAST_KEY, String(Date.now()));
 
+    const intervalMs = Math.max(1, intervalHours) * 60 * 60 * 1000;
+
     const check = () => {
       if (getLs(ENABLED_KEY) === "0") return;
       const now = Date.now();
       if (now < Number(getLs(SNOOZE_KEY) ?? 0)) return;
       const hour = new Date().getHours();
-      if (hour < ACTIVE_START || hour >= ACTIVE_END) return;
-      if (now - Number(getLs(LAST_KEY) ?? 0) >= INTERVAL_MS) {
+      if (hour < startHour || hour >= endHour) return;
+      if (now - Number(getLs(LAST_KEY) ?? 0) >= intervalMs) {
         setDue(true);
         setLs(LAST_KEY, String(now));
         // Belirgin uyarı sesi + titreşim (sessiz kalmasın, kaçmasın).
@@ -61,7 +73,7 @@ export function WaterReminder() {
             Notification.permission === "granted"
           ) {
             new Notification("💧 Su molası — UzmanDiyet", {
-              body: "Bir bardak (200 ml) su içme zamanı. Hadi bir yudum! 🥤",
+              body: `Bir bardak (${glassMl} ml) su içme zamanı. Hadi bir yudum! 🥤`,
               tag: "water",
             });
           }
@@ -73,14 +85,14 @@ export function WaterReminder() {
 
     const id = window.setInterval(check, 60_000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [startHour, endHour, intervalHours, glassMl]);
 
   if (!due) return null;
 
   async function drink() {
     setDue(false);
     setLs(LAST_KEY, String(Date.now()));
-    const res = await updateWater({ deltaMl: WATER_GLASS_ML });
+    const res = await updateWater({ deltaMl: glassMl });
     // Açık su sayacını canlı güncelle (reload beklemeden).
     if (res && "total" in res) broadcastWater(res.total);
   }
@@ -98,7 +110,7 @@ export function WaterReminder() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">Su molası 💧</p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Bir bardak (250 ml) su içmeye ne dersin?
+            Bir bardak ({glassMl} ml) su içmeye ne dersin?
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <button
