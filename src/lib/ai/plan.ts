@@ -71,12 +71,16 @@ export async function generatePlanMeals(params: {
 }): Promise<GeneratedMeal[]> {
   const system = buildSystemPrompt(params.dietitianRules);
 
+  const lo = Math.round(params.dailyTarget * 0.95);
+  const hi = Math.round(params.dailyTarget * 1.05);
+
   const prompt = `Aşağıdaki kişi için 7 günlük (day_of_week: 0=Pazartesi ... 6=Pazar) Türk mutfağına uygun, dengeli bir diyet programı oluştur.
 
 - Her gün 5 öğün olmalı: breakfast, snack_morning, lunch, snack_afternoon, dinner.
 - Her öğün için 1-3 yiyecek öğesi ver. Her öğeyi MİKTARIYLA yaz (örn. "2 haşlanmış yumurta", "5 siyah zeytin", "1 dilim tam buğday ekmeği").
-- Her öğenin tahmini kalorisini ekle.
-- Günlük toplam kalori YAKLAŞIK ${params.dailyTarget} kcal olmalı (±100).
+- Her öğenin GERÇEKÇİ tahmini kalorisini ekle (porsiyona uygun; abartma/eksiltme).
+- KALORİ HEDEFİ — KRİTİK: HER GÜNÜN öğün kalorileri toplamı ${lo}–${hi} kcal arasında olmalı (hedef ${params.dailyTarget} kcal). Bunu tutturmak için öğün MİKTARLARINI ayarla (porsiyonu büyüt/küçült, gerekirse öğe ekle/çıkar). Her gün AYRI AYRI bu banda girmeli — günler düşük (ör. ${Math.round(params.dailyTarget * 0.75)}) ya da yüksek kalmasın.
+- save_diet_plan'i çağırmadan ÖNCE her günün 5 öğününün kalorilerini tek tek topla ve ${lo}–${hi} bandında olduğunu DOĞRULA; değilse miktarları düzelt.
 - ÇOK ÖNEMLİ: 7 günün HER BİRİ BİRBİRİNDEN FARKLI olsun. Aynı öğünü/menüyü iki güne KOYMA; malzeme, pişirme ve öğünleri günden güne değiştir.
 ${params.weekNote ? `- ${params.weekNote}\n` : ""}
 Kişi bilgisi: ${params.intakeSummary}
