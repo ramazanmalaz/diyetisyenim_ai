@@ -27,15 +27,20 @@ export async function POST(request: NextRequest) {
   }
 
   // Sonucu kaydet (service-role; kullanıcı oturumu yok).
+  // İDEMPOTENCY: yalnızca 'pending' → ... geçişini güncelle. iyzico callback'i
+  // tekrar gelirse (yenileme/çift POST) satır artık 'pending' olmadığından
+  // eşleşmez, premium İKİNCİ KEZ uzatılmaz.
   const admin = createAdminClient();
   const { data: payment } = await admin
     .from("payments")
     .update({ status: paid ? "paid" : "failed" })
     .eq("provider_ref", token)
+    .eq("status", "pending")
     .select("client_id, premium_days")
     .maybeSingle();
 
-  // Ödeme başarılıysa, ödemenin taşıdığı gün kadar premium uzat (mevcut süreye ekle).
+  // Ödeme başarılıysa VE bu callback durumu ilk kez değiştirdiyse (payment != null)
+  // premium'u ödemenin taşıdığı gün kadar uzat (mevcut süreye ekle).
   if (paid && payment?.client_id) {
     const { data: profile } = await admin
       .from("profiles")

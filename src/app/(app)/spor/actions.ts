@@ -73,7 +73,8 @@ export async function generateWorkout(values: unknown): Promise<WorkoutResult> {
       equipment: v.equipment,
       intakeSummary,
     });
-  } catch {
+  } catch (e) {
+    console.error("[spor] program üretilemedi:", e instanceof Error ? e.message : e);
     return { error: "Program oluşturulamadı. Lütfen tekrar dene." };
   }
 
@@ -128,7 +129,8 @@ export async function analyzeGym(formData: FormData): Promise<GymScanResult> {
   try {
     const res = await analyzeGymEquipment({ images });
     return { equipment: res.equipment, note: res.note };
-  } catch {
+  } catch (e) {
+    console.error("[spor] alet tanıma hatası:", e instanceof Error ? e.message : e);
     return { error: "Aletler tanınamadı, tekrar dene." };
   }
 }

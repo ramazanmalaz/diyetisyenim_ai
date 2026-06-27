@@ -280,7 +280,8 @@ export async function getMealDetail(values: unknown): Promise<MealDetailResult> 
       })
       .eq("id", parsed.data.mealId);
     return { detail };
-  } catch {
+  } catch (e) {
+    console.error("[plan] öğün detayı alınamadı:", e instanceof Error ? e.message : e);
     return { error: "Detay alınamadı, tekrar dene." };
   }
 }
@@ -818,7 +819,8 @@ export async function scanPlatePhoto(formData: FormData): Promise<ScanResult> {
       items: scan.items.map((i) => ({ name: i.name, calories: i.calories })),
       note: scan.note,
     };
-  } catch {
+  } catch (e) {
+    console.error("[plan] tabak analizi hatası:", e instanceof Error ? e.message : e);
     return { error: "Fotoğraf analiz edilemedi, tekrar dene." };
   }
 }

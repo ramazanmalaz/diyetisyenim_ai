@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
             controller.enqueue(encoder.encode(event.delta.text));
           }
         }
-      } catch {
+      } catch (e) {
+        console.error("[ai] yanıt akışı hatası:", e instanceof Error ? e.message : e);
         controller.enqueue(
           encoder.encode("\n\n[Yanıt üretilirken bir hata oluştu.]"),
         );
