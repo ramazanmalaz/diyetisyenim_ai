@@ -110,15 +110,19 @@ Planı yalnızca save_diet_plan aracını çağırarak döndür.`;
   return enrichMealsWithUsda(meals);
 }
 
-/** Üretilen farklı hafta sayısı üst sınırı (~3 ay). */
-export const MAX_PLAN_WEEKS = 13;
-/** Rate limit'e takılmamak için aynı anda üretilen hafta sayısı. */
+/**
+ * Çeşitlilik için üretilen FARKLI hafta sayısı. Hedef daha uzun sürse bile plan
+ * ekranı bu haftaları döngüleyerek yayar (weeksSinceStart % weekCount). Az tutmak
+ * onboarding'i HIZLI ve GÜVENİLİR kılar: tek paralel grup → Vercel 60sn'yi aşmaz,
+ * rate limit'e takılmaz. 4 hafta = 28 farklı günlük menü (aylık döngü).
+ */
+export const PLAN_VARIETY_WEEKS = 4;
+/** Aynı anda üretilen hafta sayısı (tümü tek grupta paralel). */
 const GEN_CONCURRENCY = 5;
 
 /**
- * Hedef süreye göre BİRBİRİNDEN FARKLI haftalık programlar üretir. numWeeks
- * 1..MAX_PLAN_WEEKS (≈3 ay) arasına çekilir; rate limit için gruplar halinde
- * paralel üretilir. Plan, hedef süre bu sınırı aşarsa haftaları döngüyle yayar.
+ * BİRBİRİNDEN FARKLI haftalık programlar üretir (en çok PLAN_VARIETY_WEEKS).
+ * Tek paralel grupta üretilir; plan ekranı haftaları döngüyle yayar.
  */
 export async function generateWeeklyPrograms(params: {
   dietitianRules: string | null;
@@ -126,7 +130,7 @@ export async function generateWeeklyPrograms(params: {
   intakeSummary: string;
   numWeeks: number;
 }): Promise<GeneratedMeal[][]> {
-  const n = Math.max(1, Math.min(MAX_PLAN_WEEKS, params.numWeeks));
+  const n = Math.max(1, Math.min(PLAN_VARIETY_WEEKS, params.numWeeks));
   const out: GeneratedMeal[][] = [];
   for (let start = 0; start < n; start += GEN_CONCURRENCY) {
     const size = Math.min(GEN_CONCURRENCY, n - start);

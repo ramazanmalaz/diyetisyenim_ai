@@ -5,6 +5,9 @@ import { PlanBoard } from "@/components/plan/plan-board";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
+// Plan yeniden üretimi (regeneratePlan) AI çağrıları yapar; varsayılan süreyi aşmasın.
+export const maxDuration = 60;
+
 export default async function PlanPage() {
   const profile = await requireProfile();
   const supabase = await createClient();
