@@ -1,16 +1,62 @@
-import Iyzipay from "iyzipay";
+import crypto from "node:crypto";
 
-let client: Iyzipay | null = null;
+// iyzico Checkout Form — doğrudan REST + HMAC (IYZWSv2) çağrısı.
+//
+// Not: Resmî `iyzipay` SDK'sı `postman-request` üzerinden ~70 paketlik bir
+// bağımlılık ağacını DİNAMİK require ediyor; Next/Vercel file-tracing bunu
+// güvenilir paketleyemiyor (resources/postman-request/psl … "Cannot find module"
+// hataları). SDK'nın imza algoritması burada birebir uygulanır; ağ çağrısı fetch
+// ile yapılır — hiçbir harici çalışma-zamanı bağımlılığı yok.
 
-function getClient(): Iyzipay {
-  if (!client) {
-    client = new Iyzipay({
-      apiKey: process.env.IYZICO_API_KEY,
-      secretKey: process.env.IYZICO_SECRET_KEY,
-      uri: process.env.IYZICO_BASE_URL ?? "https://sandbox-api.iyzipay.com",
-    });
-  }
-  return client;
+const BASE_URL = process.env.IYZICO_BASE_URL ?? "https://sandbox-api.iyzipay.com";
+const API_KEY = process.env.IYZICO_API_KEY ?? "";
+const SECRET_KEY = process.env.IYZICO_SECRET_KEY ?? "";
+const CLIENT_VERSION = "iyzipay-node-2.0.67";
+
+const INIT_PATH = "/payment/iyzipos/checkoutform/initialize/auth/ecom";
+const DETAIL_PATH = "/payment/iyzipos/checkoutform/auth/ecom/detail";
+
+/** "99" → "99.0" (iyzico fiyat formatı; SDK formatPrice ile aynı). */
+function formatPrice(price: string | number): string {
+  const n = parseFloat(String(price));
+  if (!isFinite(n)) return String(price);
+  const s = n.toString();
+  return s.includes(".") ? s : s + ".0";
+}
+
+/** IYZWSv2 yetkilendirme başlığı (SDK generateHashV2 ile birebir). */
+function authHeaderV2(uriPath: string, bodyStr: string, randomKey: string): string {
+  const signature = crypto
+    .createHmac("sha256", SECRET_KEY)
+    .update(randomKey + uriPath + bodyStr)
+    .digest("hex");
+  const params = [
+    `apiKey:${API_KEY}`,
+    `randomKey:${randomKey}`,
+    `signature:${signature}`,
+  ].join("&");
+  return "IYZWSv2 " + Buffer.from(params).toString("base64");
+}
+
+async function iyziPost<T>(uriPath: string, body: unknown): Promise<T> {
+  // İmza ile gönderilen gövde BİREBİR aynı string olmalı (iyzico randomKey +
+  // uri + ham gövde ile yeniden hashler) — bu yüzden tek sefer stringify edip
+  // hem imzada hem istekte kullanıyoruz.
+  const bodyStr = JSON.stringify(body);
+  const randomKey = `${Date.now()}${crypto.randomBytes(6).toString("hex")}`;
+
+  const res = await fetch(BASE_URL + uriPath, {
+    method: "POST",
+    headers: {
+      Authorization: authHeaderV2(uriPath, bodyStr, randomKey),
+      "x-iyzi-rnd": randomKey,
+      "x-iyzi-client-version": CLIENT_VERSION,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: bodyStr,
+  });
+  return (await res.json()) as T;
 }
 
 export type CheckoutBuyer = {
@@ -20,27 +66,33 @@ export type CheckoutBuyer = {
   surname: string;
 };
 
+type InitResponse = {
+  status?: string;
+  errorMessage?: string;
+  token?: string;
+  paymentPageUrl?: string;
+};
+
 /**
  * iyzico Checkout Form başlatır; ödeme sayfası URL'i ve token döndürür.
  * (Callback ile token üzerinden sonuç doğrulanır — ayrı imza/webhook yok.)
  */
-export function initializeCheckout(params: {
+export async function initializeCheckout(params: {
   conversationId: string;
   callbackUrl: string;
   buyer: CheckoutBuyer;
   price: string;
   title: string;
 }): Promise<{ token: string; paymentPageUrl: string }> {
-  const iyzipay = getClient();
-
-  const request: Record<string, unknown> = {
-    locale: Iyzipay.LOCALE.TR,
+  const price = formatPrice(params.price);
+  const body = {
+    locale: "tr",
     conversationId: params.conversationId,
-    price: params.price,
-    paidPrice: params.price,
-    currency: Iyzipay.CURRENCY.TRY,
+    price,
+    paidPrice: price,
+    currency: "TRY",
     basketId: params.conversationId,
-    paymentGroup: Iyzipay.PAYMENT_GROUP.SUBSCRIPTION,
+    paymentGroup: "SUBSCRIPTION",
     callbackUrl: params.callbackUrl,
     enabledInstallments: [1],
     buyer: {
@@ -66,40 +118,30 @@ export function initializeCheckout(params: {
         id: "subscription-monthly",
         name: params.title,
         category1: "Danışmanlık",
-        itemType: Iyzipay.BASKET_ITEM_TYPE.VIRTUAL,
-        price: params.price,
+        itemType: "VIRTUAL",
+        price,
       },
     ],
   };
 
-  return new Promise((resolve, reject) => {
-    iyzipay.checkoutFormInitialize.create(request, (err, result) => {
-      if (err) return reject(err);
-      if (result.status !== "success" || !result.token || !result.paymentPageUrl) {
-        return reject(
-          new Error(result.errorMessage ?? "Ödeme başlatılamadı."),
-        );
-      }
-      resolve({ token: result.token, paymentPageUrl: result.paymentPageUrl });
-    });
-  });
+  const result = await iyziPost<InitResponse>(INIT_PATH, body);
+  if (result.status !== "success" || !result.token || !result.paymentPageUrl) {
+    throw new Error(result.errorMessage ?? "Ödeme başlatılamadı.");
+  }
+  return { token: result.token, paymentPageUrl: result.paymentPageUrl };
 }
 
+type DetailResponse = { status?: string; paymentStatus?: string };
+
 /** Token ile ödeme sonucunu sorgular. paymentStatus 'SUCCESS' ise ödeme başarılı. */
-export function retrieveCheckout(
+export async function retrieveCheckout(
   token: string,
 ): Promise<{ success: boolean }> {
-  const iyzipay = getClient();
-  return new Promise((resolve, reject) => {
-    iyzipay.checkoutForm.retrieve(
-      { locale: Iyzipay.LOCALE.TR, token },
-      (err, result) => {
-        if (err) return reject(err);
-        resolve({
-          success:
-            result.status === "success" && result.paymentStatus === "SUCCESS",
-        });
-      },
-    );
+  const result = await iyziPost<DetailResponse>(DETAIL_PATH, {
+    locale: "tr",
+    token,
   });
+  return {
+    success: result.status === "success" && result.paymentStatus === "SUCCESS",
+  };
 }
