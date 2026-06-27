@@ -171,6 +171,7 @@ export function RemindersApp({
   const [newReminder, setNewReminder] = useState(false);
   const [newList, setNewList] = useState(false);
   const [search, setSearch] = useState("");
+  const [draft, setDraft] = useState("");
 
   const active = items.filter((r) => !r.completed);
   const counts = {
@@ -231,6 +232,94 @@ export function RemindersApp({
   async function onDelete(id: string) {
     setItems((prev) => prev.filter((x) => x.id !== id));
     await deleteReminder(id);
+  }
+
+  // Optimistik ekleme: öğe anında listeye girer (sayılar gecikmesiz güncellenir),
+  // sunucu aynı id ile kaydeder; hata olursa geri alınır.
+  async function addReminderOptimistic(input: {
+    id: string;
+    listId: string | null;
+    title: string;
+    notes?: string;
+    url?: string;
+    dueAt: string | null;
+    hasTime?: boolean;
+    flagged?: boolean;
+    priority?: number;
+  }): Promise<{ error: string } | { ok: true }> {
+    const obj: Reminder = {
+      id: input.id,
+      list_id: input.listId,
+      title: input.title,
+      notes: input.notes || null,
+      url: input.url || null,
+      due_at: input.dueAt,
+      has_time: !!input.hasTime,
+      flagged: !!input.flagged,
+      priority: input.priority ?? 0,
+      completed: false,
+      completed_at: null,
+      sort_order: 0,
+      created_at: new Date().toISOString(),
+    };
+    setItems((prev) => [...prev, obj]);
+    const res = await createReminder(input);
+    if ("error" in res) setItems((prev) => prev.filter((x) => x.id !== input.id));
+    return res;
+  }
+
+  async function addListOptimistic(input: {
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
+  }): Promise<{ error: string } | { ok: true }> {
+    const obj: ReminderList = {
+      id: input.id,
+      name: input.name,
+      color: input.color,
+      icon: input.icon,
+      sort_order: 0,
+    };
+    setLists((prev) => [...prev, obj]);
+    const res = await createList(input);
+    if ("error" in res) setLists((prev) => prev.filter((x) => x.id !== input.id));
+    return res;
+  }
+
+  // Inline ekleme bağlamı: hangi görünümdeysek yeni satır ona uygun düşsün.
+  function inlineCtx(): {
+    listId: string | null;
+    dueAt: string | null;
+    flagged: boolean;
+  } {
+    if (view?.kind === "list")
+      return { listId: view.id, dueAt: null, flagged: false };
+    if (view?.kind === "smart") {
+      if (view.key === "today" || view.key === "scheduled")
+        return {
+          listId: null,
+          dueAt: new Date(`${todayKey}T09:00:00`).toISOString(),
+          flagged: false,
+        };
+      if (view.key === "flagged")
+        return { listId: null, dueAt: null, flagged: true };
+    }
+    return { listId: null, dueAt: null, flagged: false };
+  }
+
+  async function addInline() {
+    const t = draft.trim();
+    if (!t) return;
+    setDraft("");
+    const ctx = inlineCtx();
+    await addReminderOptimistic({
+      id: crypto.randomUUID(),
+      listId: ctx.listId,
+      title: t,
+      dueAt: ctx.dueAt,
+      flagged: ctx.flagged,
+    });
   }
 
   return (
@@ -377,11 +466,6 @@ export function RemindersApp({
             <SearchBar value={search} onChange={setSearch} />
 
             <ul className="mt-4 space-y-0 overflow-hidden rounded-2xl bg-white dark:bg-gray-900">
-              {detailItems().length === 0 && (
-                <li className="px-4 py-6 text-center text-sm text-gray-400">
-                  Hatırlatıcı yok.
-                </li>
-              )}
               {detailItems().map((r, i) => {
                 const color =
                   lists.find((l) => l.id === r.list_id)?.color ?? "blue";
@@ -453,6 +537,32 @@ export function RemindersApp({
                   </li>
                 );
               })}
+
+              {/* Inline yeni satır — yaz + Enter, imleç kalır; pasif satıra dokun → yaz */}
+              <li
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5",
+                  detailItems().length > 0 &&
+                    "border-t border-gray-100 dark:border-gray-800",
+                )}
+              >
+                <span
+                  aria-hidden
+                  className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border-2 border-gray-300 dark:border-gray-600"
+                />
+                <input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void addInline();
+                    }
+                  }}
+                  placeholder="Yeni hatırlatıcı"
+                  className="w-full bg-transparent text-[16px] text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
+                />
+              </li>
             </ul>
 
             <div className="mt-6">
@@ -475,10 +585,13 @@ export function RemindersApp({
         <NewReminderSheet
           lists={lists}
           defaultListId={view?.kind === "list" ? view.id : null}
+          onAdd={addReminderOptimistic}
           onClose={() => setNewReminder(false)}
         />
       )}
-      {newList && <NewListSheet onClose={() => setNewList(false)} />}
+      {newList && (
+        <NewListSheet onAdd={addListOptimistic} onClose={() => setNewList(false)} />
+      )}
     </div>
   );
 }
@@ -507,10 +620,22 @@ function SearchBar({
 function NewReminderSheet({
   lists,
   defaultListId,
+  onAdd,
   onClose,
 }: {
   lists: ReminderList[];
   defaultListId: string | null;
+  onAdd: (input: {
+    id: string;
+    listId: string | null;
+    title: string;
+    notes?: string;
+    url?: string;
+    dueAt: string | null;
+    hasTime?: boolean;
+    flagged?: boolean;
+    priority?: number;
+  }) => Promise<{ error: string } | { ok: true }>;
   onClose: () => void;
 }) {
   const [title, setTitle] = useState("");
@@ -537,7 +662,8 @@ function NewReminderSheet({
     if (dateOn && date) {
       dueAt = new Date(`${date}T${timeOn ? time : "09:00"}:00`).toISOString();
     }
-    const res = await createReminder({
+    const res = await onAdd({
+      id: crypto.randomUUID(),
       listId: listId || null,
       title,
       notes,
@@ -683,7 +809,18 @@ function NewReminderSheet({
 }
 
 // ===================== YENİ LİSTE =====================
-function NewListSheet({ onClose }: { onClose: () => void }) {
+function NewListSheet({
+  onAdd,
+  onClose,
+}: {
+  onAdd: (input: {
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
+  }) => Promise<{ error: string } | { ok: true }>;
+  onClose: () => void;
+}) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("blue");
   const [icon, setIcon] = useState("list");
@@ -698,7 +835,7 @@ function NewListSheet({ onClose }: { onClose: () => void }) {
     }
     setBusy(true);
     setError(null);
-    const res = await createList({ name, color, icon });
+    const res = await onAdd({ id: crypto.randomUUID(), name, color, icon });
     setBusy(false);
     if ("error" in res) {
       setError(res.error);

@@ -40,6 +40,7 @@ const ICONS = [
 // --- Listeler ---
 
 const listSchema = z.object({
+  id: z.string().uuid().optional(),
   name: z.string().trim().min(1, "Liste adı gir.").max(60),
   color: z.enum(COLORS).optional().default("blue"),
   icon: z.enum(ICONS).optional().default("list"),
@@ -54,6 +55,7 @@ export async function createList(values: unknown): Promise<ActionResult> {
   }
   const supabase = await createClient();
   const { error } = await supabase.from("reminder_lists").insert({
+    ...(parsed.data.id ? { id: parsed.data.id } : {}),
     client_id: user.id,
     name: parsed.data.name,
     color: parsed.data.color,
@@ -84,6 +86,7 @@ export async function deleteList(id: unknown): Promise<ActionResult> {
 // --- Hatırlatıcılar ---
 
 const reminderSchema = z.object({
+  id: z.string().uuid().optional(),
   listId: z.string().uuid().nullable().optional(),
   title: z.string().trim().min(1, "Başlık gir.").max(200),
   notes: z.string().trim().max(2000).optional().default(""),
@@ -104,6 +107,7 @@ export async function createReminder(values: unknown): Promise<ActionResult> {
   const v = parsed.data;
   const supabase = await createClient();
   const { error } = await supabase.from("reminders").insert({
+    ...(v.id ? { id: v.id } : {}),
     client_id: user.id,
     list_id: v.listId ?? null,
     title: v.title,
