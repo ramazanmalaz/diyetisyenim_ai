@@ -763,6 +763,87 @@ export type Database = {
         };
         Relationships: [];
       };
+      reminder_lists: {
+        Row: {
+          id: string;
+          client_id: string;
+          name: string;
+          color: string;
+          icon: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          name: string;
+          color?: string;
+          icon?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          name?: string;
+          color?: string;
+          icon?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      reminders: {
+        Row: {
+          id: string;
+          client_id: string;
+          list_id: string | null;
+          title: string;
+          notes: string | null;
+          url: string | null;
+          due_at: string | null;
+          has_time: boolean;
+          flagged: boolean;
+          priority: number;
+          completed: boolean;
+          completed_at: string | null;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          list_id?: string | null;
+          title: string;
+          notes?: string | null;
+          url?: string | null;
+          due_at?: string | null;
+          has_time?: boolean;
+          flagged?: boolean;
+          priority?: number;
+          completed?: boolean;
+          completed_at?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          list_id?: string | null;
+          title?: string;
+          notes?: string | null;
+          url?: string | null;
+          due_at?: string | null;
+          has_time?: boolean;
+          flagged?: boolean;
+          priority?: number;
+          completed?: boolean;
+          completed_at?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       dietitian_slots: {
         Row: {
           id: string;
