@@ -31,6 +31,46 @@ function youtubeSearch(name: string): string {
   )}`;
 }
 
+// İnce film greni — OLED siyah üzerinde derinlik (Any Distance tarzı).
+const NOISE =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E";
+
+/** Tamamlanma halkası — gradient stroke + glow (Any Distance imzası). */
+function ProgressRing({ completed, total }: { completed: number; total: number }) {
+  const pct = total > 0 ? Math.min(100, (completed / total) * 100) : 0;
+  const r = 30;
+  const circ = 2 * Math.PI * r;
+  const dash = (pct / 100) * circ;
+  return (
+    <div className="relative grid h-[72px] w-[72px] shrink-0 place-items-center">
+      <svg className="h-[72px] w-[72px] -rotate-90" viewBox="0 0 72 72">
+        <defs>
+          <linearGradient id="ringgrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#bef264" />
+            <stop offset="100%" stopColor="#2dd4bf" />
+          </linearGradient>
+        </defs>
+        <circle cx="36" cy="36" r={r} fill="none" strokeWidth="7" className="stroke-white/10" />
+        <circle
+          cx="36"
+          cy="36"
+          r={r}
+          fill="none"
+          strokeWidth="7"
+          strokeLinecap="round"
+          stroke="url(#ringgrad)"
+          strokeDasharray={`${dash} ${circ}`}
+          className="transition-[stroke-dasharray] duration-500 ease-[var(--ease-out)] drop-shadow-[0_0_6px_rgba(163,230,53,0.55)]"
+        />
+      </svg>
+      <span className="absolute font-display text-sm font-extrabold tabular-nums text-white">
+        {completed}
+        <span className="text-zinc-500">/{total}</span>
+      </span>
+    </div>
+  );
+}
+
 export function WorkoutBoard({
   program,
   mode,
@@ -132,67 +172,78 @@ export function WorkoutBoard({
     dayProgress.total > 0 && dayProgress.completed === dayProgress.total;
 
   return (
-    <div className="min-h-[calc(100vh-7rem)] bg-zinc-950 text-zinc-100">
-      <div className="mx-auto w-full max-w-2xl space-y-5 px-4 py-8">
-        {/* Başlık — gradient hero */}
-        <section className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-900 to-lime-950/40 p-6">
+    <div className="min-h-[calc(100vh-7rem)] bg-black text-zinc-100">
+      <div className="mx-auto w-full max-w-2xl space-y-4 px-4 py-8">
+        {/* ===== Hero ===== */}
+        <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-zinc-900 via-black to-emerald-950/40 p-6">
           <div
             aria-hidden
-            className="pointer-events-none absolute -top-16 -right-12 h-44 w-44 rounded-full bg-lime-400/15 blur-3xl"
+            className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full bg-lime-400/20 blur-3xl"
           />
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-lime-400/15 px-3 py-1 text-[10px] font-semibold tracking-[0.18em] text-lime-300 uppercase">
-            <Dumbbell className="h-3.5 w-3.5" /> Spor Programı
-          </span>
-          <h1 className="mt-3 text-3xl font-extrabold tracking-tight">
-            Antrenman Planım
-          </h1>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {[
-              mode === "gym" ? "Spor salonu" : "Kendi vücut ağırlığı",
-              goal ? (GOAL_LABEL[goal] ?? goal) : null,
-              level ? (LEVEL_LABEL[level] ?? level) : null,
-              `Haftada ${daysPerWeek} gün`,
-            ]
-              .filter(Boolean)
-              .map((t) => (
-                <span
-                  key={t as string}
-                  className="rounded-full bg-zinc-800/80 px-2.5 py-1 text-xs font-medium text-zinc-300"
-                >
-                  {t}
-                </span>
-              ))}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
+            style={{ backgroundImage: `url("${NOISE}")` }}
+          />
+          <div className="relative">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold tracking-[0.22em] text-lime-300 uppercase ring-1 ring-white/10">
+              <Dumbbell className="h-3.5 w-3.5" /> Spor Programı
+            </span>
+            <h1 className="font-display mt-3 bg-gradient-to-br from-white to-zinc-400 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent">
+              Antrenman Planım
+            </h1>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {[
+                mode === "gym" ? "Spor salonu" : "Kendi vücut ağırlığı",
+                goal ? (GOAL_LABEL[goal] ?? goal) : null,
+                level ? (LEVEL_LABEL[level] ?? level) : null,
+                `Haftada ${daysPerWeek} gün`,
+              ]
+                .filter(Boolean)
+                .map((t) => (
+                  <span
+                    key={t as string}
+                    className="rounded-full bg-white/5 px-2.5 py-1 text-xs font-medium text-zinc-300 ring-1 ring-white/10 backdrop-blur-sm"
+                  >
+                    {t}
+                  </span>
+                ))}
+            </div>
           </div>
         </section>
 
         {program?.note && (
-          <div className="flex gap-2.5 rounded-2xl border border-lime-400/20 bg-lime-400/5 p-3.5 text-sm text-lime-100/90">
+          <div className="flex gap-2.5 rounded-2xl border border-lime-400/15 bg-lime-400/[0.06] p-3.5 text-sm text-lime-100/90">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-lime-300" />
             <p>{program.note}</p>
           </div>
         )}
 
-        {/* Gün sekmeleri */}
+        {/* ===== Gün sekmeleri ===== */}
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
           {days.map((d, i) => {
             const total = d.exercises.length;
             let c = 0;
             for (let j = 0; j < total; j++) if (done.has(`${i}|${j}`)) c += 1;
             const complete = total > 0 && c === total;
+            const active = i === activeDay;
             return (
               <button
                 key={i}
                 type="button"
                 onClick={() => setActiveDay(i)}
                 className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-semibold transition active:scale-[0.97]",
-                  i === activeDay
-                    ? "border-lime-400/50 bg-lime-400/15 text-lime-200"
-                    : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800",
+                  "flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold transition-[transform,background-color] duration-200 ease-[var(--ease-out)] active:scale-[0.96]",
+                  active
+                    ? "bg-gradient-to-r from-lime-300 to-emerald-400 text-black shadow-[0_8px_22px_-8px_rgba(163,230,53,0.7)]"
+                    : "bg-white/5 text-zinc-400 ring-1 ring-white/10 hover:bg-white/10 hover:text-zinc-200",
                 )}
               >
                 {complete && (
-                  <Check className="h-3.5 w-3.5 text-lime-400" strokeWidth={3} />
+                  <Check
+                    className={cn("h-3.5 w-3.5", active ? "text-black" : "text-lime-400")}
+                    strokeWidth={3.5}
+                  />
                 )}
                 {i + 1}. Gün
               </button>
@@ -200,61 +251,47 @@ export function WorkoutBoard({
           })}
         </div>
 
-        {/* Seçili gün */}
+        {/* ===== Seçili gün ===== */}
         {day && (
           <section
             className={cn(
-              "overflow-hidden rounded-2xl border bg-zinc-900 transition",
-              dayDone ? "border-lime-400/40" : "border-zinc-800",
+              "overflow-hidden rounded-3xl border bg-white/[0.03] backdrop-blur-sm transition",
+              dayDone ? "border-lime-400/40" : "border-white/10",
             )}
           >
-            <div className="border-b border-zinc-800 px-4 py-3.5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="truncate text-lg font-bold">{day.day}</h2>
-                  {day.focus && (
-                    <p className="truncate text-xs text-lime-300/90">
-                      {day.focus}
-                    </p>
-                  )}
-                </div>
-                <span
-                  className={cn(
-                    "shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums",
-                    dayDone
-                      ? "bg-lime-400/15 text-lime-300"
-                      : "bg-zinc-800 text-zinc-400",
-                  )}
-                >
-                  {dayProgress.completed}/{dayProgress.total}
-                </span>
-              </div>
-              {/* İlerleme çubuğu */}
-              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-zinc-800">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-lime-400 to-emerald-400 transition-[width] duration-300"
-                  style={{
-                    width: `${
-                      dayProgress.total
-                        ? (dayProgress.completed / dayProgress.total) * 100
-                        : 0
-                    }%`,
-                  }}
-                />
+            <div className="flex items-center gap-4 border-b border-white/10 px-5 py-4">
+              <ProgressRing
+                completed={dayProgress.completed}
+                total={dayProgress.total}
+              />
+              <div className="min-w-0 flex-1">
+                <h2 className="font-display truncate text-xl font-extrabold tracking-tight">
+                  {day.day}
+                </h2>
+                {day.focus && (
+                  <p className="truncate text-sm font-medium text-lime-300/90">
+                    {day.focus}
+                  </p>
+                )}
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  {dayDone
+                    ? "Günü tamamladın 🔥"
+                    : `${dayProgress.total - dayProgress.completed} hareket kaldı`}
+                </p>
               </div>
             </div>
 
-            <p className="px-4 pt-3 text-[11px] text-zinc-500">
-              💡 Yaptığın egzersizi <span className="text-zinc-300">soldaki daireden</span> işaretle ·
+            <p className="px-5 pt-3 text-[11px] text-zinc-500">
+              Yaptığın hareketi <span className="text-zinc-300">soldaki daireden</span> işaretle ·
               ada dokun → <span className="text-zinc-300">videolu anlatım</span>.
             </p>
 
-            <ul className="divide-y divide-zinc-800/70">
+            <ul className="divide-y divide-white/5 px-2 py-1">
               {day.exercises.map((ex, j) => {
                 const isDone = done.has(`${activeDay}|${j}`);
                 const title = localizeExercise(ex);
                 return (
-                  <li key={j} className="flex items-center gap-2 px-3 py-1">
+                  <li key={j} className="flex items-center gap-2 px-1.5 py-1">
                     {/* Tik */}
                     <button
                       type="button"
@@ -262,25 +299,25 @@ export function WorkoutBoard({
                       aria-label={isDone ? "İşareti kaldır" : "Yapıldı olarak işaretle"}
                       aria-pressed={isDone}
                       className={cn(
-                        "grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 transition active:scale-90",
+                        "grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 transition-[transform,background-color,box-shadow] duration-200 ease-[var(--ease-out)] active:scale-90",
                         isDone
-                          ? "border-lime-400 bg-lime-400 text-zinc-900"
-                          : "border-zinc-600 text-transparent hover:border-lime-400/60",
+                          ? "border-transparent bg-gradient-to-br from-lime-300 to-emerald-400 text-black shadow-[0_6px_16px_-6px_rgba(163,230,53,0.8)]"
+                          : "border-zinc-700 text-transparent hover:border-lime-400/60",
                       )}
                     >
-                      <Check className="h-5 w-5" strokeWidth={3} />
+                      <Check className="h-5 w-5" strokeWidth={3.5} />
                     </button>
                     {/* Ad + detay */}
                     <button
                       type="button"
                       onClick={() => setDetail(ex)}
-                      className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-1.5 py-2.5 text-left transition hover:bg-zinc-800/60 active:bg-zinc-800"
+                      className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2.5 py-3 text-left transition-colors duration-200 ease-[var(--ease-out)] hover:bg-white/5 active:bg-white/10"
                     >
                       <div className="min-w-0 flex-1">
                         <p
                           className={cn(
-                            "truncate font-medium transition",
-                            isDone && "text-zinc-500 line-through",
+                            "truncate font-semibold transition",
+                            isDone && "text-zinc-600 line-through",
                           )}
                         >
                           {title}
@@ -290,7 +327,7 @@ export function WorkoutBoard({
                           {ex.rest ? ` · dinlenme ${ex.rest}` : ""}
                         </p>
                       </div>
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-lime-400/15 text-lime-300">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/5 text-lime-300 ring-1 ring-white/10 transition group-hover:bg-white/10">
                         <Play className="h-4 w-4" fill="currentColor" />
                       </span>
                     </button>
@@ -301,37 +338,39 @@ export function WorkoutBoard({
           </section>
         )}
 
-        {/* Yeniden oluştur */}
+        {/* ===== Yeniden oluştur ===== */}
         <form action={resetWorkout}>
           <button
             type="submit"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 active:scale-[0.98]"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium text-zinc-300 transition-[transform,background-color] duration-200 ease-[var(--ease-out)] hover:bg-white/10 active:scale-[0.98]"
           >
             <RotateCcw className="h-4 w-4" /> Yeni program oluştur
           </button>
         </form>
 
-        <p className="text-center text-[11px] text-zinc-500">
+        <p className="text-center text-[11px] text-zinc-600">
           Bu program genel bilgilendirme amaçlıdır, tıbbi tavsiye değildir. Ağrı
           veya rahatsızlık hissedersen dur ve bir uzmana danış.
         </p>
       </div>
 
-      {/* Egzersiz detay paneli */}
+      {/* ===== Egzersiz detay paneli ===== */}
       {detail && (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-0 backdrop-blur-md sm:items-center sm:p-4"
           onClick={() => setDetail(null)}
         >
           <div
-            className="reveal w-full max-w-md rounded-t-3xl border border-zinc-800 bg-zinc-900 p-5 sm:rounded-3xl"
+            className="reveal w-full max-w-md rounded-t-[28px] border border-white/10 bg-zinc-950/95 p-5 sm:rounded-[28px]"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h3 className="text-lg font-bold">{localizeExercise(detail)}</h3>
+                <h3 className="font-display text-xl font-extrabold tracking-tight">
+                  {localizeExercise(detail)}
+                </h3>
                 <p className="mt-0.5 text-sm tabular-nums text-zinc-400">
                   {detail.sets} set × {detail.reps}
                   {detail.rest ? ` · dinlenme ${detail.rest}` : ""}
@@ -341,7 +380,7 @@ export function WorkoutBoard({
                 type="button"
                 onClick={() => setDetail(null)}
                 aria-label="Kapat"
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-zinc-800 text-zinc-400 transition hover:text-zinc-100"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/5 text-zinc-400 ring-1 ring-white/10 transition hover:text-zinc-100"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -349,12 +388,12 @@ export function WorkoutBoard({
 
             {/* İnline hareket görseli (başlangıç/bitiş kareleri animasyonlu) */}
             {demo.loading && (
-              <div className="mt-4 grid h-48 place-items-center rounded-2xl border border-zinc-800 bg-zinc-800/40 text-sm text-zinc-500">
+              <div className="mt-4 grid h-48 place-items-center rounded-2xl border border-white/10 bg-white/[0.03] text-sm text-zinc-500">
                 Hareket görseli yükleniyor…
               </div>
             )}
             {!demo.loading && demo.frames && demo.frames.length > 0 && (
-              <div className="mt-4 overflow-hidden rounded-2xl border border-zinc-800 bg-white">
+              <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={demo.frames[frameIdx] ?? demo.frames[0]}
@@ -365,7 +404,7 @@ export function WorkoutBoard({
             )}
 
             {detail.note && (
-              <p className="mt-3 flex gap-2 rounded-xl bg-zinc-800/60 p-3 text-sm text-zinc-300">
+              <p className="mt-3 flex gap-2 rounded-xl bg-white/5 p-3 text-sm text-zinc-300">
                 <Info className="mt-0.5 h-4 w-4 shrink-0 text-lime-300" />
                 {detail.note}
               </p>
@@ -380,11 +419,11 @@ export function WorkoutBoard({
               href={youtubeSearch(localizeExercise(detail))}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-lime-400 px-4 py-3 text-sm font-bold text-zinc-900 transition hover:brightness-105 active:scale-[0.98]"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-lime-300 to-emerald-400 px-4 py-3 text-sm font-bold text-black shadow-[0_10px_24px_-8px_rgba(163,230,53,0.6)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 active:scale-[0.98]"
             >
               <Play className="h-4 w-4" fill="currentColor" /> Videolu anlatımı izle
             </a>
-            <p className="mt-2 text-center text-[11px] text-zinc-500">
+            <p className="mt-2 text-center text-[11px] text-zinc-600">
               YouTube&apos;da arama açılır.
             </p>
           </div>
