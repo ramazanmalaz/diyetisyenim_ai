@@ -1,10 +1,10 @@
 import {
   Camera,
   Droplets,
-  LineChart,
-  MessageCircle,
+  Salad,
+  Sparkles,
   Timer,
-  UtensilsCrossed,
+  TrendingUp,
 } from "lucide-react";
 
 import { HomeChoices } from "@/components/app/home-choices";
@@ -14,12 +14,12 @@ import { computeStreak } from "@/lib/plan/streak";
 import { createClient } from "@/lib/supabase/server";
 
 const FEATURES = [
-  { icon: UtensilsCrossed, label: "Kişiye özel plan" },
-  { icon: MessageCircle, label: "AI asistan" },
-  { icon: Camera, label: "Tabak analizi" },
-  { icon: Droplets, label: "Su takibi" },
-  { icon: LineChart, label: "İlerleme grafiği" },
-  { icon: Timer, label: "Odak (pomodoro)" },
+  { icon: Salad, label: "Kişiye özel plan", tint: "from-amber-400 to-orange-500" },
+  { icon: Sparkles, label: "AI asistan", tint: "from-emerald-400 to-emerald-600" },
+  { icon: Camera, label: "Tabak analizi", tint: "from-violet-400 to-purple-600" },
+  { icon: Droplets, label: "Su takibi", tint: "from-sky-400 to-cyan-600" },
+  { icon: TrendingUp, label: "İlerleme grafiği", tint: "from-rose-400 to-rose-600" },
+  { icon: Timer, label: "Odak (pomodoro)", tint: "from-lime-400 to-green-600" },
 ];
 
 function greetingFor(hourTr: number): string {
@@ -103,23 +103,10 @@ export default async function PanelPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-7 px-4 py-8">
-      {/* Selam */}
-      <div className="reveal">
-        <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-          {greeting} 👋
-        </p>
-        <h1 className="mt-0.5 text-3xl font-extrabold tracking-tight">
-          {firstName || "Hoş geldin"}
-        </h1>
-        {!hasPlan && (
-          <p className="mt-1.5 text-gray-500 dark:text-gray-400">
-            Nasıl ilerlemek istersin? İki yol da bir mesaj penceresi kadar yakın.
-          </p>
-        )}
-      </div>
-
       {hasPlan ? (
         <HomeDashboard
+          name={firstName}
+          greeting={greeting}
           consumed={consumed}
           target={plan?.daily_calorie_target ?? null}
           waterMl={waterMl}
@@ -128,6 +115,19 @@ export default async function PanelPage() {
         />
       ) : (
         <>
+          {/* Selam */}
+          <div className="reveal">
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+              {greeting} 👋
+            </p>
+            <h1 className="font-display mt-0.5 text-3xl font-extrabold tracking-tight">
+              {firstName || "Hoş geldin"}
+            </h1>
+            <p className="mt-1.5 text-gray-500 dark:text-gray-400">
+              Nasıl ilerlemek istersin? İki yol da bir mesaj penceresi kadar yakın.
+            </p>
+          </div>
+
           <HomeChoices />
 
           {/* Neler var? */}
@@ -135,7 +135,7 @@ export default async function PanelPage() {
             <p className="text-center text-xs font-semibold tracking-[0.16em] text-gray-400 uppercase">
               Uygulamada neler var
             </p>
-            <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className="mt-4 grid grid-cols-3 gap-4">
               {FEATURES.map((f) => {
                 const Icon = f.icon;
                 return (
@@ -143,8 +143,10 @@ export default async function PanelPage() {
                     key={f.label}
                     className="flex flex-col items-center gap-2 text-center"
                   >
-                    <span className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                      <Icon className="h-5 w-5" strokeWidth={1.75} />
+                    <span
+                      className={`grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-[var(--shadow-soft)] ${f.tint}`}
+                    >
+                      <Icon className="h-[22px] w-[22px]" strokeWidth={2} />
                     </span>
                     <span className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
                       {f.label}
