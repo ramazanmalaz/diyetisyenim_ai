@@ -80,6 +80,43 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // --- Premium yenileme hatırlatması (günde bir, 11:00) ---
+  // Süre 3 gün kala, 1 gün kala ve dolduğunda birer kez bildirir. Her eşik
+  // farklı günde tetiklendiği için ekstra "gönderildi" takibi gerekmez.
+  if (hhmm === "11:00") {
+    const DAY = 86_400_000;
+    const now = Date.now();
+    const { data: premProfs } = await admin
+      .from("profiles")
+      .select("id, premium_until")
+      .not("premium_until", "is", null);
+    for (const p of premProfs ?? []) {
+      if (!p.premium_until) continue;
+      const msLeft = new Date(p.premium_until).getTime() - now;
+      const daysLeft = Math.ceil(msLeft / DAY);
+      let title: string | null = null;
+      let body = "";
+      if (daysLeft === 3) {
+        title = "👑 Premium'un 3 gün sonra doluyor";
+        body = "Kesintisiz devam için şimdi yenile, ayrıcalıkların sürsün.";
+      } else if (daysLeft === 1) {
+        title = "👑 Premium'un yarın doluyor";
+        body = "Yenileyerek sınırsız erişimini kaybetme.";
+      } else if (msLeft <= 0 && msLeft > -DAY) {
+        title = "⏳ Premium'un sona erdi";
+        body = "Tek dokunuşla yenile, kaldığın yerden devam et.";
+      }
+      if (title) {
+        sent += await sendPushToUser(p.id, {
+          title,
+          body,
+          tag: "premium",
+          url: "/abonelik",
+        });
+      }
+    }
+  }
+
   // --- Pomodoro seans sınırları ---
   const { data: plans } = await admin
     .from("pomodoro_plans")
