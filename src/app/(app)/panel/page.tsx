@@ -9,6 +9,7 @@ import {
 
 import { HomeChoices } from "@/components/app/home-choices";
 import { HomeDashboard } from "@/components/app/home-dashboard";
+import { WeeklySummary } from "@/components/app/weekly-summary";
 import { requireProfile } from "@/lib/auth";
 import { computeStreak } from "@/lib/plan/streak";
 import { createClient } from "@/lib/supabase/server";
@@ -56,6 +57,12 @@ export default async function PanelPage() {
   let waterMl = 0;
   let waterGoal = 2500;
   let streak = 0;
+  // Haftalık özet (son 7 gün)
+  let currentWeight: number | null = null;
+  let weightDelta: number | null = null;
+  let workoutDays = 0;
+  let mealDays = 0;
+  let waterGoalDays = 0;
 
   if (hasPlan) {
     const since = new Date();
@@ -99,20 +106,85 @@ export default async function PanelPage() {
     waterGoal = prefs?.water_goal_ml ?? 2500;
     const dates = new Set((logs ?? []).map((l) => l.log_date));
     streak = computeStreak(dates, todayKey);
+
+    // --- Haftalık özet (son 7 gün) ---
+    const wkStart = new Date(now);
+    wkStart.setDate(wkStart.getDate() - 6);
+    const wkStartKey = wkStart.toISOString().slice(0, 10);
+    const wAgo = new Date(now);
+    wAgo.setDate(wAgo.getDate() - 7);
+    const wAgoKey = wAgo.toISOString().slice(0, 10);
+
+    const [{ data: weights }, { data: woRows }, { data: waterWeek }] =
+      await Promise.all([
+        supabase
+          .from("progress_entries")
+          .select("entry_date, weight_kg")
+          .not("weight_kg", "is", null)
+          .order("entry_date", { ascending: true })
+          .limit(60),
+        supabase
+          .from("workout_logs")
+          .select("log_date")
+          .gte("log_date", wkStartKey),
+        supabase
+          .from("water_intake")
+          .select("day, total_ml")
+          .gte("day", wkStartKey),
+      ]);
+
+    workoutDays = new Set((woRows ?? []).map((r) => r.log_date)).size;
+    mealDays = new Set(
+      (logs ?? [])
+        .filter((l) => l.log_date >= wkStartKey)
+        .map((l) => l.log_date),
+    ).size;
+    waterGoalDays = (waterWeek ?? []).filter(
+      (w) => (w.total_ml ?? 0) >= waterGoal,
+    ).length;
+
+    const ws = (weights ?? []).filter((w) => w.weight_kg != null);
+    if (ws.length) {
+      currentWeight = ws[ws.length - 1].weight_kg;
+      let ref: (typeof ws)[number] | null = null;
+      for (let i = ws.length - 1; i >= 0; i--) {
+        if (ws[i].entry_date <= wAgoKey) {
+          ref = ws[i];
+          break;
+        }
+      }
+      if (
+        ref &&
+        ref.weight_kg != null &&
+        currentWeight != null &&
+        ref.entry_date !== ws[ws.length - 1].entry_date
+      ) {
+        weightDelta = Math.round((currentWeight - ref.weight_kg) * 10) / 10;
+      }
+    }
   }
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-7 px-4 py-8">
       {hasPlan ? (
-        <HomeDashboard
-          name={firstName}
-          greeting={greeting}
-          consumed={consumed}
-          target={plan?.daily_calorie_target ?? null}
-          waterMl={waterMl}
-          waterGoal={waterGoal}
-          streak={streak}
-        />
+        <>
+          <HomeDashboard
+            name={firstName}
+            greeting={greeting}
+            consumed={consumed}
+            target={plan?.daily_calorie_target ?? null}
+            waterMl={waterMl}
+            waterGoal={waterGoal}
+            streak={streak}
+          />
+          <WeeklySummary
+            weightDelta={weightDelta}
+            currentWeight={currentWeight}
+            workoutDays={workoutDays}
+            mealDays={mealDays}
+            waterGoalDays={waterGoalDays}
+          />
+        </>
       ) : (
         <>
           {/* Selam */}
