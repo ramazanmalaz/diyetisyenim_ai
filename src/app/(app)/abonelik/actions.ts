@@ -38,7 +38,14 @@ export async function startCheckout(planKey: unknown): Promise<CheckoutResult> {
         surname,
       },
     });
-  } catch {
+  } catch (e) {
+    // Geçici teşhis: gerçek iyzico hata mesajını + env varlığını logla.
+    console.error("[iyzico] checkout init failed:", e instanceof Error ? e.message : e, {
+      apiKeyLen: (process.env.IYZICO_API_KEY ?? "").length,
+      secretLen: (process.env.IYZICO_SECRET_KEY ?? "").length,
+      base: process.env.IYZICO_BASE_URL,
+      callback: `${APP_URL}/api/webhooks/iyzico`,
+    });
     return { error: "Ödeme başlatılamadı. Lütfen tekrar deneyin." };
   }
 
