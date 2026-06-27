@@ -5,6 +5,7 @@ import { logout } from "@/app/(auth)/actions";
 import { AudioArmer } from "@/components/app/audio-armer";
 import { BottomNav } from "@/components/app/bottom-nav";
 import { PremiumWall } from "@/components/app/premium-wall";
+import { MealReminder } from "@/components/app/meal-reminder";
 import { PushSetup } from "@/components/app/push-setup";
 import { WaterReminder } from "@/components/app/water-reminder";
 import { requireProfile } from "@/lib/auth";
@@ -26,7 +27,7 @@ export default async function AppLayout({
   const { data: waterCfg } = await supabase
     .from("profiles")
     .select(
-      "water_reminder_enabled, water_start_hour, water_end_hour, water_interval_hours, water_amount_ml",
+      "water_reminder_enabled, water_start_hour, water_end_hour, water_interval_hours, water_amount_ml, meal_reminders_enabled, breakfast_time, lunch_time, dinner_time",
     )
     .maybeSingle();
 
@@ -89,6 +90,12 @@ export default async function AppLayout({
         endHour={waterCfg?.water_end_hour ?? 20}
         intervalHours={waterCfg?.water_interval_hours ?? 2}
         amountMl={waterCfg?.water_amount_ml ?? 200}
+      />
+      <MealReminder
+        enabled={waterCfg?.meal_reminders_enabled ?? false}
+        breakfast={waterCfg?.breakfast_time ?? "08:00"}
+        lunch={waterCfg?.lunch_time ?? "13:00"}
+        dinner={waterCfg?.dinner_time ?? "19:00"}
       />
       <PushSetup />
       <AudioArmer />
