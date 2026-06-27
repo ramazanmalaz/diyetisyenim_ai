@@ -9,37 +9,43 @@ import { Input } from "@/components/ui/input";
 import { enablePush } from "@/lib/push-client";
 import {
   broadcastWater,
+  REMINDER_TOGGLE_EVENT,
+  setReminderEnabledLs,
+  syncReminderEnabledLs,
   WATER_GLASS_ML,
   WATER_UPDATE_EVENT,
 } from "@/lib/water-sync";
 
-const GLASS_ML = WATER_GLASS_ML; // 1 bardak (standart) — hatırlatıcıyla ortak
-const REMINDER_KEY = "su_reminder_enabled";
-
 export function WaterTracker({
   initialMl,
   goalMl = 2500,
+  glassMl = WATER_GLASS_ML,
+  reminderEnabled = true,
 }: {
   initialMl: number;
   goalMl?: number;
+  glassMl?: number;
+  reminderEnabled?: boolean;
 }) {
   const GOAL_ML = goalMl > 0 ? goalMl : 2500; // günlük hedef (kullanıcı ayarı)
+  const GLASS_ML = glassMl > 0 ? glassMl : WATER_GLASS_ML; // bardak (ayar)
   const GLASSES = Math.max(1, Math.round(GOAL_ML / GLASS_ML)); // bardak sayısı
   const [total, setTotal] = useState(initialMl);
-  const [reminderOn, setReminderOn] = useState(false);
+  const [reminderOn, setReminderOn] = useState(reminderEnabled);
   const [custom, setCustom] = useState("");
   const [busy, setBusy] = useState(false);
   const [lastAdd, setLastAdd] = useState(0); // son eklenen miktar (geri al için)
 
-  // Hatırlatıcı durumunu localStorage'dan oku (varsayılan açık).
+  // Tam yüklemede DB otoritedir: aynayı eşitle + başka yerde değişirse dinle.
   useEffect(() => {
-    try {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setReminderOn(localStorage.getItem(REMINDER_KEY) !== "0");
-    } catch {
-      /* no-op */
-    }
-  }, []);
+    syncReminderEnabledLs(reminderEnabled);
+    const onToggle = (e: Event) => {
+      const on = (e as CustomEvent<{ on: boolean }>).detail?.on;
+      if (typeof on === "boolean") setReminderOn(on);
+    };
+    window.addEventListener(REMINDER_TOGGLE_EVENT, onToggle);
+    return () => window.removeEventListener(REMINDER_TOGGLE_EVENT, onToggle);
+  }, [reminderEnabled]);
 
   // Su hatırlatıcısı "bir bardak içtim" deyince sayacı canlı güncelle.
   useEffect(() => {
@@ -102,13 +108,9 @@ export function WaterTracker({
   async function toggleReminder() {
     const next = !reminderOn;
     setReminderOn(next);
-    try {
-      localStorage.setItem(REMINDER_KEY, next ? "1" : "0");
-    } catch {
-      /* no-op */
-    }
+    setReminderEnabledLs(next); // localStorage ayna + event (in-app hatırlatıcı)
     if (next) await enablePush();
-    void setWaterReminder(next);
+    void setWaterReminder(next); // DB (tek kaynak)
   }
 
   return (
@@ -259,7 +261,7 @@ export function WaterTracker({
           className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-sky-500 to-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgba(2,132,199,0.7)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} /> 1 bardak ekle
-          <span className="opacity-80">· 250 ml</span>
+          <span className="opacity-80">· {GLASS_ML} ml</span>
         </button>
         <button
           type="button"

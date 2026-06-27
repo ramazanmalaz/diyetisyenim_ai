@@ -28,7 +28,7 @@ export default async function SettingsPage() {
       </div>
 
       <NotificationSettings
-        water={data?.water_reminder_enabled ?? false}
+        water={data?.water_reminder_enabled ?? true}
         waterStart={data?.water_start_hour ?? 10}
         waterEnd={data?.water_end_hour ?? 20}
         waterInterval={data?.water_interval_hours ?? 2}

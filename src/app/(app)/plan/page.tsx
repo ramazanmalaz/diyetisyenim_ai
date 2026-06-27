@@ -42,12 +42,14 @@ export default async function PlanPage() {
     .eq("day", todayKey)
     .maybeSingle();
 
-  // Kullanıcının günlük su hedefi (ayarlardan; varsayılan 2500).
+  // Kullanıcının su ayarları (hedef + bardak miktarı + hatırlatıcı; varsayılanlar).
   const { data: prefs } = await supabase
     .from("profiles")
-    .select("water_goal_ml")
+    .select("water_goal_ml, water_amount_ml, water_reminder_enabled")
     .maybeSingle();
   const waterGoalMl = prefs?.water_goal_ml ?? 2500;
+  const waterGlassMl = prefs?.water_amount_ml ?? 200;
+  const waterReminderEnabled = prefs?.water_reminder_enabled ?? true;
 
   // Son ~30 günün öğün günlüğü (tarih-bazlı yedim/atladım; RLS: kendi kaydı).
   const since = new Date();
@@ -136,6 +138,8 @@ export default async function PlanPage() {
         todayDate={todayKey}
         initialLogs={mealLogs ?? []}
         waterGoalMl={waterGoalMl}
+        waterGlassMl={waterGlassMl}
+        waterReminderEnabled={waterReminderEnabled}
       />
     </div>
   );

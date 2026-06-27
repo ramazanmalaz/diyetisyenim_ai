@@ -26,7 +26,7 @@ export default async function AppLayout({
   const { data: waterCfg } = await supabase
     .from("profiles")
     .select(
-      "water_start_hour, water_end_hour, water_interval_hours, water_amount_ml",
+      "water_reminder_enabled, water_start_hour, water_end_hour, water_interval_hours, water_amount_ml",
     )
     .maybeSingle();
 
@@ -84,6 +84,7 @@ export default async function AppLayout({
 
       <BottomNav />
       <WaterReminder
+        enabled={waterCfg?.water_reminder_enabled ?? true}
         startHour={waterCfg?.water_start_hour ?? 10}
         endHour={waterCfg?.water_end_hour ?? 20}
         intervalHours={waterCfg?.water_interval_hours ?? 2}

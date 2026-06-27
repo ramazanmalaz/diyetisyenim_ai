@@ -5,9 +5,13 @@ import { useEffect, useState } from "react";
 
 import { updateWater } from "@/app/(app)/plan/actions";
 import { playAlertChime } from "@/lib/alert-sound";
-import { broadcastWater, WATER_GLASS_ML } from "@/lib/water-sync";
+import {
+  broadcastWater,
+  REMINDER_ENABLED_KEY as ENABLED_KEY,
+  syncReminderEnabledLs,
+  WATER_GLASS_ML,
+} from "@/lib/water-sync";
 
-const ENABLED_KEY = "su_reminder_enabled";
 const LAST_KEY = "su_reminder_last";
 const SNOOZE_KEY = "su_reminder_snooze";
 
@@ -35,23 +39,26 @@ function setLs(key: string, value: string) {
  * Açma/kapama localStorage'dadır (WaterTracker'daki zil ile ortak).
  */
 export function WaterReminder({
+  enabled = true,
   startHour = 10,
   endHour = 20,
   intervalHours = 2,
   amountMl = 200,
 }: {
+  enabled?: boolean;
   startHour?: number;
   endHour?: number;
   intervalHours?: number;
   amountMl?: number;
 }) {
   const [due, setDue] = useState(false);
-  // Ayarlardaki bardak miktarı; geçersizse 250'ye düş.
+  // Ayarlardaki bardak miktarı; geçersizse ortak varsayılana düş.
   const glassMl = amountMl > 0 ? amountMl : WATER_GLASS_ML;
 
   useEffect(() => {
-    // İlk açılışta varsayılan: açık. 'last' yoksa şimdi (hemen tetiklenmesin).
-    if (getLs(ENABLED_KEY) === null) setLs(ENABLED_KEY, "1");
+    // Tam yüklemede DB otoritedir: aç/kapa aynasını sunucu değeriyle eşitle.
+    // (Oturum içinde zil/ayarlar bu aynayı canlı günceller.)
+    syncReminderEnabledLs(enabled);
     if (!getLs(LAST_KEY)) setLs(LAST_KEY, String(Date.now()));
 
     const intervalMs = Math.max(1, intervalHours) * 60 * 60 * 1000;
@@ -85,7 +92,7 @@ export function WaterReminder({
 
     const id = window.setInterval(check, 60_000);
     return () => window.clearInterval(id);
-  }, [startHour, endHour, intervalHours, glassMl]);
+  }, [enabled, startHour, endHour, intervalHours, glassMl]);
 
   if (!due) return null;
 

@@ -15,6 +15,7 @@ import { saveNotificationPrefs } from "@/app/(app)/push/actions";
 import { DEFAULT_POMODORO_CONFIG, type PomodoroConfig } from "@/lib/pomodoro";
 import { enablePush } from "@/lib/push-client";
 import { cn } from "@/lib/utils";
+import { setReminderEnabledLs } from "@/lib/water-sync";
 
 type Props = {
   water: boolean;
@@ -179,6 +180,8 @@ export function NotificationSettings(props: Props) {
       setError(res.error);
       return;
     }
+    // In-app su hatırlatıcısı (layout'ta kalıcı) yeni aç/kapayı reload beklemeden alsın.
+    setReminderEnabledLs(water);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
