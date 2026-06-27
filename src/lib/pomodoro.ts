@@ -184,6 +184,46 @@ export function nextMode(
   return "short";
 }
 
+export type RunBoundary = { at: number; mode: PomoMode; pomodoro: number };
+
+/**
+ * Çalışan timer'ın yaklaşan faz GEÇİŞ anlarını (uygulama kapalıyken push için)
+ * IST gün-içi dakikası olarak üretir. `at` = bir sonraki faza geçilen dakika,
+ * `mode` = geçilen mod. Yalnızca aynı IST gününe düşenler döner (gece yarısını
+ * aşanlar bırakılır — cron run_date=bugün ile eşler).
+ */
+export function upcomingBoundaries(
+  c: PomodoroConfig,
+  mode: PomoMode,
+  completedFocus: number,
+  remainingSec: number,
+  nowMs: number,
+): RunBoundary[] {
+  const istParts = (ms: number) => {
+    const d = new Date(ms + 3 * 3600 * 1000); // UTC+3 (Türkiye, DST yok)
+    return {
+      date: d.toISOString().slice(0, 10),
+      min: d.getUTCHours() * 60 + d.getUTCMinutes(),
+    };
+  };
+  const today = istParts(nowMs).date;
+  const out: RunBoundary[] = [];
+  let curMode = mode;
+  let cf = completedFocus;
+  let tMs = nowMs + remainingSec * 1000; // mevcut faz burada biter
+  for (let i = 0; i < 32; i += 1) {
+    const enteredCf = curMode === "focus" ? cf + 1 : cf;
+    const nm = nextMode(c, curMode, enteredCf);
+    const p = istParts(tMs);
+    if (p.date !== today) break; // gün aşımı
+    out.push({ at: p.min, mode: nm, pomodoro: enteredCf });
+    cf = enteredCf;
+    curMode = nm;
+    tMs += modeMinutes(c, nm) * 60 * 1000;
+  }
+  return out;
+}
+
 /** "5 sa 25 dk" gibi okunaklı süre. */
 export function humanMinutes(total: number): string {
   const h = Math.floor(total / 60);

@@ -13,12 +13,17 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import {
+  savePomodoroRun,
+  clearPomodoroRun,
+} from "@/app/(app)/pomodoro/actions";
+import {
   buildPhases,
   DEFAULT_POMODORO_CONFIG,
   modeMinutes,
   nextMode,
   type PomoMode,
   type PomodoroConfig,
+  upcomingBoundaries,
 } from "@/lib/pomodoro";
 import { cn } from "@/lib/utils";
 
@@ -239,23 +244,31 @@ export function PomodoroTimer() {
       }
     }
     playTick();
-    endRef.current = Date.now() + remaining * 1000;
+    const now = Date.now();
+    endRef.current = now + remaining * 1000;
     setRunning(true);
+    // Uygulama kapalıyken push için yaklaşan faz sınırlarını DB'ye yaz.
+    void savePomodoroRun({
+      phases: upcomingBoundaries(config, mode, completedFocus, remaining, now),
+    });
   }
   function pause() {
     setRunning(false);
     setRemaining(Math.max(0, Math.round((endRef.current - Date.now()) / 1000)));
+    void clearPomodoroRun();
   }
   function reset() {
     setRunning(false);
     setMode("focus");
     setCompletedFocus(0);
     setRemaining(config.focusMin * 60);
+    void clearPomodoroRun();
   }
   function switchMode(m: PomoMode) {
     setRunning(false);
     setMode(m);
     setRemaining(modeMinutes(config, m) * 60);
+    void clearPomodoroRun();
   }
   function toggleMute() {
     setMuted((v) => {
@@ -282,6 +295,7 @@ export function PomodoroTimer() {
     setMode("focus");
     setCompletedFocus(0);
     setRemaining(c.focusMin * 60);
+    void clearPomodoroRun();
   }
 
   const meta = META[mode];

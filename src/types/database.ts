@@ -23,6 +23,14 @@ export type ActivityLevel = "sedentary" | "light" | "moderate" | "active";
 export type Sex = "female" | "male";
 export type SlotStatus = "open" | "booked" | "closed";
 
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 export type Database = {
   public: {
     Tables: {
@@ -730,6 +738,27 @@ export type Database = {
           break_min?: number;
           muted?: boolean;
           completed_sessions?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      pomodoro_runs: {
+        Row: {
+          client_id: string;
+          run_date: string;
+          phases: Json;
+          updated_at: string;
+        };
+        Insert: {
+          client_id: string;
+          run_date: string;
+          phases?: Json;
+          updated_at?: string;
+        };
+        Update: {
+          client_id?: string;
+          run_date?: string;
+          phases?: Json;
           updated_at?: string;
         };
         Relationships: [];

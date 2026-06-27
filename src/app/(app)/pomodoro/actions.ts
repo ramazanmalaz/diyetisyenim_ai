@@ -96,6 +96,55 @@ export async function updatePomodoroState(values: unknown): Promise<StateResult>
   return { ok: true };
 }
 
+// --- Canlı timer push'u: yaklaşan faz sınırları (uygulama kapalıyken bildirim) ---
+
+const runSchema = z.object({
+  phases: z
+    .array(
+      z.object({
+        at: z.coerce.number().int().min(0).max(1439), // IST gün-içi dakika
+        mode: z.enum(["focus", "short", "long", "lunch"]),
+        pomodoro: z.coerce.number().int().min(0).max(100),
+      }),
+    )
+    .max(48),
+});
+
+/** Çalışan timer'ın yaklaşan faz sınırlarını kaydeder (cron push için). */
+export async function savePomodoroRun(values: unknown): Promise<StateResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+  const parsed = runSchema.safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz veri." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("pomodoro_runs").upsert(
+    {
+      client_id: user.id,
+      run_date: today(),
+      phases: parsed.data.phases,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "client_id,run_date" },
+  );
+  if (error) return { error: "Kaydedilemedi." };
+  return { ok: true };
+}
+
+/** Çalışan timer durunca planlı push'ları temizler (duraklat/sıfırla/yeni config). */
+export async function clearPomodoroRun(): Promise<StateResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("pomodoro_runs")
+    .delete()
+    .eq("client_id", user.id)
+    .eq("run_date", today());
+  if (error) return { error: "Temizlenemedi." };
+  return { ok: true };
+}
+
 /** O günün planını siler (yeni plan kurmak için). */
 export async function clearPomodoroPlan(): Promise<StateResult> {
   const user = await getUser();

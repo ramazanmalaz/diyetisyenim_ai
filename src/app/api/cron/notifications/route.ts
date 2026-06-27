@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { buildSchedule } from "@/lib/pomodoro";
 import { sendPushToUser } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -117,61 +116,56 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // --- Pomodoro seans sınırları ---
-  const { data: plans } = await admin
-    .from("pomodoro_plans")
-    .select("client_id, start_min, end_min, work_min, break_min")
-    .eq("plan_date", dateStr)
-    .eq("muted", false);
+  // --- Pomodoro faz geçişleri (canlı timer'ın DB'ye yazdığı sınırlardan) ---
+  // Timer çalışırken yaklaşan geçiş anlarını pomodoro_runs.phases'e yazar; burada
+  // yalnızca o dakikaya denk gelen geçiş için "sıradaki faz" push'u gönderilir.
+  const { data: runs } = await admin
+    .from("pomodoro_runs")
+    .select("client_id, phases")
+    .eq("run_date", dateStr);
 
-  // Pomodoro ana anahtarı kapalı olan kullanıcıları atla.
-  const pomoIds = [...new Set((plans ?? []).map((p) => p.client_id))];
-  const pomoOff = new Set<string>();
-  if (pomoIds.length) {
+  if (runs && runs.length) {
+    // pomodoro_reminders_enabled === false olanları atla (null/true = açık).
+    const ids = [...new Set(runs.map((r) => r.client_id))];
+    const off = new Set<string>();
     const { data: pp } = await admin
       .from("profiles")
       .select("id, pomodoro_reminders_enabled")
-      .in("id", pomoIds);
+      .in("id", ids);
     for (const x of pp ?? []) {
-      if (!x.pomodoro_reminders_enabled) pomoOff.add(x.id);
-    }
-  }
-
-  for (const plan of plans ?? []) {
-    if (pomoOff.has(plan.client_id)) continue;
-    const schedule = buildSchedule({
-      startMin: plan.start_min,
-      endMin: plan.end_min,
-      workMin: plan.work_min,
-      breakMin: plan.break_min,
-    });
-    if (schedule.segments.length === 0) continue;
-
-    if (minuteOfDay === plan.start_min) {
-      sent += await sendPushToUser(plan.client_id, {
-        title: "⏱️ Odak zamanı — UzmanDiyet",
-        body: "İlk pomodoro seansın başladı. Telefonu bırak, odaklan! 💪",
-        tag: "pomodoro",
-        url: "/pomodoro",
-      });
-      continue;
+      if (x.pomodoro_reminders_enabled === false) off.add(x.id);
     }
 
-    for (let i = 0; i < schedule.segments.length; i += 1) {
-      const seg = schedule.segments[i];
-      if (seg.endMin !== minuteOfDay) continue;
-      const next = schedule.segments[i + 1];
-      const body = next
-        ? next.kind === "work"
-          ? `🎯 ${next.session}. seans başlıyor — odaklanma vakti!`
-          : `☕ Mola zamanı — ${next.endMin - next.startMin} dk dinlen, nefes al.`
-        : "🎉 Tüm seanslar tamamlandı, harika iş çıkardın!";
-      sent += await sendPushToUser(plan.client_id, {
-        title: "⏱️ Odak zamanı — UzmanDiyet",
-        body,
-        tag: "pomodoro",
-        url: "/pomodoro",
-      });
+    const bodyFor = (mode: string): string => {
+      switch (mode) {
+        case "focus":
+          return "🎯 Mola bitti — odak zamanı! Telefonu bırak.";
+        case "short":
+          return "☕ Kısa mola — nefes al, biraz dinlen.";
+        case "long":
+          return "🌿 Uzun mola — hak ettin, iyi dinlen!";
+        case "lunch":
+          return "🍽️ Öğle arası — afiyet olsun!";
+        default:
+          return "Sıradaki faz başladı.";
+      }
+    };
+
+    for (const run of runs) {
+      if (off.has(run.client_id)) continue;
+      const phases = Array.isArray(run.phases)
+        ? (run.phases as { at?: number; mode?: string }[])
+        : [];
+      for (const ph of phases) {
+        if (ph?.at === minuteOfDay && typeof ph.mode === "string") {
+          sent += await sendPushToUser(run.client_id, {
+            title: "⏱️ Odak — UzmanDiyet",
+            body: bodyFor(ph.mode),
+            tag: "pomodoro",
+            url: "/pomodoro",
+          });
+        }
+      }
     }
   }
 
