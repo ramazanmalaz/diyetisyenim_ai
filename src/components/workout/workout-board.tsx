@@ -189,7 +189,7 @@ export function WorkoutBoard({
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold tracking-[0.22em] text-lime-300 uppercase ring-1 ring-white/10">
               <Dumbbell className="h-3.5 w-3.5" /> Spor Programı
             </span>
-            <h1 className="font-display mt-3 bg-gradient-to-br from-white to-zinc-400 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent">
+            <h1 className="font-display mt-3 text-[2.6rem] font-extrabold leading-[1.02] tracking-[-0.03em] text-white">
               Antrenman Planım
             </h1>
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -235,7 +235,7 @@ export function WorkoutBoard({
                 className={cn(
                   "flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold transition-[transform,background-color] duration-200 ease-[var(--ease-out)] active:scale-[0.96]",
                   active
-                    ? "bg-gradient-to-r from-lime-300 to-emerald-400 text-black shadow-[0_8px_22px_-8px_rgba(163,230,53,0.7)]"
+                    ? "bg-white text-black shadow-[0_8px_22px_-10px_rgba(255,255,255,0.5)]"
                     : "bg-white/5 text-zinc-400 ring-1 ring-white/10 hover:bg-white/10 hover:text-zinc-200",
                 )}
               >
@@ -419,7 +419,7 @@ export function WorkoutBoard({
               href={youtubeSearch(localizeExercise(detail))}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-lime-300 to-emerald-400 px-4 py-3 text-sm font-bold text-black shadow-[0_10px_24px_-8px_rgba(163,230,53,0.6)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 active:scale-[0.98]"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-bold text-black shadow-[0_10px_30px_-10px_rgba(255,255,255,0.4)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:bg-zinc-100 active:scale-[0.98]"
             >
               <Play className="h-4 w-4" fill="currentColor" /> Videolu anlatımı izle
             </a>

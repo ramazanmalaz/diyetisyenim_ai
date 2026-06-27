@@ -170,7 +170,7 @@ export function WorkoutWizard() {
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold tracking-[0.22em] text-lime-300 uppercase ring-1 ring-white/10">
           <Dumbbell className="h-3.5 w-3.5" /> Spor Asistanı
         </span>
-        <h1 className="font-display mt-3 bg-gradient-to-br from-white to-zinc-400 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent">
+        <h1 className="font-display mt-3 text-[2.1rem] font-extrabold leading-[1.05] tracking-[-0.03em] text-white">
           Sana özel antrenman programı
         </h1>
         <p className="mt-1 text-sm text-zinc-400">
@@ -325,7 +325,7 @@ export function WorkoutWizard() {
           <button
             type="button"
             onClick={() => setStep("mode")}
-            className="w-full rounded-2xl bg-gradient-to-r from-lime-300 to-emerald-400 px-4 py-3 text-sm font-bold text-black shadow-[0_10px_24px_-8px_rgba(163,230,53,0.6)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 active:scale-[0.98]"
+            className="w-full rounded-full bg-white px-4 py-3 text-sm font-bold text-black shadow-[0_10px_30px_-10px_rgba(255,255,255,0.4)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:bg-zinc-100 active:scale-[0.98]"
           >
             Devam →
           </button>
@@ -418,7 +418,7 @@ export function WorkoutWizard() {
             type="button"
             disabled={equipment.length === 0}
             onClick={() => void runGenerate(equipment, "gym")}
-            className="mt-5 w-full rounded-2xl bg-gradient-to-r from-lime-300 to-emerald-400 px-4 py-3 text-sm font-bold text-black shadow-[0_10px_24px_-8px_rgba(163,230,53,0.6)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 active:scale-[0.98] disabled:opacity-40"
+            className="mt-5 w-full rounded-full bg-white px-4 py-3 text-sm font-bold text-black shadow-[0_10px_30px_-10px_rgba(255,255,255,0.4)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-40"
           >
             {equipment.length} alet seçildi · Programı oluştur →
           </button>
@@ -483,7 +483,7 @@ export function WorkoutWizard() {
               onClick={() =>
                 void runGenerate(equipment, "gym")
               }
-              className="mt-5 w-full rounded-2xl bg-gradient-to-r from-lime-300 to-emerald-400 px-4 py-3 text-sm font-bold text-black shadow-[0_10px_24px_-8px_rgba(163,230,53,0.6)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 active:scale-[0.98]"
+              className="mt-5 w-full rounded-full bg-white px-4 py-3 text-sm font-bold text-black shadow-[0_10px_30px_-10px_rgba(255,255,255,0.4)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:bg-zinc-100 active:scale-[0.98]"
             >
               {equipment.length > 0
                 ? `${equipment.length} aletle programı oluştur →`
