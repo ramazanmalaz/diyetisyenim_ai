@@ -107,22 +107,24 @@ export function HomeDashboard({
 
   return (
     <div className="space-y-6">
-      {/* ===== Hero: bugünün özeti ===== */}
-      <section className="reveal relative overflow-hidden rounded-[28px] bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800 p-6 text-white shadow-[0_20px_50px_-20px_rgba(56,85,28,0.85)]">
-        {/* lime parıltı + gren dokusu */}
+      {/* ===== Hero: bugünün özeti (açık tema) ===== */}
+      <section className="reveal relative overflow-hidden rounded-[28px] border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-teal-50/50 p-6 shadow-[var(--shadow-soft)] dark:border-emerald-900/40 dark:from-emerald-950/25 dark:via-gray-950 dark:to-teal-950/15">
+        {/* yumuşak lime parıltı + ince gren */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full bg-lime-accent/30 blur-3xl"
+          className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full bg-emerald-300/25 blur-3xl dark:bg-emerald-500/15"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.12] mix-blend-overlay"
+          className="pointer-events-none absolute inset-0 opacity-[0.04] mix-blend-multiply dark:opacity-[0.06] dark:mix-blend-overlay"
           style={{ backgroundImage: `url("${NOISE}")` }}
         />
 
         <div className="relative">
-          <p className="text-sm font-medium text-lime-accent">{greeting} 👋</p>
-          <h1 className="font-display mt-0.5 text-2xl font-extrabold tracking-tight">
+          <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+            {greeting} 👋
+          </p>
+          <h1 className="font-display mt-0.5 text-2xl font-extrabold tracking-tight text-gray-900 dark:text-emerald-50">
             {name || "Hoş geldin"}
           </h1>
         </div>
@@ -133,8 +135,8 @@ export function HomeDashboard({
             <svg className="h-32 w-32 -rotate-90" viewBox="0 0 128 128">
               <defs>
                 <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#d9f99d" />
-                  <stop offset="100%" stopColor="#a3e635" />
+                  <stop offset="0%" stopColor="#97cd41" />
+                  <stop offset="100%" stopColor="#51811d" />
                 </linearGradient>
               </defs>
               <circle
@@ -143,7 +145,7 @@ export function HomeDashboard({
                 r={r}
                 fill="none"
                 strokeWidth="11"
-                className="stroke-white/15"
+                className="stroke-emerald-100 dark:stroke-emerald-950/60"
               />
               <circle
                 cx="64"
@@ -154,24 +156,24 @@ export function HomeDashboard({
                 strokeLinecap="round"
                 stroke="url(#ring)"
                 strokeDasharray={`${dash} ${circ}`}
-                className="transition-[stroke-dasharray] duration-700 ease-[var(--ease-out)] drop-shadow-[0_0_6px_rgba(163,230,53,0.6)]"
+                className="transition-[stroke-dasharray] duration-700 ease-[var(--ease-out)] drop-shadow-[0_0_5px_rgba(151,205,65,0.5)]"
               />
             </svg>
             <div className="absolute text-center">
-              <p className="font-display text-3xl font-extrabold tabular-nums leading-none">
+              <p className="font-display text-3xl font-extrabold tabular-nums leading-none text-emerald-900 dark:text-emerald-50">
                 {consumed}
               </p>
-              <p className="mt-0.5 text-[11px] text-white/70">
+              <p className="mt-0.5 text-[11px] text-gray-500">
                 / {target ?? "—"} kcal
               </p>
             </div>
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold tracking-[0.16em] text-lime-accent uppercase">
+            <p className="text-[11px] font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300">
               Bugün
             </p>
-            <p className="mt-1 text-lg font-bold">
+            <p className="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-50">
               {target
                 ? pct >= 100
                   ? "Hedefe ulaştın 🎉"
@@ -181,11 +183,11 @@ export function HomeDashboard({
 
             {/* Su + Seri */}
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-xs font-semibold ring-1 ring-white/15 backdrop-blur-sm">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-950/50 dark:text-sky-300">
                 💧 Su %{waterPct}
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-xs font-semibold ring-1 ring-white/15 backdrop-blur-sm">
-                <Flame className="h-3.5 w-3.5 text-amber-300" fill="currentColor" />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                <Flame className="h-3.5 w-3.5" fill="currentColor" />
                 {streak} gün seri
               </span>
             </div>
@@ -194,7 +196,7 @@ export function HomeDashboard({
 
         <Link
           href="/plan"
-          className="group relative mt-5 flex items-center justify-center gap-2 rounded-2xl bg-lime-accent px-4 py-3 text-sm font-bold text-emerald-950 shadow-[0_10px_24px_-8px_rgba(163,230,53,0.6)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none active:scale-[0.98]"
+          className="group relative mt-5 flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-[0_10px_24px_-10px_rgba(106,166,33,0.8)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98]"
         >
           Planımı aç
           <ArrowRight className="h-4 w-4 transition-transform duration-200 ease-[var(--ease-out)] group-hover:translate-x-0.5" />
