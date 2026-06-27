@@ -25,6 +25,10 @@ import {
   STYLE_OPTIONS,
 } from "@/lib/workout";
 
+// İnce film greni — OLED siyah üzerinde derinlik (board ile aynı dil).
+const NOISE =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E";
+
 type Step =
   | "level"
   | "goal"
@@ -152,9 +156,9 @@ export function WorkoutWizard() {
     return (
       <Shell>
         <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-lime-400" />
-          <p className="font-medium">Antrenman programın hazırlanıyor…</p>
-          <p className="text-sm text-zinc-400">Bu birkaç saniye sürebilir.</p>
+          <Loader2 className="h-8 w-8 animate-spin text-lime-400 drop-shadow-[0_0_8px_rgba(163,230,53,0.6)]" />
+          <p className="font-display text-lg font-bold">Antrenman programın hazırlanıyor…</p>
+          <p className="text-sm text-zinc-400">Egzersizleri ve görselleri seçiyor; yarım dakikayı bulabilir.</p>
         </div>
       </Shell>
     );
@@ -163,10 +167,10 @@ export function WorkoutWizard() {
   return (
     <Shell>
       <div className="mb-6">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-lime-400/15 px-3 py-1 text-[10px] font-semibold tracking-[0.18em] text-lime-300 uppercase">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold tracking-[0.22em] text-lime-300 uppercase ring-1 ring-white/10">
           <Dumbbell className="h-3.5 w-3.5" /> Spor Asistanı
         </span>
-        <h1 className="mt-3 text-2xl font-extrabold tracking-tight">
+        <h1 className="font-display mt-3 bg-gradient-to-br from-white to-zinc-400 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent">
           Sana özel antrenman programı
         </h1>
         <p className="mt-1 text-sm text-zinc-400">
@@ -246,10 +250,10 @@ export function WorkoutWizard() {
                   setStep("session");
                 }}
                 className={cn(
-                  "rounded-xl border py-3 text-lg font-bold transition active:scale-95",
+                  "font-display rounded-2xl border py-3 text-lg font-extrabold transition-[transform,background-color] duration-200 ease-[var(--ease-out)] active:scale-95",
                   days === d
-                    ? "border-lime-400 bg-lime-400/15 text-lime-300"
-                    : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-zinc-500",
+                    ? "border-transparent bg-gradient-to-br from-lime-300 to-emerald-400 text-black shadow-[0_8px_20px_-10px_rgba(163,230,53,0.7)]"
+                    : "border-white/10 bg-white/[0.03] text-zinc-200 hover:bg-white/10",
                 )}
               >
                 {d}
@@ -293,10 +297,10 @@ export function WorkoutWizard() {
                 setStep("injuries");
               }}
               className={cn(
-                "w-full rounded-xl border px-4 py-3 text-left transition active:scale-[0.98]",
+                "w-full rounded-2xl border px-4 py-3 text-left transition-[transform,background-color] duration-200 ease-[var(--ease-out)] active:scale-[0.98]",
                 style === o.value
-                  ? "border-lime-400 bg-lime-400/15"
-                  : "border-zinc-700 bg-zinc-900 hover:border-zinc-500",
+                  ? "border-lime-400/50 bg-lime-400/15 shadow-[0_8px_22px_-10px_rgba(163,230,53,0.6)]"
+                  : "border-white/10 bg-white/[0.03] hover:bg-white/10",
               )}
             >
               <span className="block text-sm font-medium">{o.label}</span>
@@ -316,12 +320,12 @@ export function WorkoutWizard() {
             onChange={(e) => setInjuries(e.target.value)}
             rows={2}
             placeholder="Örn. diz ağrısı, bel fıtığı… (yoksa boş geç)"
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-900 p-3 text-sm text-zinc-100 placeholder:text-zinc-500"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-zinc-100 placeholder:text-zinc-500"
           />
           <button
             type="button"
             onClick={() => setStep("mode")}
-            className="w-full rounded-xl bg-lime-400 px-4 py-3 text-sm font-bold text-zinc-900 transition hover:brightness-105 active:scale-[0.98]"
+            className="w-full rounded-2xl bg-gradient-to-r from-lime-300 to-emerald-400 px-4 py-3 text-sm font-bold text-black shadow-[0_10px_24px_-8px_rgba(163,230,53,0.6)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 active:scale-[0.98]"
           >
             Devam →
           </button>
@@ -414,7 +418,7 @@ export function WorkoutWizard() {
             type="button"
             disabled={equipment.length === 0}
             onClick={() => void runGenerate(equipment, "gym")}
-            className="mt-5 w-full rounded-2xl bg-lime-400 px-4 py-3 text-sm font-bold text-zinc-900 transition hover:brightness-105 active:scale-[0.98] disabled:opacity-40"
+            className="mt-5 w-full rounded-2xl bg-gradient-to-r from-lime-300 to-emerald-400 px-4 py-3 text-sm font-bold text-black shadow-[0_10px_24px_-8px_rgba(163,230,53,0.6)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 active:scale-[0.98] disabled:opacity-40"
           >
             {equipment.length} alet seçildi · Programı oluştur →
           </button>
@@ -479,7 +483,7 @@ export function WorkoutWizard() {
               onClick={() =>
                 void runGenerate(equipment, "gym")
               }
-              className="mt-5 w-full rounded-2xl bg-lime-400 px-4 py-3 text-sm font-bold text-zinc-900 transition hover:brightness-105 active:scale-[0.98]"
+              className="mt-5 w-full rounded-2xl bg-gradient-to-r from-lime-300 to-emerald-400 px-4 py-3 text-sm font-bold text-black shadow-[0_10px_24px_-8px_rgba(163,230,53,0.6)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:brightness-105 active:scale-[0.98]"
             >
               {equipment.length > 0
                 ? `${equipment.length} aletle programı oluştur →`
@@ -498,8 +502,13 @@ export function WorkoutWizard() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-[calc(100vh-7rem)] bg-zinc-950 text-zinc-100">
-      <div className="mx-auto w-full max-w-md px-4 py-8">{children}</div>
+    <div className="relative min-h-[calc(100vh-7rem)] bg-black text-zinc-100">
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 opacity-[0.05] mix-blend-overlay"
+        style={{ backgroundImage: `url("${NOISE}")` }}
+      />
+      <div className="relative mx-auto w-full max-w-md px-4 py-8">{children}</div>
     </div>
   );
 }
@@ -515,7 +524,7 @@ function Question({
 }) {
   return (
     <div className="step-in space-y-3">
-      <div className="rounded-2xl rounded-tl-sm bg-zinc-800 px-4 py-3 text-sm">
+      <div className="rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-3 text-sm backdrop-blur-sm">
         {title}
       </div>
       <div className="space-y-2">{children}</div>
@@ -546,10 +555,10 @@ function Choice({
       type="button"
       onClick={onClick}
       className={cn(
-        "w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition active:scale-[0.98]",
+        "w-full rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition-[transform,background-color] duration-200 ease-[var(--ease-out)] active:scale-[0.98]",
         active
-          ? "border-lime-400 bg-lime-400/15 text-lime-300"
-          : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-zinc-500",
+          ? "border-lime-400/50 bg-lime-400/15 text-lime-200 shadow-[0_8px_22px_-10px_rgba(163,230,53,0.6)]"
+          : "border-white/10 bg-white/[0.03] text-zinc-200 hover:bg-white/10",
       )}
     >
       {children}
@@ -572,9 +581,9 @@ function BigChoice({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-2xl border border-zinc-700 bg-zinc-900 p-4 text-left transition hover:border-lime-400/50 hover:bg-zinc-800/80 active:scale-[0.98]"
+      className="group flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left backdrop-blur-sm transition-[transform,background-color] duration-200 ease-[var(--ease-out)] hover:bg-white/10 active:scale-[0.98]"
     >
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-lime-400/15 text-lime-300">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-lime-300 to-emerald-400 text-black shadow-[0_8px_20px_-8px_rgba(163,230,53,0.7)] transition-transform duration-200 ease-[var(--ease-out)] group-hover:scale-105">
         <Icon className="h-5 w-5" strokeWidth={2} />
       </span>
       <span className="min-w-0">
@@ -599,10 +608,10 @@ function Chip({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1.5 text-sm font-medium transition active:scale-95",
+        "rounded-full border px-3 py-1.5 text-sm font-semibold transition-[transform,background-color] duration-200 ease-[var(--ease-out)] active:scale-95",
         active
-          ? "border-lime-400 bg-lime-400/20 text-lime-200"
-          : "border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500",
+          ? "border-transparent bg-gradient-to-r from-lime-300 to-emerald-400 text-black shadow-[0_6px_16px_-8px_rgba(163,230,53,0.7)]"
+          : "border-white/10 bg-white/[0.03] text-zinc-300 hover:bg-white/10",
       )}
     >
       {children}
