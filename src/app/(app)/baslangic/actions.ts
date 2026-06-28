@@ -90,8 +90,8 @@ export async function generatePlan(values: unknown): Promise<GenerateResult> {
       numWeeks: v.goalWeeks,
     });
   } catch (err) {
-    console.error("[generatePlan] AI hatası:", err);
-    return { error: "Plan oluşturulamadı. Lütfen tekrar dene." };
+    const msg = err instanceof Error ? err.message : String(err);
+    return { error: `[DEBUG] ${msg}` };
   }
 
   // Önceki aktif planları arşivle.
