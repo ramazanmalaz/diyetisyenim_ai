@@ -89,7 +89,7 @@ Planı yalnızca save_diet_plan aracını çağırarak döndür.`;
 
   const response = await anthropic.messages.create({
     model: DEFAULT_MODEL,
-    max_tokens: 8000,
+    max_tokens: 4096,
     system: [
       { type: "text", text: system, cache_control: { type: "ephemeral" } },
     ],
@@ -120,7 +120,7 @@ Planı yalnızca save_diet_plan aracını çağırarak döndür.`;
  * onboarding'i HIZLI ve GÜVENİLİR kılar: tek paralel grup → Vercel 60sn'yi aşmaz,
  * rate limit'e takılmaz. 4 hafta = 28 farklı günlük menü (aylık döngü).
  */
-export const PLAN_VARIETY_WEEKS = 2;
+export const PLAN_VARIETY_WEEKS = 1;
 /** Aynı anda üretilen hafta sayısı (tümü tek grupta paralel). */
 const GEN_CONCURRENCY = 5;
 

@@ -188,20 +188,25 @@ export function IntakeWizard() {
     if (a.goalLossKg === undefined || a.goalWeeks === undefined) return;
     setSubmitting(true);
     setError(null);
-    const result = await generatePlan({
-      sex: a.sex,
-      age: a.age,
-      heightCm: a.heightCm,
-      currentWeightKg: a.currentWeightKg,
-      activity: a.activity,
-      dietType: a.dietType ?? "balanced",
-      goalLossKg: a.goalLossKg,
-      goalWeeks: a.goalWeeks,
-      healthNotes: a.healthNotes,
-      dislikes: a.dislikes,
-    });
-    setSubmitting(false);
-    if (result && "error" in result) setError(result.error);
+    try {
+      const result = await generatePlan({
+        sex: a.sex,
+        age: a.age,
+        heightCm: a.heightCm,
+        currentWeightKg: a.currentWeightKg,
+        activity: a.activity,
+        dietType: a.dietType ?? "balanced",
+        goalLossKg: a.goalLossKg,
+        goalWeeks: a.goalWeeks,
+        healthNotes: a.healthNotes,
+        dislikes: a.dislikes,
+      });
+      if (result && "error" in result) setError(result.error);
+    } catch {
+      setError("Plan oluşturulamadı. Lütfen tekrar dene.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const minDate = (() => {
