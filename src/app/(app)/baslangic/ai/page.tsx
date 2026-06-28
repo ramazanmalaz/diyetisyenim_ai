@@ -7,6 +7,8 @@ import { AiOnboarding } from "@/components/onboarding/ai-onboarding";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
+export const maxDuration = 300;
+
 export default async function BaslangicAiPage() {
   await requireProfile();
   const supabase = await createClient();

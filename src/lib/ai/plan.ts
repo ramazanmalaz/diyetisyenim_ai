@@ -120,7 +120,7 @@ Planı yalnızca save_diet_plan aracını çağırarak döndür.`;
  * onboarding'i HIZLI ve GÜVENİLİR kılar: tek paralel grup → Vercel 60sn'yi aşmaz,
  * rate limit'e takılmaz. 4 hafta = 28 farklı günlük menü (aylık döngü).
  */
-export const PLAN_VARIETY_WEEKS = 4;
+export const PLAN_VARIETY_WEEKS = 2;
 /** Aynı anda üretilen hafta sayısı (tümü tek grupta paralel). */
 const GEN_CONCURRENCY = 5;
 
