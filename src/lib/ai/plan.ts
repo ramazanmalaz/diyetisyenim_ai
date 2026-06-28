@@ -89,7 +89,7 @@ Planı yalnızca save_diet_plan aracını çağırarak döndür.`;
 
   const response = await anthropic.messages.create({
     model: DEFAULT_MODEL,
-    max_tokens: 4096,
+    max_tokens: 7000,
     system: [
       { type: "text", text: system, cache_control: { type: "ephemeral" } },
     ],
@@ -103,6 +103,10 @@ Planı yalnızca save_diet_plan aracını çağırarak döndür.`;
     tool_choice: { type: "tool", name: "save_diet_plan" },
     messages: [{ role: "user", content: prompt }],
   });
+
+  if (response.stop_reason === "max_tokens") {
+    throw new Error("Yanıt token limitinde kesildi — max_tokens artırılmalı.");
+  }
 
   const toolUse = response.content.find((block) => block.type === "tool_use");
   if (!toolUse || toolUse.type !== "tool_use") {
