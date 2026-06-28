@@ -203,6 +203,21 @@ h3 {
   animation: reveal-up 0.4s var(--ease-out) both;
 }
 
+/* Yükleme slide geçişi — sağdan girer (karusel hissi). */
+@keyframes slide-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.slide-in {
+  animation: slide-from-right 0.4s var(--ease-out) both;
+}
+
 /* Karpuz tarayıcı — analiz sırasında yukarı-aşağı süzülen tarama çizgisi. */
 @keyframes scanline {
   0% {
