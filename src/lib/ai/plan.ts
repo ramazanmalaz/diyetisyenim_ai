@@ -74,22 +74,22 @@ export async function generatePlanMeals(params: {
   const lo = Math.round(params.dailyTarget * 0.95);
   const hi = Math.round(params.dailyTarget * 1.05);
 
-  const prompt = `Aşağıdaki kişi için 7 günlük (day_of_week: 0=Pazartesi ... 6=Pazar) Türk mutfağına uygun, dengeli bir diyet programı oluştur.
+  const prompt = `Aşağıdaki kişi için 7 günlük Türk mutfağına uygun dengeli diyet planı oluştur.
 
-- Her gün 5 öğün olmalı: breakfast, snack_morning, lunch, snack_afternoon, dinner.
-- Her öğün için 1-3 yiyecek öğesi ver. Her öğeyi MİKTARIYLA yaz (örn. "2 haşlanmış yumurta", "5 siyah zeytin", "1 dilim tam buğday ekmeği").
-- Her öğenin GERÇEKÇİ tahmini kalorisini ekle (porsiyona uygun; abartma/eksiltme).
-- KALORİ HEDEFİ — KRİTİK: HER GÜNÜN öğün kalorileri toplamı ${lo}–${hi} kcal arasında olmalı (hedef ${params.dailyTarget} kcal). Bunu tutturmak için öğün MİKTARLARINI ayarla (porsiyonu büyüt/küçült, gerekirse öğe ekle/çıkar). Her gün AYRI AYRI bu banda girmeli — günler düşük (ör. ${Math.round(params.dailyTarget * 0.75)}) ya da yüksek kalmasın.
-- save_diet_plan'i çağırmadan ÖNCE her günün 5 öğününün kalorilerini tek tek topla ve ${lo}–${hi} bandında olduğunu DOĞRULA; değilse miktarları düzelt.
-- ÇOK ÖNEMLİ: 7 günün HER BİRİ BİRBİRİNDEN FARKLI olsun. Aynı öğünü/menüyü iki güne KOYMA; malzeme, pişirme ve öğünleri günden güne değiştir.
+KURALLAR:
+- Her gün TAM OLARAK 5 kayıt: breakfast, snack_morning, lunch, snack_afternoon, dinner.
+- Her kayıt = 1 satır. "item" alanına TÜM öğün içeriğini tek cümlede yaz: miktar + besin (örn. "2 yumurta + 1 dilim tam buğday ekmeği + 5 zeytin").
+- "calories" = o öğünün TOPLAM kalorisi (gerçekçi, porsiyona uygun).
+- Günlük toplam ${lo}–${hi} kcal bandında olmalı (hedef ${params.dailyTarget} kcal).
+- 7 günün her biri birbirinden FARKLI olsun; tekrar yok.
 ${params.weekNote ? `- ${params.weekNote}\n` : ""}
-Kişi bilgisi: ${params.intakeSummary}
+Kişi: ${params.intakeSummary}
 
-Planı yalnızca save_diet_plan aracını çağırarak döndür.`;
+Yalnızca save_diet_plan aracını çağır.`;
 
   const response = await anthropic.messages.create({
     model: DEFAULT_MODEL,
-    max_tokens: 7000,
+    max_tokens: 3500,
     system: [
       { type: "text", text: system, cache_control: { type: "ephemeral" } },
     ],
