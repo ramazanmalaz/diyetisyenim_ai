@@ -1,6 +1,6 @@
 "use client";
 
-import { LineChart, MessageCircle, RotateCcw } from "lucide-react";
+import { LineChart, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -257,19 +257,6 @@ export function PlanBoard({
         plannedToday={todayStats.planned}
       />
 
-      {/* Hızlı erişim */}
-      <div className="grid gap-2 sm:grid-cols-2">
-        <form action={openAssistant}>
-          <Button type="submit" variant="outline" className="w-full gap-2">
-            <MessageCircle className="h-4 w-4" /> Asistana soru sor
-          </Button>
-        </form>
-        <Button asChild variant="outline" className="w-full gap-2">
-          <Link href="/ilerleme">
-            <LineChart className="h-4 w-4" /> Kilo & ilerleme takibi
-          </Link>
-        </Button>
-      </div>
 
       {/* İlerlemeye göre programı güncelle (AI planları için) */}
       <form

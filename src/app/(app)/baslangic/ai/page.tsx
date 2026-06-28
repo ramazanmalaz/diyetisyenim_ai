@@ -39,8 +39,8 @@ export default async function BaslangicAiPage() {
           hesaplayıp takip edebilirim.
         </p>
       </div>
-      <MedicalDisclaimer />
       <AiOnboarding />
+      <MedicalDisclaimer />
     </div>
   );
 }
