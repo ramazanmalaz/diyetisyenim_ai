@@ -577,16 +577,16 @@ function BigNumberInput({
       <div className="flex items-stretch gap-3">
         <input
           type="number"
+          inputMode="numeric"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          autoFocus
           onKeyDown={(e) => {
             if (e.key === "Enter" && canNext) onNext();
           }}
-          className="min-w-0 flex-1 rounded-2xl border-2 border-gray-200 bg-white px-5 py-4 text-center text-[36px] font-bold text-gray-900 outline-none transition focus:border-emerald-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          className="min-w-0 flex-1 rounded-2xl border-2 border-gray-200 bg-white px-4 py-3 text-center text-[22px] font-semibold text-gray-900 outline-none transition focus:border-emerald-500 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
         />
-        <div className="flex items-center justify-center rounded-2xl bg-gray-100 px-5 text-[17px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+        <div className="flex items-center justify-center rounded-2xl bg-gray-100 px-4 py-3 text-[15px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
           {suffix}
         </div>
       </div>
