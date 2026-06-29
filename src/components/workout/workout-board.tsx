@@ -4,7 +4,6 @@ import {
   Check,
   Dumbbell,
   Info,
-  PersonStanding,
   Play,
   RotateCcw,
   Timer,
@@ -18,7 +17,6 @@ import {
   setExerciseDone,
   type ExerciseDemoResult,
 } from "@/app/(app)/spor/actions";
-import { BodyPicker } from "@/components/workout/body-picker";
 import { localizeExercise } from "@/lib/exercise-tr";
 import {
   GOAL_LABEL,
@@ -94,7 +92,6 @@ export function WorkoutBoard({
   const days = program?.days ?? [];
 
   const [activeDay, setActiveDay] = useState(0);
-  const [bodyPickerOpen, setBodyPickerOpen] = useState(false);
   // Bugün tamamlanan egzersizler: "dayIndex|exerciseIndex"
   const [done, setDone] = useState<Set<string>>(
     () =>
@@ -347,15 +344,6 @@ export function WorkoutBoard({
           </section>
         )}
 
-        {/* ===== Bölgeye göre egzersiz ===== */}
-        <button
-          type="button"
-          onClick={() => setBodyPickerOpen(true)}
-          className="flex w-full items-center justify-center gap-2.5 rounded-2xl border border-lime-400/20 bg-lime-400/[0.07] px-4 py-3.5 text-sm font-semibold text-lime-300 transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-lime-400/12 active:scale-[0.98]"
-        >
-          <PersonStanding className="h-[18px] w-[18px]" strokeWidth={1.75} />
-          Bölgeye göre egzersiz ara
-        </button>
 
         {/* ===== Yeniden oluştur ===== */}
         <form action={resetWorkout}>
@@ -490,10 +478,6 @@ export function WorkoutBoard({
         </div>
       )}
 
-      {/* ===== Bölgeye göre egzersiz seçici ===== */}
-      {bodyPickerOpen && (
-        <BodyPicker onClose={() => setBodyPickerOpen(false)} />
-      )}
     </div>
   );
 }
