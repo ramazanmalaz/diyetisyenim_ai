@@ -16,22 +16,24 @@ import type { LucideProps } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const ITEMS: {
+const BASE_ITEMS: {
   href: string;
   label: string;
   icon: ComponentType<LucideProps>;
+  adminOnly?: boolean;
 }[] = [
   { href: "/panel", label: "Ana", icon: Home },
   { href: "/plan", label: "Plan", icon: UtensilsCrossed },
   { href: "/spor", label: "Spor", icon: Dumbbell },
   { href: "/sohbet", label: "Sohbet", icon: MessageCircle },
   { href: "/ilerleme", label: "İlerleme", icon: LineChart },
-  { href: "/pomodoro", label: "Odak", icon: Timer },
+  { href: "/pomodoro", label: "Odak", icon: Timer, adminOnly: true },
   { href: "/hatirlatici", label: "Hatırlatıcı", icon: ListChecks },
 ];
 
-export function BottomNav() {
+export function BottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
+  const ITEMS = BASE_ITEMS.filter((it) => !it.adminOnly || isAdmin);
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">

@@ -22,16 +22,18 @@ type Props = {
   waterMl: number;
   waterGoal: number;
   streak: number;
+  isAdmin?: boolean;
 };
 
 // Tüm özellikler — her biri ayrı gradient kimliği + karakterli ikon.
-const FEATURES: {
+const ALL_FEATURES: {
   href: string;
   label: string;
   desc: string;
   icon: ComponentType<LucideProps>;
   grad: string; // ikon karosu gradyanı
   glow: string; // renkli gölge (alçak opaklık)
+  adminOnly?: boolean;
 }[] = [
   {
     href: "/sohbet",
@@ -72,6 +74,7 @@ const FEATURES: {
     icon: Timer,
     grad: "from-rose-400 to-rose-600",
     glow: "shadow-[0_10px_24px_-10px_rgba(244,63,94,0.7)]",
+    adminOnly: true,
   },
   {
     href: "/karpuz",
@@ -80,6 +83,7 @@ const FEATURES: {
     icon: Watermelon,
     grad: "from-rose-400 to-emerald-500",
     glow: "shadow-[0_10px_24px_-10px_rgba(244,63,94,0.6)]",
+    adminOnly: true,
   },
 ];
 
@@ -95,7 +99,9 @@ export function HomeDashboard({
   waterMl,
   waterGoal,
   streak,
+  isAdmin = false,
 }: Props) {
+  const FEATURES = ALL_FEATURES.filter((f) => !f.adminOnly || isAdmin);
   const t = target ?? 0;
   const pct = t > 0 ? Math.min(100, Math.round((consumed / t) * 100)) : 0;
   const left = Math.max(0, t - consumed);

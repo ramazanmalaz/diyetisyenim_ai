@@ -176,6 +176,7 @@ export default async function PanelPage() {
             waterMl={waterMl}
             waterGoal={waterGoal}
             streak={streak}
+            isAdmin={profile.role === "admin" || profile.role === "dietitian"}
           />
           <WeeklySummary
             weightDelta={weightDelta}

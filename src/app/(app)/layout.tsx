@@ -83,7 +83,7 @@ export default async function AppLayout({
 
       <main className="flex flex-1 flex-col pb-28">{children}</main>
 
-      <BottomNav />
+      <BottomNav isAdmin={profile.role === "admin" || profile.role === "dietitian"} />
       <WaterReminder
         enabled={waterCfg?.water_reminder_enabled ?? true}
         startHour={waterCfg?.water_start_hour ?? 10}
