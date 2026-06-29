@@ -4,6 +4,7 @@ import {
   Check,
   Dumbbell,
   Info,
+  PersonStanding,
   Play,
   RotateCcw,
   Timer,
@@ -15,7 +16,9 @@ import {
   exerciseDemo,
   resetWorkout,
   setExerciseDone,
+  type ExerciseDemoResult,
 } from "@/app/(app)/spor/actions";
+import { BodyPicker } from "@/components/workout/body-picker";
 import { localizeExercise } from "@/lib/exercise-tr";
 import {
   GOAL_LABEL,
@@ -91,6 +94,7 @@ export function WorkoutBoard({
   const days = program?.days ?? [];
 
   const [activeDay, setActiveDay] = useState(0);
+  const [bodyPickerOpen, setBodyPickerOpen] = useState(false);
   // Bugün tamamlanan egzersizler: "dayIndex|exerciseIndex"
   const [done, setDone] = useState<Set<string>>(
     () =>
@@ -101,10 +105,14 @@ export function WorkoutBoard({
       ),
   );
   const [detail, setDetail] = useState<Exercise | null>(null);
-  const [demo, setDemo] = useState<{
-    frames: string[] | null;
-    loading: boolean;
-  }>({ frames: null, loading: false });
+  const [demo, setDemo] = useState<ExerciseDemoResult & { loading: boolean }>({
+    frames: null,
+    gifUrl: null,
+    trSteps: null,
+    trInstructions: null,
+    muscleGroup: null,
+    loading: false,
+  });
   const [frameIdx, setFrameIdx] = useState(0);
 
   const day = days[activeDay];
@@ -115,10 +123,11 @@ export function WorkoutBoard({
     let active = true;
     const q = detail.enName?.trim() || detail.name;
     queueMicrotask(() => {
-      if (active) setDemo({ frames: null, loading: true });
+      if (active)
+        setDemo({ frames: null, gifUrl: null, trSteps: null, trInstructions: null, muscleGroup: null, loading: true });
     });
     exerciseDemo(q).then((res) => {
-      if (active) setDemo({ frames: res.frames, loading: false });
+      if (active) setDemo({ ...res, loading: false });
     });
     return () => {
       active = false;
@@ -338,6 +347,16 @@ export function WorkoutBoard({
           </section>
         )}
 
+        {/* ===== Bölgeye göre egzersiz ===== */}
+        <button
+          type="button"
+          onClick={() => setBodyPickerOpen(true)}
+          className="flex w-full items-center justify-center gap-2.5 rounded-2xl border border-lime-400/20 bg-lime-400/[0.07] px-4 py-3.5 text-sm font-semibold text-lime-300 transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-lime-400/12 active:scale-[0.98]"
+        >
+          <PersonStanding className="h-[18px] w-[18px]" strokeWidth={1.75} />
+          Bölgeye göre egzersiz ara
+        </button>
+
         {/* ===== Yeniden oluştur ===== */}
         <form action={resetWorkout}>
           <button
@@ -386,13 +405,23 @@ export function WorkoutBoard({
               </button>
             </div>
 
-            {/* İnline hareket görseli (başlangıç/bitiş kareleri animasyonlu) */}
+            {/* Hareket görseli: önce animasyonlu GIF (exercises-dataset), yoksa 2-kare animasyon */}
             {demo.loading && (
               <div className="mt-4 grid h-48 place-items-center rounded-2xl border border-white/10 bg-white/[0.03] text-sm text-zinc-500">
                 Hareket görseli yükleniyor…
               </div>
             )}
-            {!demo.loading && demo.frames && demo.frames.length > 0 && (
+            {!demo.loading && demo.gifUrl && (
+              <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-white">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={demo.gifUrl}
+                  alt={`${localizeExercise(detail)} hareketi`}
+                  className="mx-auto max-h-60 w-auto"
+                />
+              </div>
+            )}
+            {!demo.loading && !demo.gifUrl && demo.frames && demo.frames.length > 0 && (
               <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -400,6 +429,37 @@ export function WorkoutBoard({
                   alt={`${localizeExercise(detail)} hareketi`}
                   className="mx-auto max-h-60 w-auto"
                 />
+              </div>
+            )}
+
+            {/* Türkçe yapılış adımları */}
+            {!demo.loading && (demo.trSteps ?? demo.trInstructions) && (
+              <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-[11px] font-bold tracking-[0.14em] text-lime-300 uppercase">
+                  Nasıl yapılır
+                </p>
+                {demo.trSteps && demo.trSteps.length > 0 ? (
+                  <ol className="space-y-1.5 text-sm text-zinc-300">
+                    {demo.trSteps.map((step, i) => (
+                      <li key={i} className="flex gap-2">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-lime-400/10 text-[10px] font-bold text-lime-400 ring-1 ring-lime-400/20">
+                          {i + 1}
+                        </span>
+                        <span className="leading-snug">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-sm leading-relaxed text-zinc-300">
+                    {demo.trInstructions}
+                  </p>
+                )}
+                {demo.muscleGroup && (
+                  <p className="mt-2 text-xs text-zinc-500">
+                    Çalışan kas:{" "}
+                    <span className="font-medium text-zinc-400">{demo.muscleGroup}</span>
+                  </p>
+                )}
               </div>
             )}
 
@@ -428,6 +488,11 @@ export function WorkoutBoard({
             </p>
           </div>
         </div>
+      )}
+
+      {/* ===== Bölgeye göre egzersiz seçici ===== */}
+      {bodyPickerOpen && (
+        <BodyPicker onClose={() => setBodyPickerOpen(false)} />
       )}
     </div>
   );

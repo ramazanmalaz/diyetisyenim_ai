@@ -11,6 +11,7 @@ import {
 import { getUser } from "@/lib/auth";
 import { consumeAiCredit } from "@/lib/entitlements";
 import { resolveExerciseFrames } from "@/lib/exercise-db";
+import { findExercise, loadExercisesDataset } from "@/lib/exercises-dataset";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { GOAL_LABEL, LEVEL_LABEL, STYLE_LABEL } from "@/lib/workout";
 import {
@@ -135,18 +136,37 @@ export async function analyzeGym(formData: FormData): Promise<GymScanResult> {
   }
 }
 
+export type ExerciseDemoResult = {
+  frames: string[] | null;
+  gifUrl: string | null;
+  trSteps: string[] | null;
+  trInstructions: string | null;
+  muscleGroup: string | null;
+};
+
 /**
- * Egzersiz için demo görsel kareleri (yuhonas). AI egzersizleri aynı kaynaktan
- * (sözlükten) seçtiği için enName birebir eşleşir; eşleşmezse token-örtüşmesi.
+ * Egzersiz için demo görsel + Türkçe talimatlar.
+ * Önce hasaneyldrm/exercises-dataset'ten GIF + TR talimat; paralelde yuhonas'tan
+ * 2-kare animasyon (GIF yoksa fallback olarak kullanılır).
  */
 export async function exerciseDemo(
   query: unknown,
-): Promise<{ frames: string[] | null }> {
+): Promise<ExerciseDemoResult> {
   const q = typeof query === "string" ? query : "";
   try {
-    return { frames: await resolveExerciseFrames(q) };
+    const [frames, dataset] = await Promise.all([
+      resolveExerciseFrames(q),
+      findExercise(q),
+    ]);
+    return {
+      frames,
+      gifUrl: dataset?.gifUrl ?? null,
+      trSteps: dataset?.trSteps ?? null,
+      trInstructions: dataset?.trInstructions ?? null,
+      muscleGroup: dataset?.muscleGroup ?? null,
+    };
   } catch {
-    return { frames: null };
+    return { frames: null, gifUrl: null, trSteps: null, trInstructions: null, muscleGroup: null };
   }
 }
 
@@ -189,6 +209,33 @@ export async function setExerciseDone(values: unknown): Promise<WorkoutLogResult
     if (error) return { error: "Güncellenemedi." };
   }
   return { ok: true };
+}
+
+export type ExerciseCard = {
+  id: string;
+  name: string;
+  gifUrl: string | null;
+  muscleGroup: string | null;
+  trSteps: string[] | null;
+  trInstructions: string | null;
+};
+
+/** exercises-dataset'ten body_part'a göre egzersiz listesi döndürür. */
+export async function getExercisesByBodyPart(
+  bodyPart: string,
+): Promise<ExerciseCard[]> {
+  const dataset = await loadExercisesDataset();
+  return dataset
+    .filter((x) => x.bodyPart.toLowerCase() === bodyPart.toLowerCase())
+    .slice(0, 50)
+    .map((x) => ({
+      id: x.id,
+      name: x.name,
+      gifUrl: x.gifUrl,
+      muscleGroup: x.muscleGroup,
+      trSteps: x.trSteps,
+      trInstructions: x.trInstructions,
+    }));
 }
 
 /** Aktif programı arşivler (baştan başla). */
