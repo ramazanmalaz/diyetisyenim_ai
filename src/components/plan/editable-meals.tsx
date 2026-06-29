@@ -69,6 +69,8 @@ const UNIT_WORDS = new Set([
 ]);
 
 function parseFree(content: string): { amount: string; name: string } {
+  // Bileşik öğün (+ işareti var) → bölme, tümünü ad olarak göster.
+  if (content.includes("+")) return { amount: "", name: content.trim() };
   const toks = content.trim().split(/\s+/);
   if (toks.length === 0 || !/^[\d.,]+$/.test(toks[0])) {
     return { amount: "", name: content.trim() };
@@ -456,7 +458,7 @@ export function EditableMeals({
                             >
                               <p
                                 className={cn(
-                                  "truncate text-sm font-medium transition",
+                                  "break-words text-sm font-medium leading-snug transition",
                                   struck && "text-gray-400 line-through",
                                 )}
                               >
