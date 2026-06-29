@@ -16,7 +16,9 @@ import {
   List as ListIcon,
   Mail,
   MapPin,
+  MinusCircle,
   Music,
+  Pencil,
   Plus,
   Search,
   ShoppingCart,
@@ -29,9 +31,12 @@ import type { LucideProps } from "lucide-react";
 import {
   createList,
   createReminder,
+  deleteList,
   deleteReminder,
   toggleFlag,
   toggleReminder,
+  updateList,
+  updateReminder,
 } from "@/app/(app)/hatirlatici/actions";
 import { cn } from "@/lib/utils";
 
@@ -158,13 +163,11 @@ export function RemindersApp({
 }) {
   const [lists, setLists] = useState(initialLists);
   const [items, setItems] = useState(initialReminders);
-  // Sunucu verisi (revalidate/refresh sonrası) değişince yerel state'i eşitle.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setLists(initialLists), [initialLists]);
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setItems(initialReminders), [initialReminders]);
 
-  // null = Listeler ana ekranı; aksi halde açık detay
   const [view, setView] = useState<
     { kind: "smart"; key: SmartKey } | { kind: "list"; id: string } | null
   >(null);
@@ -173,28 +176,27 @@ export function RemindersApp({
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
 
+  // Düzenleme modları
+  const [listEditMode, setListEditMode] = useState(false);
+  const [editReminder, setEditReminder] = useState<Reminder | null>(null);
+  const [editList, setEditList] = useState<ReminderList | null>(null);
+
   const active = items.filter((r) => !r.completed);
   const counts = {
-    today: active.filter(
-      (r) => r.due_at && r.due_at.slice(0, 10) <= todayKey,
-    ).length,
+    today: active.filter((r) => r.due_at && r.due_at.slice(0, 10) <= todayKey).length,
     scheduled: active.filter((r) => r.due_at).length,
     all: active.length,
     flagged: active.filter((r) => r.flagged).length,
   };
-  const listCount = (id: string) =>
-    active.filter((r) => r.list_id === id).length;
+  const listCount = (id: string) => active.filter((r) => r.list_id === id).length;
 
   function detailItems(): Reminder[] {
     let list = items;
     if (view?.kind === "smart") {
       if (view.key === "today")
-        list = items.filter(
-          (r) => r.due_at && r.due_at.slice(0, 10) <= todayKey,
-        );
+        list = items.filter((r) => r.due_at && r.due_at.slice(0, 10) <= todayKey);
       else if (view.key === "scheduled") list = items.filter((r) => r.due_at);
       else if (view.key === "flagged") list = items.filter((r) => r.flagged);
-      // all → hepsi
     } else if (view?.kind === "list") {
       list = items.filter((r) => r.list_id === view.id);
     }
@@ -202,40 +204,36 @@ export function RemindersApp({
       const q = search.toLowerCase();
       list = list.filter((r) => r.title.toLowerCase().includes(q));
     }
-    // tamamlanmayanlar önce
-    return [...list].sort(
-      (a, b) => Number(a.completed) - Number(b.completed),
-    );
+    return [...list].sort((a, b) => Number(a.completed) - Number(b.completed));
   }
 
   const detailTitle =
     view?.kind === "smart"
-      ? SMART.find((s) => s.key === view.key)?.label ?? ""
+      ? (SMART.find((s) => s.key === view.key)?.label ?? "")
       : view?.kind === "list"
         ? (lists.find((l) => l.id === view.id)?.name ?? "")
         : "";
 
   async function onToggle(r: Reminder) {
     const next = !r.completed;
-    setItems((prev) =>
-      prev.map((x) => (x.id === r.id ? { ...x, completed: next } : x)),
-    );
+    setItems((prev) => prev.map((x) => (x.id === r.id ? { ...x, completed: next } : x)));
     await toggleReminder({ id: r.id, completed: next });
   }
   async function onFlag(r: Reminder) {
     const next = !r.flagged;
-    setItems((prev) =>
-      prev.map((x) => (x.id === r.id ? { ...x, flagged: next } : x)),
-    );
+    setItems((prev) => prev.map((x) => (x.id === r.id ? { ...x, flagged: next } : x)));
     await toggleFlag({ id: r.id, flagged: next });
   }
   async function onDelete(id: string) {
     setItems((prev) => prev.filter((x) => x.id !== id));
     await deleteReminder(id);
   }
+  async function onDeleteList(id: string) {
+    setLists((prev) => prev.filter((x) => x.id !== id));
+    setItems((prev) => prev.filter((x) => x.list_id !== id));
+    await deleteList(id);
+  }
 
-  // Optimistik ekleme: öğe anında listeye girer (sayılar gecikmesiz güncellenir),
-  // sunucu aynı id ile kaydeder; hata olursa geri alınır.
   async function addReminderOptimistic(input: {
     id: string;
     listId: string | null;
@@ -268,42 +266,78 @@ export function RemindersApp({
     return res;
   }
 
+  async function onUpdateReminderOptimistic(input: {
+    id: string;
+    listId: string | null;
+    title: string;
+    notes?: string;
+    url?: string;
+    dueAt: string | null;
+    hasTime?: boolean;
+    flagged?: boolean;
+    priority?: number;
+  }): Promise<{ error: string } | { ok: true }> {
+    const prev = items.find((x) => x.id === input.id);
+    setItems((all) =>
+      all.map((x) =>
+        x.id === input.id
+          ? {
+              ...x,
+              list_id: input.listId,
+              title: input.title,
+              notes: input.notes || null,
+              url: input.url || null,
+              due_at: input.dueAt,
+              has_time: !!input.hasTime,
+              flagged: !!input.flagged,
+              priority: input.priority ?? 0,
+            }
+          : x,
+      ),
+    );
+    const res = await updateReminder(input);
+    if ("error" in res && prev)
+      setItems((all) => all.map((x) => (x.id === input.id ? prev : x)));
+    return res;
+  }
+
   async function addListOptimistic(input: {
     id: string;
     name: string;
     color: string;
     icon: string;
   }): Promise<{ error: string } | { ok: true }> {
-    const obj: ReminderList = {
-      id: input.id,
-      name: input.name,
-      color: input.color,
-      icon: input.icon,
-      sort_order: 0,
-    };
+    const obj: ReminderList = { ...input, sort_order: 0 };
     setLists((prev) => [...prev, obj]);
     const res = await createList(input);
     if ("error" in res) setLists((prev) => prev.filter((x) => x.id !== input.id));
     return res;
   }
 
-  // Inline ekleme bağlamı: hangi görünümdeysek yeni satır ona uygun düşsün.
-  function inlineCtx(): {
-    listId: string | null;
-    dueAt: string | null;
-    flagged: boolean;
-  } {
-    if (view?.kind === "list")
-      return { listId: view.id, dueAt: null, flagged: false };
+  async function onUpdateListOptimistic(input: {
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
+  }): Promise<{ error: string } | { ok: true }> {
+    const prev = lists.find((x) => x.id === input.id);
+    setLists((all) =>
+      all.map((x) =>
+        x.id === input.id ? { ...x, name: input.name, color: input.color, icon: input.icon } : x,
+      ),
+    );
+    const res = await updateList(input);
+    if ("error" in res && prev)
+      setLists((all) => all.map((x) => (x.id === input.id ? prev : x)));
+    return res;
+  }
+
+  function inlineCtx(): { listId: string | null; dueAt: string | null; flagged: boolean } {
+    if (view?.kind === "list") return { listId: view.id, dueAt: null, flagged: false };
     if (view?.kind === "smart") {
       if (view.key === "today" || view.key === "scheduled")
-        return {
-          listId: null,
-          dueAt: new Date(`${todayKey}T09:00:00`).toISOString(),
-          flagged: false,
-        };
-      if (view.key === "flagged")
-        return { listId: null, dueAt: null, flagged: true };
+        return { listId: null, dueAt: new Date(`${todayKey}T09:00:00`).toISOString(), flagged: false };
+      if (view.key === "flagged") return { listId: null, dueAt: null, flagged: true };
     }
     return { listId: null, dueAt: null, flagged: false };
   }
@@ -331,9 +365,10 @@ export function RemindersApp({
             <div className="flex h-7 items-center justify-end">
               <button
                 type="button"
+                onClick={() => setListEditMode((v) => !v)}
                 className="text-[15px] font-medium text-blue-500 active:opacity-60"
               >
-                Düzenle
+                {listEditMode ? "Bitti" : "Düzenle"}
               </button>
             </div>
             <h1 className="mt-1 text-[34px] font-bold leading-tight tracking-tight text-gray-900 dark:text-white">
@@ -360,9 +395,7 @@ export function RemindersApp({
                       <span className="grid h-7 w-7 place-items-center rounded-full bg-white/25">
                         <Icon className="h-4 w-4" strokeWidth={2.5} />
                       </span>
-                      <span className="text-2xl font-bold tabular-nums">
-                        {counts[s.key]}
-                      </span>
+                      <span className="text-2xl font-bold tabular-nums">{counts[s.key]}</span>
                     </div>
                     <span className="text-[15px] font-semibold">{s.label}</span>
                   </button>
@@ -376,38 +409,72 @@ export function RemindersApp({
             </p>
             {lists.length === 0 ? (
               <div className="rounded-2xl bg-white px-4 py-6 text-center text-sm text-gray-400 dark:bg-gray-900">
-                Henüz liste yok. Aşağıdan “Liste Ekle” ile başla.
+                Henüz liste yok. Aşağıdan "Liste Ekle" ile başla.
               </div>
             ) : (
               <div className="overflow-hidden rounded-2xl bg-white dark:bg-gray-900">
                 {lists.map((l, i) => {
                   const Icon = ICONS[l.icon] ?? ListIcon;
                   return (
-                    <button
+                    <div
                       key={l.id}
-                      type="button"
-                      onClick={() => setView({ kind: "list", id: l.id })}
                       className={cn(
-                        "flex w-full items-center gap-3 px-3 py-2.5 text-left transition active:bg-gray-100 dark:active:bg-gray-800",
+                        "flex w-full items-center gap-3 px-3 py-2.5",
                         i > 0 && "border-t border-gray-100 dark:border-gray-800",
                       )}
                     >
-                      <span
-                        className={cn(
-                          "grid h-7 w-7 shrink-0 place-items-center rounded-full text-white",
-                          COLOR_BG[l.color] ?? "bg-blue-500",
-                        )}
+                      {/* Düzenleme modunda: kırmızı sil butonu */}
+                      {listEditMode && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteList(l.id)}
+                          aria-label="Listeyi sil"
+                          className="shrink-0 text-red-500 active:opacity-60"
+                        >
+                          <MinusCircle className="h-5 w-5" />
+                        </button>
+                      )}
+
+                      {/* Liste adı — tıklanınca detay (düzenleme modunda değilse) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!listEditMode) setView({ kind: "list", id: l.id });
+                        }}
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left"
                       >
-                        <Icon className="h-4 w-4" strokeWidth={2.5} />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-[16px] text-gray-900 dark:text-white">
-                        {l.name}
-                      </span>
-                      <span className="text-sm tabular-nums text-gray-400">
-                        {listCount(l.id)}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-gray-300" />
-                    </button>
+                        <span
+                          className={cn(
+                            "grid h-7 w-7 shrink-0 place-items-center rounded-full text-white",
+                            COLOR_BG[l.color] ?? "bg-blue-500",
+                          )}
+                        >
+                          <Icon className="h-4 w-4" strokeWidth={2.5} />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-[16px] text-gray-900 dark:text-white">
+                          {l.name}
+                        </span>
+                        {!listEditMode && (
+                          <span className="text-sm tabular-nums text-gray-400">
+                            {listCount(l.id)}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Düzenleme modunda: kalem butonu */}
+                      {listEditMode ? (
+                        <button
+                          type="button"
+                          onClick={() => setEditList(l)}
+                          aria-label="Listeyi düzenle"
+                          className="shrink-0 text-gray-400 active:opacity-60"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -439,10 +506,7 @@ export function RemindersApp({
           <div className="reveal">
             <button
               type="button"
-              onClick={() => {
-                setView(null);
-                setSearch("");
-              }}
+              onClick={() => { setView(null); setSearch(""); }}
               className="flex items-center gap-0.5 text-[15px] font-medium text-blue-500 active:opacity-60"
             >
               <ChevronLeft className="h-5 w-5" /> Listeler
@@ -451,13 +515,8 @@ export function RemindersApp({
               className={cn(
                 "mt-1 text-[34px] font-bold leading-tight tracking-tight",
                 view.kind === "list"
-                  ? (COLOR_TEXT[
-                      lists.find((l) => l.id === view.id)?.color ?? "blue"
-                    ] ?? "text-blue-500")
-                  : (SMART.find((s) => s.key === view.key)?.bg.replace(
-                      "bg-",
-                      "text-",
-                    ) ?? "text-blue-500"),
+                  ? (COLOR_TEXT[lists.find((l) => l.id === view.id)?.color ?? "blue"] ?? "text-blue-500")
+                  : (SMART.find((s) => s.key === view.key)?.bg.replace("bg-", "text-") ?? "text-blue-500"),
               )}
             >
               {detailTitle}
@@ -467,8 +526,7 @@ export function RemindersApp({
 
             <ul className="mt-4 space-y-0 overflow-hidden rounded-2xl bg-white dark:bg-gray-900">
               {detailItems().map((r, i) => {
-                const color =
-                  lists.find((l) => l.id === r.list_id)?.color ?? "blue";
+                const color = lists.find((l) => l.id === r.list_id)?.color ?? "blue";
                 return (
                   <li
                     key={r.id}
@@ -477,6 +535,7 @@ export function RemindersApp({
                       i > 0 && "border-t border-gray-100 dark:border-gray-800",
                     )}
                   >
+                    {/* Tamamlandı toggle */}
                     <button
                       type="button"
                       onClick={() => onToggle(r)}
@@ -484,19 +543,19 @@ export function RemindersApp({
                       className={cn(
                         "mt-0.5 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border-2 transition active:scale-90",
                         r.completed
-                          ? cn(
-                              "border-transparent text-white",
-                              COLOR_BG[color] ?? "bg-blue-500",
-                            )
-                          : cn(
-                              "text-transparent",
-                              COLOR_BORDER[color] ?? "border-blue-500",
-                            ),
+                          ? cn("border-transparent text-white", COLOR_BG[color] ?? "bg-blue-500")
+                          : cn("text-transparent", COLOR_BORDER[color] ?? "border-blue-500"),
                       )}
                     >
                       <Check className="h-3 w-3" strokeWidth={4} />
                     </button>
-                    <div className="min-w-0 flex-1">
+
+                    {/* Başlık + not — dokunca düzenle */}
+                    <button
+                      type="button"
+                      onClick={() => setEditReminder(r)}
+                      className="min-w-0 flex-1 text-left"
+                    >
                       <p
                         className={cn(
                           "truncate text-[16px] text-gray-900 dark:text-white",
@@ -507,12 +566,12 @@ export function RemindersApp({
                       </p>
                       {(r.notes || r.due_at) && (
                         <p className="truncate text-[13px] text-gray-400">
-                          {r.due_at
-                            ? dueLabel(r.due_at, r.has_time, todayKey)
-                            : r.notes}
+                          {r.due_at ? dueLabel(r.due_at, r.has_time, todayKey) : r.notes}
                         </p>
                       )}
-                    </div>
+                    </button>
+
+                    {/* Bayrak */}
                     {r.flagged && (
                       <button
                         type="button"
@@ -520,17 +579,16 @@ export function RemindersApp({
                         aria-label="Bayrağı kaldır"
                         className="mt-0.5 shrink-0"
                       >
-                        <Flag
-                          className="h-4 w-4 text-orange-500"
-                          fill="currentColor"
-                        />
+                        <Flag className="h-4 w-4 text-orange-500" fill="currentColor" />
                       </button>
                     )}
+
+                    {/* Sil */}
                     <button
                       type="button"
                       onClick={() => onDelete(r.id)}
                       aria-label="Sil"
-                      className="mt-0.5 shrink-0 text-gray-300 opacity-0 transition group-hover:opacity-100"
+                      className="mt-0.5 shrink-0 text-gray-300 opacity-0 transition group-hover:opacity-100 sm:opacity-100"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -538,12 +596,11 @@ export function RemindersApp({
                 );
               })}
 
-              {/* Inline yeni satır — yaz + Enter, imleç kalır; pasif satıra dokun → yaz */}
+              {/* Inline yeni satır */}
               <li
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5",
-                  detailItems().length > 0 &&
-                    "border-t border-gray-100 dark:border-gray-800",
+                  detailItems().length > 0 && "border-t border-gray-100 dark:border-gray-800",
                 )}
               >
                 <span
@@ -554,10 +611,7 @@ export function RemindersApp({
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      void addInline();
-                    }
+                    if (e.key === "Enter") { e.preventDefault(); void addInline(); }
                   }}
                   placeholder="Yeni hatırlatıcı"
                   className="w-full bg-transparent text-[16px] text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
@@ -582,27 +636,40 @@ export function RemindersApp({
       </div>
 
       {newReminder && (
-        <NewReminderSheet
+        <ReminderSheet
+          mode="create"
           lists={lists}
           defaultListId={view?.kind === "list" ? view.id : null}
-          onAdd={addReminderOptimistic}
+          onSave={addReminderOptimistic}
           onClose={() => setNewReminder(false)}
         />
       )}
+      {editReminder && (
+        <ReminderSheet
+          mode="edit"
+          initial={editReminder}
+          lists={lists}
+          defaultListId={editReminder.list_id}
+          onSave={(input) => onUpdateReminderOptimistic({ ...input, id: editReminder.id })}
+          onClose={() => setEditReminder(null)}
+        />
+      )}
       {newList && (
-        <NewListSheet onAdd={addListOptimistic} onClose={() => setNewList(false)} />
+        <ListSheet mode="create" onSave={addListOptimistic} onClose={() => setNewList(false)} />
+      )}
+      {editList && (
+        <ListSheet
+          mode="edit"
+          initial={editList}
+          onSave={(input) => onUpdateListOptimistic({ ...input, id: editList.id })}
+          onClose={() => setEditList(null)}
+        />
       )}
     </div>
   );
 }
 
-function SearchBar({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function SearchBar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="mt-3 flex items-center gap-2 rounded-xl bg-gray-200/70 px-3 py-2 dark:bg-gray-800">
       <Search className="h-4 w-4 text-gray-400" />
@@ -616,16 +683,20 @@ function SearchBar({
   );
 }
 
-// ===================== YENİ HATIRLATICI =====================
-function NewReminderSheet({
+// ===================== HATIRLATICI SHEET =====================
+function ReminderSheet({
+  mode,
+  initial,
   lists,
   defaultListId,
-  onAdd,
+  onSave,
   onClose,
 }: {
+  mode: "create" | "edit";
+  initial?: Reminder;
   lists: ReminderList[];
   defaultListId: string | null;
-  onAdd: (input: {
+  onSave: (input: {
     id: string;
     listId: string | null;
     title: string;
@@ -638,32 +709,36 @@ function NewReminderSheet({
   }) => Promise<{ error: string } | { ok: true }>;
   onClose: () => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
-  const [url, setUrl] = useState("");
-  const [dateOn, setDateOn] = useState(false);
-  const [timeOn, setTimeOn] = useState(false);
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("09:00");
-  const [flagged, setFlagged] = useState(false);
-  const [priority, setPriority] = useState(0);
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [url, setUrl] = useState(initial?.url ?? "");
+  const [flagged, setFlagged] = useState(initial?.flagged ?? false);
+  const [priority, setPriority] = useState(initial?.priority ?? 0);
   const [listId, setListId] = useState<string>(defaultListId ?? "");
+
+  const initDue = initial?.due_at ? new Date(initial.due_at) : null;
+  const [dateOn, setDateOn] = useState(!!initDue);
+  const [timeOn, setTimeOn] = useState(!!(initDue && initial?.has_time));
+  const [date, setDate] = useState(initDue ? initDue.toISOString().slice(0, 10) : "");
+  const [time, setTime] = useState(
+    initDue
+      ? initDue.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })
+      : "09:00",
+  );
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function add() {
-    if (!title.trim()) {
-      setError("Başlık gir.");
-      return;
-    }
+  async function save() {
+    if (!title.trim()) { setError("Başlık gir."); return; }
     setBusy(true);
     setError(null);
     let dueAt: string | null = null;
     if (dateOn && date) {
       dueAt = new Date(`${date}T${timeOn ? time : "09:00"}:00`).toISOString();
     }
-    const res = await onAdd({
-      id: crypto.randomUUID(),
+    const res = await onSave({
+      id: initial?.id ?? crypto.randomUUID(),
       listId: listId || null,
       title,
       notes,
@@ -674,10 +749,7 @@ function NewReminderSheet({
       priority,
     });
     setBusy(false);
-    if ("error" in res) {
-      setError(res.error);
-      return;
-    }
+    if ("error" in res) { setError(res.error); return; }
     onClose();
   }
 
@@ -685,9 +757,9 @@ function NewReminderSheet({
     <Sheet>
       <SheetBar
         onCancel={onClose}
-        title="Yeni Hatırlatıcı"
-        actionLabel="Ekle"
-        onAction={add}
+        title={mode === "create" ? "Yeni Hatırlatıcı" : "Düzenle"}
+        actionLabel={mode === "create" ? "Ekle" : "Kaydet"}
+        onAction={save}
         actionDisabled={busy || !title.trim()}
       />
       <div className="space-y-4 p-4">
@@ -718,13 +790,7 @@ function NewReminderSheet({
         </div>
 
         <div className="overflow-hidden rounded-xl bg-white dark:bg-gray-900">
-          <ToggleRow
-            icon={Calendar}
-            iconBg="bg-red-500"
-            label="Tarih"
-            on={dateOn}
-            onChange={setDateOn}
-          />
+          <ToggleRow icon={Calendar} iconBg="bg-red-500" label="Tarih" on={dateOn} onChange={setDateOn} />
           {dateOn && (
             <div className="border-t border-gray-100 px-3.5 py-2 dark:border-gray-800">
               <input
@@ -741,10 +807,7 @@ function NewReminderSheet({
             iconBg="bg-blue-500"
             label="Saat"
             on={timeOn}
-            onChange={(v) => {
-              setTimeOn(v);
-              if (v) setDateOn(true);
-            }}
+            onChange={(v) => { setTimeOn(v); if (v) setDateOn(true); }}
           />
           {timeOn && (
             <div className="border-t border-gray-100 px-3.5 py-2 dark:border-gray-800">
@@ -757,20 +820,12 @@ function NewReminderSheet({
             </div>
           )}
           <div className="border-t border-gray-100 dark:border-gray-800" />
-          <ToggleRow
-            icon={Flag}
-            iconBg="bg-orange-500"
-            label="Bayrak"
-            on={flagged}
-            onChange={setFlagged}
-          />
+          <ToggleRow icon={Flag} iconBg="bg-orange-500" label="Bayrak" on={flagged} onChange={setFlagged} />
         </div>
 
         <div className="overflow-hidden rounded-xl bg-white dark:bg-gray-900">
           <label className="flex items-center justify-between px-3.5 py-3">
-            <span className="text-[16px] text-gray-900 dark:text-white">
-              Öncelik
-            </span>
+            <span className="text-[16px] text-gray-900 dark:text-white">Öncelik</span>
             <select
               value={priority}
               onChange={(e) => setPriority(Number(e.target.value))}
@@ -784,9 +839,7 @@ function NewReminderSheet({
           </label>
           <div className="border-t border-gray-100 dark:border-gray-800" />
           <label className="flex items-center justify-between px-3.5 py-3">
-            <span className="text-[16px] text-gray-900 dark:text-white">
-              Liste
-            </span>
+            <span className="text-[16px] text-gray-900 dark:text-white">Liste</span>
             <select
               value={listId}
               onChange={(e) => setListId(e.target.value)}
@@ -794,9 +847,7 @@ function NewReminderSheet({
             >
               <option value="">Liste yok</option>
               {lists.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
+                <option key={l.id} value={l.id}>{l.name}</option>
               ))}
             </select>
           </label>
@@ -808,12 +859,16 @@ function NewReminderSheet({
   );
 }
 
-// ===================== YENİ LİSTE =====================
-function NewListSheet({
-  onAdd,
+// ===================== LİSTE SHEET =====================
+function ListSheet({
+  mode,
+  initial,
+  onSave,
   onClose,
 }: {
-  onAdd: (input: {
+  mode: "create" | "edit";
+  initial?: ReminderList;
+  onSave: (input: {
     id: string;
     name: string;
     color: string;
@@ -821,26 +876,20 @@ function NewListSheet({
   }) => Promise<{ error: string } | { ok: true }>;
   onClose: () => void;
 }) {
-  const [name, setName] = useState("");
-  const [color, setColor] = useState("blue");
-  const [icon, setIcon] = useState("list");
+  const [name, setName] = useState(initial?.name ?? "");
+  const [color, setColor] = useState(initial?.color ?? "blue");
+  const [icon, setIcon] = useState(initial?.icon ?? "list");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const PreviewIcon = ICONS[icon] ?? ListIcon;
 
   async function done() {
-    if (!name.trim()) {
-      setError("Liste adı gir.");
-      return;
-    }
+    if (!name.trim()) { setError("Liste adı gir."); return; }
     setBusy(true);
     setError(null);
-    const res = await onAdd({ id: crypto.randomUUID(), name, color, icon });
+    const res = await onSave({ id: initial?.id ?? crypto.randomUUID(), name, color, icon });
     setBusy(false);
-    if ("error" in res) {
-      setError(res.error);
-      return;
-    }
+    if ("error" in res) { setError(res.error); return; }
     onClose();
   }
 
@@ -848,20 +897,14 @@ function NewListSheet({
     <Sheet>
       <SheetBar
         onCancel={onClose}
-        title="Yeni Liste"
+        title={mode === "create" ? "Yeni Liste" : "Listeyi Düzenle"}
         actionLabel="Bitti"
         onAction={done}
         actionDisabled={busy || !name.trim()}
       />
       <div className="space-y-5 p-4">
-        {/* Önizleme */}
         <div className="flex flex-col items-center gap-3 pt-2">
-          <span
-            className={cn(
-              "grid h-20 w-20 place-items-center rounded-full text-white shadow-md",
-              COLOR_BG[color],
-            )}
-          >
+          <span className={cn("grid h-20 w-20 place-items-center rounded-full text-white shadow-md", COLOR_BG[color])}>
             <PreviewIcon className="h-9 w-9" strokeWidth={2.5} />
           </span>
         </div>
@@ -876,7 +919,6 @@ function NewListSheet({
           )}
         />
 
-        {/* Renkler */}
         <div className="rounded-2xl bg-white p-4 dark:bg-gray-900">
           <div className="grid grid-cols-6 gap-3">
             {COLORS.map((c) => (
@@ -888,19 +930,15 @@ function NewListSheet({
                 className={cn(
                   "mx-auto grid h-8 w-8 place-items-center rounded-full transition active:scale-90",
                   COLOR_BG[c],
-                  color === c &&
-                    "ring-2 ring-gray-300 ring-offset-2 dark:ring-offset-gray-900",
+                  color === c && "ring-2 ring-gray-300 ring-offset-2 dark:ring-offset-gray-900",
                 )}
               >
-                {color === c && (
-                  <Check className="h-4 w-4 text-white" strokeWidth={3} />
-                )}
+                {color === c && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
               </button>
             ))}
           </div>
         </div>
 
-        {/* İkonlar */}
         <div className="rounded-2xl bg-white p-4 dark:bg-gray-900">
           <div className="grid grid-cols-6 gap-3">
             {ICON_KEYS.map((k) => {
@@ -957,16 +995,10 @@ function SheetBar({
 }) {
   return (
     <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200/70 bg-[#f2f2f7]/90 px-4 py-3 backdrop-blur dark:border-gray-800 dark:bg-black/90">
-      <button
-        type="button"
-        onClick={onCancel}
-        className="text-[16px] text-blue-500 active:opacity-60"
-      >
+      <button type="button" onClick={onCancel} className="text-[16px] text-blue-500 active:opacity-60">
         İptal
       </button>
-      <span className="text-[16px] font-semibold text-gray-900 dark:text-white">
-        {title}
-      </span>
+      <span className="text-[16px] font-semibold text-gray-900 dark:text-white">{title}</span>
       <button
         type="button"
         onClick={onAction}
@@ -994,17 +1026,10 @@ function ToggleRow({
 }) {
   return (
     <div className="flex items-center gap-3 px-3.5 py-2.5">
-      <span
-        className={cn(
-          "grid h-7 w-7 shrink-0 place-items-center rounded-md text-white",
-          iconBg,
-        )}
-      >
+      <span className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-md text-white", iconBg)}>
         <Icon className="h-4 w-4" strokeWidth={2.5} />
       </span>
-      <span className="flex-1 text-[16px] text-gray-900 dark:text-white">
-        {label}
-      </span>
+      <span className="flex-1 text-[16px] text-gray-900 dark:text-white">{label}</span>
       <button
         type="button"
         role="switch"

@@ -163,6 +163,60 @@ export async function toggleFlag(values: unknown): Promise<ActionResult> {
   return { ok: true };
 }
 
+export async function updateReminder(values: unknown): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+  const parsed = reminderSchema
+    .extend({ id: z.string().uuid() })
+    .safeParse(values);
+  if (!parsed.success)
+    return { error: parsed.error.issues[0]?.message ?? "Geçersiz hatırlatıcı." };
+  const v = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("reminders")
+    .update({
+      list_id: v.listId ?? null,
+      title: v.title,
+      notes: v.notes || null,
+      url: v.url || null,
+      due_at: v.dueAt ?? null,
+      has_time: v.hasTime,
+      flagged: v.flagged,
+      priority: v.priority,
+    })
+    .eq("id", v.id)
+    .eq("client_id", user.id);
+  if (error) return { error: "Güncellenemedi." };
+  revalidatePath("/hatirlatici");
+  return { ok: true };
+}
+
+const listUpdateSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().trim().min(1, "Liste adı gir.").max(60),
+  color: z.enum(COLORS).optional().default("blue"),
+  icon: z.enum(ICONS).optional().default("list"),
+});
+
+export async function updateList(values: unknown): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+  const parsed = listUpdateSchema.safeParse(values);
+  if (!parsed.success)
+    return { error: parsed.error.issues[0]?.message ?? "Geçersiz liste." };
+  const v = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("reminder_lists")
+    .update({ name: v.name, color: v.color, icon: v.icon })
+    .eq("id", v.id)
+    .eq("client_id", user.id);
+  if (error) return { error: "Liste güncellenemedi." };
+  revalidatePath("/hatirlatici");
+  return { ok: true };
+}
+
 export async function deleteReminder(id: unknown): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { error: "Oturum bulunamadı." };
