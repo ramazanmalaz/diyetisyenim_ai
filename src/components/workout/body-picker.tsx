@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 // ─── Tipler ──────────────────────────────────────────────────────────────────
 
 type BodyView = "front" | "back";
-type BodySex  = "male" | "female";
 
 type BodyPart =
   | "chest"
@@ -41,73 +40,80 @@ const LABELS: Record<BodyPart, string> = {
 type Region = { id: BodyPart; d: string };
 
 /**
- * Ön görünüm: anatomy_realistic_bw.svg (864 × 1821)
- * Hotspot konumları bu koordinat uzayında tanımlandı.
+ * Ön görünüm: anatomy-front.svg (864 × 1821)
+ * Koordinatlar görselden ölçüldü — 3/4 sağ bakış açısı.
  */
 const FRONT_REGIONS: Region[] = [
   // Boyun
   { id: "neck",
-    d: "M356 212 L510 212 L507 272 L354 272 Z" },
+    d: "M324 278 L452 278 L450 385 L322 385 Z" },
   // Göğüs (her iki pektoral)
   { id: "chest",
-    d: "M242 265 C295 248 364 240 432 242 C500 244 570 253 620 272 L618 636 C565 650 498 656 432 654 C366 652 296 642 240 624 Z" },
+    d: "M236 368 C278 350 356 340 432 342 C508 344 562 356 612 376 L608 660 C558 674 500 680 432 678 C364 676 280 666 232 650 Z" },
   // Karın / Core
   { id: "waist",
-    d: "M240 628 C298 644 366 652 432 650 C498 652 565 644 618 630 L614 852 C566 864 498 870 432 868 C366 866 296 856 246 842 Z" },
-  // Sol omuz (ekranda sol)
+    d: "M234 654 C280 668 364 678 432 676 C500 678 556 668 608 654 L558 898 C530 910 488 915 432 913 C376 911 318 904 262 890 Z" },
+  // Sol omuz — ekranda SOL
   { id: "shoulders",
-    d: "M152 258 L282 258 L280 452 L150 452 Z" },
-  // Sağ omuz (ekranda sağ)
+    d: "M178 335 L304 335 L304 504 L176 504 Z" },
+  // Sağ omuz — ekranda SAĞ
   { id: "shoulders",
-    d: "M582 258 L714 258 L714 452 L580 452 Z" },
-  // Sol üst kol (bicep)
+    d: "M506 342 L658 342 L658 476 L504 476 Z" },
+  // Sol üst kol (bicep) — ekranda SOL
   { id: "upper arms",
-    d: "M85 452 L216 452 L214 832 L83 832 Z" },
-  // Sağ üst kol (bicep)
+    d: "M110 504 L256 504 L254 845 L108 845 Z" },
+  // Sağ üst kol — ekranda SAĞ
   { id: "upper arms",
-    d: "M648 452 L786 452 L788 832 L646 832 Z" },
+    d: "M556 476 L694 476 L697 832 L553 832 Z" },
   // Sol üst bacak (quadricep)
   { id: "upper legs",
-    d: "M205 875 L432 875 L428 1445 L202 1445 Z" },
+    d: "M222 960 L424 960 L422 1380 L220 1380 Z" },
   // Sağ üst bacak (quadricep)
   { id: "upper legs",
-    d: "M432 875 L660 875 L656 1445 L432 1445 Z" },
+    d: "M382 960 L610 960 L607 1380 L379 1380 Z" },
   // Sol alt bacak
   { id: "lower legs",
-    d: "M205 1452 L422 1452 L420 1818 L202 1818 Z" },
+    d: "M204 1388 L392 1388 L389 1734 L201 1734 Z" },
   // Sağ alt bacak
   { id: "lower legs",
-    d: "M422 1452 L656 1452 L653 1818 L420 1818 Z" },
+    d: "M370 1388 L582 1388 L579 1734 L367 1734 Z" },
 ];
 
 /**
- * Arka görünüm: body-{sex}-back.jpg (945 × 2048)
+ * Arka görünüm: anatomy-back.svg (619 × 1468)
+ * Koordinatlar görselden ölçüldü — düz arka bakış açısı.
  */
 const BACK_REGIONS: Region[] = [
+  // Boyun (arka, trapez üst)
+  { id: "neck",
+    d: "M266 164 L352 164 L350 274 L264 274 Z" },
+  // Sol omuz (deltoid arka) — ekranda SOL
+  { id: "shoulders",
+    d: "M90 224 L222 224 L220 352 L88 352 Z" },
+  // Sağ omuz (deltoid arka) — ekranda SAĞ
+  { id: "shoulders",
+    d: "M396 224 L528 224 L526 352 L394 352 Z" },
   // Sırt (trapez + lat + lomber)
   { id: "back",
-    d: "M232 362 L598 362 L590 842 L238 842 Z" },
-  // Sol omuz arka
-  { id: "shoulders",
-    d: "M542 348 L668 348 L664 500 L538 500 Z" },
-  // Sağ omuz arka
-  { id: "shoulders",
-    d: "M178 348 L280 348 L278 494 L176 494 Z" },
-  // Sol üst kol (tricep)
+    d: "M148 272 L470 272 L467 760 L146 760 Z" },
+  // Sol üst kol (tricep) — ekranda SOL
   { id: "upper arms",
-    d: "M538 500 L646 500 L642 782 L536 782 Z" },
-  // Sağ üst kol (tricep)
+    d: "M60 352 L148 352 L146 676 L58 676 Z" },
+  // Sağ üst kol (tricep) — ekranda SAĞ
   { id: "upper arms",
-    d: "M174 494 L272 494 L270 778 L172 778 Z" },
-  // Kalça + arka üst bacak (glute + hamstring)
+    d: "M470 352 L558 352 L558 676 L468 676 Z" },
+  // Sol üst bacak (glute + hamstring)
   { id: "upper legs",
-    d: "M236 846 L592 846 L586 1292 L240 1292 Z" },
-  // Sol alt bacak (baldır)
+    d: "M146 760 L312 760 L310 1196 L144 1196 Z" },
+  // Sağ üst bacak (glute + hamstring)
+  { id: "upper legs",
+    d: "M306 760 L468 760 L466 1196 L304 1196 Z" },
+  // Sol alt bacak (baldır) — ekranda SOL
   { id: "lower legs",
-    d: "M244 1296 L402 1296 L398 1728 L242 1728 Z" },
-  // Sağ alt bacak (baldır)
+    d: "M146 1200 L304 1200 L300 1412 L142 1412 Z" },
+  // Sağ alt bacak (baldır) — ekranda SAĞ
   { id: "lower legs",
-    d: "M402 1296 L548 1296 L544 1728 L402 1728 Z" },
+    d: "M298 1200 L448 1200 L444 1412 L296 1412 Z" },
 ];
 
 // ─── Beden Haritası ───────────────────────────────────────────────────────────
@@ -119,7 +125,7 @@ type ViewConfig = {
   regions: Region[];
 };
 
-function getViewConfig(view: BodyView, sex: BodySex): ViewConfig {
+function getViewConfig(view: BodyView): ViewConfig {
   if (view === "front") {
     return {
       imgSrc:  "/images/anatomy-front.svg",
@@ -129,25 +135,23 @@ function getViewConfig(view: BodyView, sex: BodySex): ViewConfig {
     };
   }
   return {
-    imgSrc:  `/images/body-${sex}-back.jpg`,
-    aspectW: 945,
-    aspectH: 2048,
+    imgSrc:  "/images/anatomy-back.svg",
+    aspectW: 619,
+    aspectH: 1468,
     regions: BACK_REGIONS,
   };
 }
 
 function BodyMap({
   view,
-  sex,
   selected,
   onSelect,
 }: {
   view: BodyView;
-  sex: BodySex;
   selected: BodyPart | null;
   onSelect: (bp: BodyPart) => void;
 }) {
-  const cfg = getViewConfig(view, sex);
+  const cfg = getViewConfig(view);
 
   return (
     <div
@@ -190,7 +194,6 @@ function BodyMap({
 // ─── Ana bileşen ──────────────────────────────────────────────────────────────
 
 export function BodyPicker({ onClose }: { onClose: () => void }) {
-  const [sex,      setSex]      = useState<BodySex>("male");
   const [view,     setView]     = useState<BodyView>("front");
   const [selected, setSelected] = useState<BodyPart | null>(null);
   const [exercises, setExercises] = useState<ExerciseCard[]>([]);
@@ -261,34 +264,14 @@ export function BodyPicker({ onClose }: { onClose: () => void }) {
           {!feedOpen && (
             <>
               {/* Kontroller */}
-              <div className="flex shrink-0 items-center justify-between gap-2 px-4 pb-2">
-                {/* Cinsiyet (yalnızca arka görünüm için gerekli) */}
-                <div className="flex flex-1 overflow-hidden rounded-xl border border-zinc-200 text-xs font-semibold">
-                  {(["male", "female"] as const).map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => { setSex(s); setSelected(null); }}
-                      className={cn(
-                        "flex-1 py-1.5 transition-colors duration-150",
-                        sex === s
-                          ? "bg-zinc-900 text-white"
-                          : "bg-white text-zinc-500 hover:bg-zinc-50",
-                      )}
-                    >
-                      {s === "male" ? "♂ Erkek" : "♀ Kadın"}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Ön / Arka flip */}
+              <div className="flex shrink-0 items-center justify-end px-4 pb-2">
                 <button
                   type="button"
                   onClick={toggleView}
                   className="flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
-                  {view === "front" ? "Ön" : "Arka"}
+                  {view === "front" ? "Öne Dön" : "Arkaya Dön"}
                 </button>
               </div>
 
@@ -309,7 +292,6 @@ export function BodyPicker({ onClose }: { onClose: () => void }) {
               <div className="flex-1 min-h-0 flex items-center justify-center py-1 px-2">
                 <BodyMap
                   view={view}
-                  sex={sex}
                   selected={selected}
                   onSelect={handleSelect}
                 />
