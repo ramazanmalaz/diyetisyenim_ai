@@ -50,6 +50,12 @@ yarn-error.log*
 /.claude/settings.local.json
 /skills-lock.json
 
+# iOS build artifacts (Xcode derived data, pods)
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/*.xcarchive
+ios/DerivedData/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
