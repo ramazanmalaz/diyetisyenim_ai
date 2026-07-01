@@ -38,11 +38,6 @@ jobs:
           ruby-version: "3.2"
           bundler-cache: true
 
-      - name: Install CocoaPods
-        run: |
-          cd ios/App
-          pod install --repo-update
-
       # ── 5. Sertifika + Provisioning Profile yükle ─────────────────────────
       - name: Import certificate
         env:
@@ -80,7 +75,7 @@ jobs:
       - name: Build archive
         run: |
           xcodebuild archive \
-            -workspace ios/App/App.xcworkspace \
+            -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
             -archivePath $RUNNER_TEMP/UzmanDiyet.xcarchive \
