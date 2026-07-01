@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UzmanDiyet — iOS App Store Yayımlama Rehberi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #080C14;
+  --surface: #0E1420;
+  --surface2: #141B28;
+  --border: #1E2A3D;
+  --border2: #263347;
+  --text: #E8EDF5;
+  --text2: #8B97AC;
+  --text3: #566070;
+  --blue: #3B82F6;
+  --blue-dim: #1D3461;
+  --blue-glow: rgba(59,130,246,0.15);
+  --green: #22C55E;
+  --green-dim: #14381F;
+  --green-glow: rgba(34,197,94,0.12);
+  --amber: #F59E0B;
+  --amber-dim: #3B2506;
+  --amber-glow: rgba(245,158,11,0.12);
+  --red: #EF4444;
+  --red-dim: #3B0F0F;
+  --purple: #A855F7;
+  --purple-dim: #2D1454;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  font-size: 15px;
+}
+
+/* ── Layout ── */
+.layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 28px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+
+.sidebar-brand {
+  padding: 0 24px 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.sidebar-logo {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+
+.sidebar-sub {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 12px 24px 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 24px;
+  font-size: 13px;
+  color: var(--text2);
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+  border-left: 2px solid transparent;
+}
+
+.nav-item:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+
+.nav-item.active {
+  color: var(--blue);
+  border-left-color: var(--blue);
+  background: var(--blue-glow);
+}
+
+.nav-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-green { background: var(--green); }
+.dot-amber { background: var(--amber); }
+.dot-blue  { background: var(--blue); }
+.dot-purple{ background: var(--purple); }
+
+/* ── Main ── */
+.main {
+  flex: 1;
+  min-width: 0;
+  max-width: 900px;
+  padding: 0 56px 80px;
+}
+
+/* ── Hero ── */
+.hero {
+  padding: 56px 0 48px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 56px;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--blue-glow);
+  border: 1px solid var(--blue-dim);
+  color: #93C5FD;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+
+.hero h1 {
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #E8EDF5 0%, #8B97AC 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-desc {
+  font-size: 16px;
+  color: var(--text2);
+  max-width: 620px;
+  line-height: 1.7;
+  margin-bottom: 32px;
+}
+
+/* ── Strategy Banner ── */
+.strategy {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 56px;
+}
+
+.strategy-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 20px;
+}
+
+.flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.flow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.flow-icon {
+  width: 48px; height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  border: 1px solid var(--border2);
+}
+
+.flow-icon.win  { background: rgba(59,130,246,0.1); border-color: var(--blue-dim); }
+.flow-icon.gh   { background: rgba(168,85,247,0.1); border-color: var(--purple-dim); }
+.flow-icon.mac  { background: rgba(245,158,11,0.1); border-color: var(--amber-dim); }
+.flow-icon.store{ background: rgba(34,197,94,0.1);  border-color: var(--green-dim); }
+
+.flow-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text3);
+  text-align: center;
+  letter-spacing: 0.03em;
+  max-width: 64px;
+}
+
+.flow-arrow {
+  font-size: 18px;
+  color: var(--border2);
+  margin: 0 4px;
+  padding-bottom: 18px;
+}
+
+.flow-note {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 16px;
+  line-height: 1.6;
+}
+
+.flow-note strong { color: var(--amber); }
+
+/* ── Platform Badges ── */
+.platform {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.platform.mac   { background: var(--amber-dim); color: #FCD34D; border: 1px solid rgba(245,158,11,0.3); }
+.platform.win   { background: var(--blue-dim);  color: #93C5FD; border: 1px solid rgba(59,130,246,0.3); }
+.platform.web   { background: var(--green-dim); color: #86EFAC; border: 1px solid rgba(34,197,94,0.3); }
+.platform.any   { background: var(--purple-dim);color: #D8B4FE; border: 1px solid rgba(168,85,247,0.3); }
+
+/* ── Section ── */
+.section {
+  margin-bottom: 64px;
+  scroll-margin-top: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-num {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--blue);
+  font-family: var(--mono);
+  flex-shrink: 0;
+}
+
+.section-meta { flex: 1; }
+
+.section-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.section-where {
+  font-size: 12px;
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Steps ── */
+.steps { display: flex; flex-direction: column; gap: 2px; }
+
+.step {
+  display: flex;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.step:last-child { border-bottom: none; }
+
+.step-idx {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  font-family: var(--mono);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.step-content { flex: 1; }
+
+.step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.step-desc {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.65;
+}
+
+.step-desc strong { color: var(--text); font-weight: 600; }
+
+/* ── Code Block ── */
+.code-wrap {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.code-lang {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.code-body {
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: #CBD5E1;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.c { color: #475569; }   /* comment */
+.k { color: #7DD3FC; }   /* keyword / command */
+.s { color: #86EFAC; }   /* string */
+.v { color: #FCA5A5; }   /* variable */
+.p { color: #FCD34D; }   /* path */
+
+/* ── Inline code ── */
+code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: #93C5FD;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ── Callouts ── */
+.callout {
+  display: flex;
+  gap: 12px;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.callout.info  { background: var(--blue-glow);  border: 1px solid var(--blue-dim);  color: #93C5FD; }
+.callout.tip   { background: var(--green-glow); border: 1px solid var(--green-dim); color: #86EFAC; }
+.callout.warn  { background: var(--amber-glow); border: 1px solid var(--amber-dim); color: #FCD34D; }
+.callout.note  { background: var(--surface2);   border: 1px solid var(--border2);   color: var(--text2); }
+
+.callout-icon { font-size: 16px; flex-shrink: 0; line-height: 1.4; }
+.callout strong { color: white; font-weight: 600; }
+.callout a { color: inherit; text-decoration: underline; opacity: 0.8; }
+
+/* ── Table ── */
+.table-wrap {
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+table { width: 100%; border-collapse: collapse; }
+
+th {
+  background: var(--surface2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text3);
+  text-align: left;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+td strong { color: var(--text); font-weight: 600; }
+
+/* ── Checklist ── */
+.checklist { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+
+.checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+.check-box {
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border2);
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.check-box.done { background: var(--green); border-color: var(--green); color: white; }
+
+.checklist li strong { color: var(--text); }
+
+/* ── Prereq grid ── */
+.prereq-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.prereq-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.prereq-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.prereq-card p {
+  font-size: 12px;
+  color: var(--text3);
+  line-height: 1.55;
+}
+
+/* ── Secret Table highlight ── */
+.secret-name {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #FCA5A5;
+  font-weight: 500;
+}
+
+/* ── Final Checklist Box ── */
+.final-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 28px;
+}
+
+.final-box h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 16px;
+  letter-spacing: 0.02em;
+}
+
+.final-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text2);
+}
+
+.final-item:last-child { border-bottom: none; }
+
+.final-num {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  font-family: var(--mono);
+  flex-shrink: 0;
+}
+
+.final-item strong { color: var(--text); }
+
+/* ── Divider ── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 48px 0;
+}
+
+/* ── Important highlight ── */
+.hl-mac  { color: var(--amber); font-weight: 600; }
+.hl-win  { color: #93C5FD; font-weight: 600; }
+.hl-web  { color: #86EFAC; font-weight: 600; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { padding: 0 24px 60px; }
+  .prereq-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">UzmanDiyet</div>
+      <div class="sidebar-sub">iOS Yayımlama Rehberi</div>
+    </div>
+
+    <div class="nav-section-label">Genel Bakış</div>
+    <a href="#strateji" class="nav-item"><span class="nav-dot dot-blue"></span>Strateji</a>
+    <a href="#onkosullar" class="nav-item"><span class="nav-dot dot-blue"></span>Ön Koşullar</a>
+
+    <div class="nav-section-label">Hazırlık (Mac)</div>
+    <a href="#bundle-id" class="nav-item"><span class="nav-dot dot-amber"></span>Bundle ID</a>
+    <a href="#sertifika" class="nav-item"><span class="nav-dot dot-amber"></span>Sertifika (P12)</a>
+    <a href="#profile" class="nav-item"><span class="nav-dot dot-amber"></span>Provisioning Profile</a>
+
+    <div class="nav-section-label">Hazırlık (Web)</div>
+    <a href="#api-key" class="nav-item"><span class="nav-dot dot-green"></span>API Key</a>
+    <a href="#base64" class="nav-item"><span class="nav-dot dot-green"></span>Base64 Çevirme</a>
+    <a href="#secrets" class="nav-item"><span class="nav-dot dot-green"></span>GitHub Secrets</a>
+
+    <div class="nav-section-label">Build &amp; Yayımlama</div>
+    <a href="#build" class="nav-item"><span class="nav-dot dot-purple"></span>Build Tetikle</a>
+    <a href="#submission" class="nav-item"><span class="nav-dot dot-purple"></span>App Store Gönder</a>
+
+    <div class="nav-section-label">Bitiriş</div>
+    <a href="#kontrol" class="nav-item"><span class="nav-dot dot-blue"></span>Kontrol Listesi</a>
+  </nav>
+
+  <!-- ── Main Content ── -->
+  <main class="main">
+
+    <!-- Hero -->
+    <div class="hero" id="strateji">
+      <div class="hero-eyebrow">📱 iOS App Store Rehberi</div>
+      <h1>UzmanDiyet'i<br>App Store'a Yayımla</h1>
+      <p class="hero-desc">
+        Projen Windows bilgisayarda, Mac bilgisayarın yok ya da az var — sorun değil.
+        Bu rehber seni <strong>adım adım</strong> götürür. Mac'e sadece <strong>~10 dakika</strong> için
+        ihtiyaç duyacaksın (sertifika oluşturma). Geri kalan her şey Windows'tan veya
+        tarayıcıdan yapılır.
+      </p>
+    </div>
+
+    <!-- Strategy Flow -->
+    <div class="strategy" id="genel-akis">
+      <div class="strategy-title">Genel Akış — Neyi Nerede Yapıyoruz</div>
+      <div class="flow">
+        <div class="flow-node">
+          <div class="flow-icon win">🪟</div>
+          <div class="flow-label">Windows'ta<br>Kod Yaz</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">
+          <div class="flow-icon mac">🍎</div>
+          <div class="flow-label">Mac'te<br>Sertifika</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">
+          <div class="flow-icon win">🌐</div>
+          <div class="flow-label">Tarayıcıda<br>Secrets</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">
+          <div class="flow-icon gh">⚙️</div>
+          <div class="flow-label">GitHub Actions<br>Otomatik Build</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">
+          <div class="flow-icon store">🏪</div>
+          <div class="flow-label">App Store<br>Yayında!</div>
+        </div>
+      </div>
+      <div class="flow-note">
+        <strong>GitHub Actions neden kullanıyoruz?</strong>
+        Xcode sadece Mac'te çalışır. Uygulamayı build etmek (derleme) için Mac gerekli.
+        Ama kendi Mac'ine sahip olmak zorunda değilsin — GitHub, build işlemini kendi Mac sunucusunda
+        <em>ücretsiz olarak</em> koşturur. Sen sadece kodu push edersin, gerisini GitHub halleder.
+        Bu sayede Windows'tan App Store'a uygulama yayımlayabilirsin.
+      </div>
+    </div>
+
+    <!-- ÖNKOŞULLAR -->
+    <div class="section" id="onkosullar">
+      <div class="section-header">
+        <div class="section-num">00</div>
+        <div class="section-meta">
+          <div class="section-title">Başlamadan Önce — Ön Koşullar</div>
+          <div class="section-where">
+            <span class="platform any">🌐 Herhangi bir tarayıcı</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:14px;color:var(--text2);margin-bottom:16px;">
+        Aşağıdakilerin hepsine sahip olduğundan emin ol. Eksik olan varsa önce onu tamamla.
+      </p>
+
+      <div class="prereq-grid">
+        <div class="prereq-card">
+          <div class="prereq-card-title">✅ Apple Developer Hesabı</div>
+          <p>developer.apple.com — yıllık $99 ücretli plan aktif olmalı. Yoksa: developer.apple.com → Enroll.</p>
+        </div>
+        <div class="prereq-card">
+          <div class="prereq-card-title">✅ App Store Connect Erişimi</div>
+          <p>appstoreconnect.apple.com — Apple ID ile giriş yapılabiliyor olmalı. Genellikle otomatik aktif.</p>
+        </div>
+        <div class="prereq-card">
+          <div class="prereq-card-title">✅ GitHub Repo</div>
+          <p>Proje GitHub'da mevcut ve <code>.github/workflows/ios-deploy.yml</code> dosyası var.</p>
+        </div>
+        <div class="prereq-card">
+          <div class="prereq-card-title">✅ Mac'e Kısa Erişim</div>
+          <p>Kendi Mac'in veya bir arkadaşının Mac'i — yaklaşık 10 dakika yeterli. Sadece sertifika adımı için.</p>
+        </div>
+      </div>
+
+      <div class="callout info" style="margin-top:16px;">
+        <div class="callout-icon">ℹ️</div>
+        <div>
+          <strong>Mac'e hiç erişimin yoksa:</strong> Xcode Cloud kullanabilirsin.
+          App Store Connect → Xcode Cloud → ücretsiz 25 saat/ay ile hem build hem signing otomatik yapılır.
+          Ama bu rehber GitHub Actions yolunu anlatıyor çünkü daha esnek.
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- BÖLÜM A: Bundle ID -->
+    <div class="section" id="bundle-id">
+      <div class="section-header">
+        <div class="section-num">01</div>
+        <div class="section-meta">
+          <div class="section-title">Bundle ID Oluştur (App ID)</div>
+          <div class="section-where">
+            <span class="platform web">🌐 Tarayıcı</span>
+            <span style="font-size:12px;color:var(--text3);">developer.apple.com/account</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;">
+        Bundle ID, uygulamanın benzersiz kimliğidir. <code>com.uzmandiyet.app</code> şeklinde tanımlanmış.
+        Bunu Apple sistemine kaydetmemiz gerekiyor.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-idx">1</div>
+          <div class="step-content">
+            <div class="step-title">Developer Portal'a Giriş</div>
+            <div class="step-desc">
+              <a href="https://developer.apple.com/account" style="color:var(--blue);">developer.apple.com/account</a> adresine git.
+              Sağ üst köşede Apple ID'nle giriş yap.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">2</div>
+          <div class="step-content">
+            <div class="step-title">Certificates, IDs &amp; Profiles'a Git</div>
+            <div class="step-desc">
+              Sol menüden <strong>Certificates, IDs &amp; Profiles</strong>'a tıkla.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">3</div>
+          <div class="step-content">
+            <div class="step-title">Identifiers → App IDs</div>
+            <div class="step-desc">
+              Sol menüden <strong>Identifiers</strong>'a tıkla → Sağ üstteki mavi <strong>+</strong> butonuna bas →
+              <strong>App IDs</strong> seç → Continue → <strong>App</strong> seç → Continue.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">4</div>
+          <div class="step-content">
+            <div class="step-title">Bilgileri Doldur</div>
+            <div class="step-desc">
+              <strong>Description:</strong> <code>UzmanDiyet</code><br>
+              <strong>Bundle ID:</strong> Explicit seç → <code>com.uzmandiyet.app</code> yaz<br>
+              <strong>Capabilities:</strong> Push Notifications'ı işaretle (ileride lazım olur)<br>
+              → <strong>Continue</strong> → <strong>Register</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout tip" style="margin-top:16px;">
+        <div class="callout-icon">✅</div>
+        <div>Bu adım tamamen tarayıcıdan yapılır. Mac gerekmez.</div>
+      </div>
+    </div>
+
+    <!-- BÖLÜM B: Sertifika -->
+    <div class="section" id="sertifika">
+      <div class="section-header">
+        <div class="section-num">02</div>
+        <div class="section-meta">
+          <div class="section-title">Distribution Sertifikası Oluştur ve P12 Export Et</div>
+          <div class="section-where">
+            <span class="platform mac">🍎 Mac Gerekli</span>
+            <span style="font-size:12px;color:var(--text3);">~10 dakika</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;">
+        Bu adım için Mac'e ihtiyaç var çünkü <strong>CSR (Certificate Signing Request)</strong> dosyası
+        ve <strong>P12</strong> export işlemi Mac'in Keychain uygulamasıyla yapılır.
+        Bir arkadaşının Mac'ini bile kullansan yeterli — işlem 10 dakika sürer.
+      </p>
+
+      <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;">A) CSR Dosyası Oluştur (Mac)</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-idx">1</div>
+          <div class="step-content">
+            <div class="step-title">Keychain Access'i Aç</div>
+            <div class="step-desc">
+              Mac'te Spotlight'a (⌘ + Space) <strong>Keychain Access</strong> yaz, aç.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">2</div>
+          <div class="step-content">
+            <div class="step-title">Certificate Assistant</div>
+            <div class="step-desc">
+              Üst menü → <strong>Keychain Access → Certificate Assistant → Request a Certificate from a Certificate Authority…</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">3</div>
+          <div class="step-content">
+            <div class="step-title">Bilgileri Doldur</div>
+            <div class="step-desc">
+              <strong>User Email Address:</strong> Apple ID e-posta adresin<br>
+              <strong>Common Name:</strong> UzmanDiyet<br>
+              <strong>Request is:</strong> <em>Saved to disk</em> seç<br>
+              → <strong>Continue</strong> → Masaüstüne kaydet (<code>CertificateSigningRequest.certSigningRequest</code>)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:14px;font-weight:600;color:var(--text);margin: 24px 0 12px;">B) Developer Portal'da Sertifika Oluştur (Tarayıcı)</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-idx">4</div>
+          <div class="step-content">
+            <div class="step-title">Certificates → + → Apple Distribution</div>
+            <div class="step-desc">
+              developer.apple.com/account → Certificates, IDs &amp; Profiles → <strong>Certificates</strong> →
+              mavi <strong>+</strong> → <strong>Apple Distribution</strong> seç → Continue.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">5</div>
+          <div class="step-content">
+            <div class="step-title">CSR Dosyasını Yükle</div>
+            <div class="step-desc">
+              <strong>Choose File</strong>'a tıkla → Az önce masaüstüne kaydettiğin
+              <code>CertificateSigningRequest.certSigningRequest</code> dosyasını seç →
+              <strong>Continue</strong> → <strong>Download</strong> → <code>distribution.cer</code> masaüstüne indi.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">6</div>
+          <div class="step-content">
+            <div class="step-title">Sertifikayı Keychain'e Ekle</div>
+            <div class="step-desc">
+              Mac'te indirilen <code>distribution.cer</code> dosyasına <strong>çift tıkla</strong>.
+              Keychain Access otomatik açılır ve sertifikayı ekler.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">7</div>
+          <div class="step-content">
+            <div class="step-title">P12 Olarak Export Et</div>
+            <div class="step-desc">
+              Keychain Access'te <strong>My Certificates</strong> sekmesine tıkla →
+              <strong>Apple Distribution: …</strong> sertifikasını bul → <strong>sağ tıkla</strong> →
+              <strong>Export "Apple Distribution…"</strong> →
+              Format: <strong>Personal Information Exchange (.p12)</strong> →
+              Kaydet → Şifre belirle (örn: <code>Build2024!</code>) — <strong>bu şifreyi not al!</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <div class="callout-icon">⚠️</div>
+        <div>
+          <strong>P12 şifresini mutlaka not al.</strong>
+          Bu şifreyi GitHub Secrets'a girmen gerekecek (<code>P12_PASSWORD</code>).
+          Unutursan sertifikayı yeniden oluşturman gerekir.
+        </div>
+      </div>
+
+      <div class="callout note" style="margin-top:8px;">
+        <div class="callout-icon">💡</div>
+        <div>
+          <strong>P12 dosyasını Windows'a aktar:</strong>
+          Mac'ten USB ya da AirDrop ile değil, e-posta ile kendine gönder ya da iCloud Drive'a at.
+          Windows'ta indir, masaüstüne kaydet.
+        </div>
+      </div>
+    </div>
+
+    <!-- BÖLÜM C: Provisioning Profile -->
+    <div class="section" id="profile">
+      <div class="section-header">
+        <div class="section-num">03</div>
+        <div class="section-meta">
+          <div class="section-title">App Store Provisioning Profile Oluştur</div>
+          <div class="section-where">
+            <span class="platform web">🌐 Tarayıcı</span>
+            <span style="font-size:12px;color:var(--text3);">developer.apple.com/account</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;">
+        Provisioning Profile, sertifikayı ve Bundle ID'yi birbirine bağlayan bir dosyadır.
+        Bu adım tamamen tarayıcıdan yapılır.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-idx">1</div>
+          <div class="step-content">
+            <div class="step-title">Profiles → +</div>
+            <div class="step-desc">
+              developer.apple.com/account → Certificates, IDs &amp; Profiles →
+              Sol menüden <strong>Profiles</strong> → mavi <strong>+</strong> butonu.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">2</div>
+          <div class="step-content">
+            <div class="step-title">App Store Connect Seç</div>
+            <div class="step-desc">
+              <strong>Distribution</strong> başlığı altında <strong>App Store Connect</strong> seç → <strong>Continue</strong>.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">3</div>
+          <div class="step-content">
+            <div class="step-title">Bundle ID Seç</div>
+            <div class="step-desc">
+              Dropdown'dan <strong>com.uzmandiyet.app</strong> seç → <strong>Continue</strong>.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">4</div>
+          <div class="step-content">
+            <div class="step-title">Sertifikayı Seç</div>
+            <div class="step-desc">
+              Az önce oluşturduğun <strong>Apple Distribution</strong> sertifikasını işaretle → <strong>Continue</strong>.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">5</div>
+          <div class="step-content">
+            <div class="step-title">İsim Ver ve İndir</div>
+            <div class="step-desc">
+              <strong>Provisioning Profile Name:</strong> <code>UzmanDiyet AppStore</code> yaz →
+              <strong>Generate</strong> → <strong>Download</strong>.
+              Dosya adı: <code>UzmanDiyet_AppStore.mobileprovision</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">✅</div>
+        <div>
+          Bu dosyayı da Windows'a aktar (e-posta / iCloud / USB). P12 ile birlikte masaüstüne kaydet.
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- BÖLÜM D: API Key -->
+    <div class="section" id="api-key">
+      <div class="section-header">
+        <div class="section-num">04</div>
+        <div class="section-meta">
+          <div class="section-title">App Store Connect API Key Oluştur</div>
+          <div class="section-where">
+            <span class="platform web">🌐 Tarayıcı</span>
+            <span style="font-size:12px;color:var(--text3);">appstoreconnect.apple.com</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;">
+        GitHub Actions, App Store Connect'e IPA yüklemek için bu API Key'i kullanır.
+        Tamamen tarayıcıdan yapılır.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-idx">1</div>
+          <div class="step-content">
+            <div class="step-title">App Store Connect → Users &amp; Access</div>
+            <div class="step-desc">
+              <a href="https://appstoreconnect.apple.com" style="color:var(--blue);">appstoreconnect.apple.com</a> →
+              Sol üst menüden <strong>Users and Access</strong> tıkla.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">2</div>
+          <div class="step-content">
+            <div class="step-title">Integrations → App Store Connect API</div>
+            <div class="step-desc">
+              Üst sekmelerden <strong>Integrations</strong> → <strong>App Store Connect API</strong>'ye tıkla.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">3</div>
+          <div class="step-content">
+            <div class="step-title">Generate API Key</div>
+            <div class="step-desc">
+              Mavi <strong>Generate API Key</strong> butonu (veya + ikonu) →
+              <strong>Name:</strong> <code>GitHub Actions</code> →
+              <strong>Access:</strong> <strong>App Manager</strong> seç →
+              <strong>Generate</strong>.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">4</div>
+          <div class="step-content">
+            <div class="step-title">Bilgileri Not Al ve Dosyayı İndir</div>
+            <div class="step-desc">
+              Key oluşturuldu. Şu değerleri not al:<br><br>
+              • <strong>Key ID</strong> (örn: <code>ABC123XYZ</code>) — sayfada görünür<br>
+              • <strong>Issuer ID</strong> — sayfanın üstünde "Issuer ID" başlığı altında<br><br>
+              <strong>Download API Key</strong>'e tıkla → <code>AuthKey_ABC123XYZ.p8</code> inecek.<br>
+              ⚠️ Bu dosya <strong>sadece bir kez</strong> indirilebilir. Kaybetme!
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <div class="callout-icon">⚠️</div>
+        <div>
+          <strong>.p8 dosyası kritiktir.</strong> "Download API Key" butonuna bir kez tıklanabilir.
+          İndirdikten sonra Windows'ta güvenli bir yere kaydet. Kaybedersen yeni key oluşturmak zorundasın.
+        </div>
+      </div>
+    </div>
+
+    <!-- BÖLÜM E: Base64 -->
+    <div class="section" id="base64">
+      <div class="section-header">
+        <div class="section-num">05</div>
+        <div class="section-meta">
+          <div class="section-title">Dosyaları Base64'e Çevir</div>
+          <div class="section-where">
+            <span class="platform win">🪟 Windows PowerShell</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;">
+        GitHub Secrets sadece metin (string) kabul eder. P12, .mobileprovision ve .p8 dosyaları
+        binary dosyalardır, doğrudan yapıştırılamaz. Bu yüzden Base64 formatına çeviriyoruz.
+        Base64, binary dosyaları metin olarak temsil etmenin standart yoludur.
+      </p>
+
+      <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;">
+        Windows PowerShell'i aç (Win + X → Windows PowerShell) ve şu komutları çalıştır:
+      </p>
+
+      <div class="code-wrap">
+        <div class="code-header">
+          <span class="code-lang">PowerShell</span>
+          <span style="font-size:11px;color:var(--text3);">Her komut sonucu panoya kopyalar</span>
+        </div>
+        <div class="code-body"><span class="c"># 1. P12 sertifikasını base64'e çevir ve panoya kopyala</span>
+<span class="k">[Convert]::ToBase64String</span>(<span class="k">[IO.File]::ReadAllBytes</span>(<span class="s">"C:\Users\Win10\Desktop\distribution.p12"</span>)) | <span class="k">clip</span>
+
+<span class="c"># → Şimdi Ctrl+V ile GitHub'a yapıştırabilirsin (BUILD_CERTIFICATE_BASE64)</span>
+
+
+<span class="c"># 2. Provisioning Profile'ı base64'e çevir</span>
+<span class="k">[Convert]::ToBase64String</span>(<span class="k">[IO.File]::ReadAllBytes</span>(<span class="s">"C:\Users\Win10\Desktop\UzmanDiyet_AppStore.mobileprovision"</span>)) | <span class="k">clip</span>
+
+<span class="c"># → Ctrl+V ile yapıştır (BUILD_PROVISION_PROFILE_BASE64)</span>
+
+
+<span class="c"># 3. .p8 API Key'i base64'e çevir</span>
+<span class="k">[Convert]::ToBase64String</span>(<span class="k">[IO.File]::ReadAllBytes</span>(<span class="s">"C:\Users\Win10\Desktop\AuthKey_ABC123XYZ.p8"</span>)) | <span class="k">clip</span>
+
+<span class="c"># → Ctrl+V ile yapıştır (APP_STORE_CONNECT_KEY_BASE64)</span></div>
+      </div>
+
+      <div class="callout note" style="margin-top:16px;">
+        <div class="callout-icon">💡</div>
+        <div>
+          <strong>Dosya yolu farklıysa</strong> komutu ona göre düzenle. Dosya adları birebir
+          aynı olmak zorunda değil, sadece gerçek dosyanın yolunu yaz.
+        </div>
+      </div>
+    </div>
+
+    <!-- BÖLÜM F: GitHub Secrets -->
+    <div class="section" id="secrets">
+      <div class="section-header">
+        <div class="section-num">06</div>
+        <div class="section-meta">
+          <div class="section-title">GitHub Secrets Kur</div>
+          <div class="section-where">
+            <span class="platform web">🌐 Tarayıcı</span>
+            <span style="font-size:12px;color:var(--text3);">github.com → Repo → Settings → Secrets</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;">
+        GitHub Actions, build sırasında bu "secret" değerlere ihtiyaç duyar.
+        Bunlar şifreli saklanır, ne sen ne başkası düz metin olarak göremez.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-idx">1</div>
+          <div class="step-content">
+            <div class="step-title">Repo Ayarlarına Git</div>
+            <div class="step-desc">
+              github.com → Repon'a git → üst menüden <strong>Settings</strong> →
+              sol menüden <strong>Secrets and variables</strong> → <strong>Actions</strong>.
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-idx">2</div>
+          <div class="step-content">
+            <div class="step-title">New Repository Secret</div>
+            <div class="step-desc">
+              Yeşil <strong>New repository secret</strong> butonuna tıkla →
+              <strong>Name</strong> alanına secret adını yaz → <strong>Secret</strong> alanına değeri yapıştır →
+              <strong>Add secret</strong>. Her secret için tekrar et (9 adet).
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:20px;">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Secret Adı</th>
+              <th>Değer / Nereden</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><span class="secret-name">BUILD_CERTIFICATE_BASE64</span></td>
+              <td>P12 dosyasının base64 çıktısı (Adım 5, komut 1)</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td><span class="secret-name">P12_PASSWORD</span></td>
+              <td>P12 export sırasında belirlediğin şifre (örn: <code>Build2024!</code>)</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><span class="secret-name">KEYCHAIN_PASSWORD</span></td>
+              <td>Herhangi bir şifre uydur — GitHub Actions geçici keychain için kullanır. Örn: <code>CI-keychain-2024</code></td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td><span class="secret-name">BUILD_PROVISION_PROFILE_BASE64</span></td>
+              <td>.mobileprovision dosyasının base64 çıktısı (Adım 5, komut 2)</td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td><span class="secret-name">PROVISIONING_PROFILE_NAME</span></td>
+              <td>Profile'ın tam adı: <code>UzmanDiyet AppStore</code></td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td><span class="secret-name">APPLE_TEAM_ID</span></td>
+              <td><strong>developer.apple.com/account</strong> → sağ üst köşe → adının altında Team ID (10 karakter, örn: <code>A1B2C3D4E5</code>)</td>
+            </tr>
+            <tr>
+              <td>7</td>
+              <td><span class="secret-name">APP_STORE_CONNECT_KEY_ID</span></td>
+              <td>Adım 4'te not aldığın Key ID (örn: <code>ABC123XYZ</code>)</td>
+            </tr>
+            <tr>
+              <td>8</td>
+              <td><span class="secret-name">APP_STORE_CONNECT_ISSUER_ID</span></td>
+              <td>Adım 4'te not aldığın Issuer ID (UUID formatında, örn: <code>a1b2c3d4-…</code>)</td>
+            </tr>
+            <tr>
+              <td>9</td>
+              <td><span class="secret-name">APP_STORE_CONNECT_KEY_BASE64</span></td>
+              <td>.p8 dosyasının base64 çıktısı (Adım 5, komut 3)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip" style="margin-top:16px;">
+        <div class="callout-icon">✅</div>
+        <div>9 secret de eklendikten sonra sayfada 9 satır göreceksin.
+        Değerleri göremezsin ama adları listede görünür — hepsinin orada olduğunu doğrula.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- BÖLÜM G: Build -->
+    <div class="section" id="build">
+      <div class="section-header">
+        <div class="section-num">07</div>
+        <div class="section-meta">
+          <div class="section-title">Build Tetikle — GitHub Actions Başlat</div>
+          <div class="section-where">
+            <span class="platform win">🪟 Windows PowerShell</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;">
+        Workflow dosyası <code>v*</code> formatında bir tag push edilince otomatik tetikleniyor
+        (örn: <code>v1.0.0</code>). Bu komutu Windows'ta proje klasöründe çalıştır.
+      </p>
+
+      <div class="code-wrap">
+        <div class="code-header">
+          <span class="code-lang">PowerShell</span>
+          <span style="font-size:11px;color:var(--text3);">C:\Users\Win10\Desktop\Masterclass klasöründe çalıştır</span>
+        </div>
+        <div class="code-body"><span class="c"># Değişiklikler commit edilmiş mi? Kontrol et</span>
+<span class="k">git status</span>
+
+<span class="c"># Varsa commit et</span>
+<span class="k">git add</span> .
+<span class="k">git commit</span> -m <span class="s">"iOS: v1.0.0 hazırlık"</span>
+<span class="k">git push</span> origin main
+
+<span class="c"># Tag oluştur ve push et — bu komut GitHub Actions'ı tetikler</span>
+<span class="k">git tag</span> <span class="s">v1.0.0</span>
+<span class="k">git push</span> origin <span class="s">v1.0.0</span></div>
+      </div>
+
+      <div class="steps" style="margin-top:24px;">
+        <div class="step">
+          <div class="step-idx">→</div>
+          <div class="step-content">
+            <div class="step-title">Actions Sekmesini Takip Et</div>
+            <div class="step-desc">
+              github.com → Repon → <strong>Actions</strong> sekmesi →
+              <strong>"iOS — App Store Deploy"</strong> workflow'u görürsün →
+              Tıkla → Adım adım ilerlemeyi canlı izleyebilirsin.<br>
+              Toplam süre: <strong>~30–45 dakika</strong> (CocoaPods kurulumu uzun sürer).
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-idx">→</div>
+          <div class="step-content">
+            <div class="step-title">Build Başarılı Olursa</div>
+            <div class="step-desc">
+              Son adım <strong>"Upload to App Store Connect"</strong> yeşil ✓ olursa IPA yüklendi demektir.
+              App Store Connect'te uygulamanın sayfasına git → <strong>TestFlight</strong> sekmesinde
+              birkaç dakika içinde <strong>Processing</strong> durumunda görürsün.
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-idx">→</div>
+          <div class="step-content">
+            <div class="step-title">Build Başarısız Olursa</div>
+            <div class="step-desc">
+              Kırmızı ✗ olan adıma tıkla → log'a bak → hata mesajını oku.
+              En sık hatalar: yanlış secret adı, yanlış Profile ismi, süresi dolmuş sertifika.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BÖLÜM H: Submission -->
+    <div class="section" id="submission">
+      <div class="section-header">
+        <div class="section-num">08</div>
+        <div class="section-meta">
+          <div class="section-title">App Store'a Gönder (Submit for Review)</div>
+          <div class="section-where">
+            <span class="platform web">🌐 Tarayıcı</span>
+            <span style="font-size:12px;color:var(--text3);">appstoreconnect.apple.com</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;">
+        IPA yüklendikten sonra App Store Connect'te bilgileri doldurman ve Apple'a incelemeye gönde
+rmen gerekiyor.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-idx">1</div>
+          <div class="step-content">
+            <div class="step-title">Uygulamanın Sayfasına Git</div>
+            <div class="step-desc">
+              appstoreconnect.apple.com → <strong>My Apps</strong> → <strong>UzmanDiyet</strong> →
+              iOS versiyonu listesini gör.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">2</div>
+          <div class="step-content">
+            <div class="step-title">Ekran Görüntüleri Yükle (Zorunlu)</div>
+            <div class="step-desc">
+              <strong>App Information → Previews and Screenshots</strong> bölümüne ekran görüntüleri yükle.<br><br>
+              <strong>Zorunlu boyutlar:</strong><br>
+              • iPhone 6.7" (iPhone 14 Pro Max): <strong>1290 × 2796 px</strong><br>
+              • iPhone 6.5" (iPhone 11 Pro Max): <strong>1242 × 2688 px</strong><br>
+              • iPad Pro 12.9": <strong>2048 × 2732 px</strong> (isteğe bağlı ama önerilir)<br><br>
+              Ekran görüntüsü almak için: iPhone Simulator (Mac'te Xcode ile) veya gerçek cihaz.
+              Yoksa: <code>placehold.co</code> ile sahte görsel de kabul edilir ama Apple reddedebilir.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">3</div>
+          <div class="step-content">
+            <div class="step-title">Uygulama Bilgilerini Doldur</div>
+            <div class="step-desc">
+              <strong>App Information</strong> sayfasında:<br>
+              • <strong>Name:</strong> UzmanDiyet<br>
+              • <strong>Subtitle:</strong> AI Destekli Diyet Asistanı<br>
+              • <strong>Privacy Policy URL:</strong> Zorunlu (uzmandiyet.com/gizlilik gibi bir sayfa gerekli)<br>
+              • <strong>Category:</strong> Health &amp; Fitness → Medical (veya Food &amp; Drink)<br>
+              • <strong>Age Rating:</strong> Soruları yanıtla (genellikle 4+ çıkar)
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">4</div>
+          <div class="step-content">
+            <div class="step-title">Versiyon Açıklaması Yaz</div>
+            <div class="step-desc">
+              <strong>Description:</strong> Uygulamanın ne işe yaradığını Türkçe anlat (max 4000 karakter)<br>
+              <strong>Keywords:</strong> diyet, kalori, yapay zeka, diyetisyen, beslenme (max 100 karakter)<br>
+              <strong>Support URL:</strong> uzmandiyet.com veya bir iletişim sayfası<br>
+              <strong>What's New:</strong> İlk sürüm için: "UzmanDiyet'in ilk sürümü."
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">5</div>
+          <div class="step-content">
+            <div class="step-title">Build Seç</div>
+            <div class="step-desc">
+              Sayfanın <strong>Build</strong> bölümünde <strong>+</strong> ikonuna tıkla →
+              GitHub Actions'ın yüklediği build'i seç (<strong>Processing</strong> bitmişse görünür).
+              Processing ortalama 10–15 dakika sürer.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-idx">6</div>
+          <div class="step-content">
+            <div class="step-title">Submit for Review</div>
+            <div class="step-desc">
+              Sağ üstteki <strong>Add for Review</strong> → ardından <strong>Submit to App Review</strong>
+              butonuna tıkla. Birkaç soru sorulur (ihracat uyumluluğu, içerik hakkı vb.) — yanıtla.
+              <br><br>
+              Apple incelemesi: <strong>1–3 iş günü</strong>. E-posta ile bildirim gelir.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout warn" style="margin-top:16px;">
+        <div class="callout-icon">⚠️</div>
+        <div>
+          <strong>Privacy Policy zorunlu.</strong> Uygulama sağlık verileri işlediği için Apple kesinlikle
+          Privacy Policy URL istiyor. Yayına çıkmadan önce <code>uzmandiyet.com/privacy</code> gibi
+          basit bir sayfa oluştur.
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Kontrol Listesi -->
+    <div class="section" id="kontrol">
+      <div class="section-header">
+        <div class="section-num">✓</div>
+        <div class="section-meta">
+          <div class="section-title">Kontrol Listesi — Her Şey Tamam Mı?</div>
+        </div>
+      </div>
+
+      <div class="final-box">
+        <h3>Sırasıyla tamamlanması gerekenler</h3>
+
+        <div class="final-item">
+          <div class="final-num">1</div>
+          <div><strong>Bundle ID</strong> developer.apple.com'da <code>com.uzmandiyet.app</code> kayıtlı <span class="platform web" style="margin-left:4px;">🌐 Web</span></div>
+        </div>
+        <div class="final-item">
+          <div class="final-num">2</div>
+          <div><strong>CSR dosyası</strong> Mac'te Keychain Access ile oluşturuldu <span class="platform mac" style="margin-left:4px;">🍎 Mac</span></div>
+        </div>
+        <div class="final-item">
+          <div class="final-num">3</div>
+          <div><strong>Apple Distribution sertifikası</strong> Developer Portal'da oluşturuldu ve P12 olarak export edildi <span class="platform mac" style="margin-left:4px;">🍎 Mac</span></div>
+        </div>
+        <div class="final-item">
+          <div class="final-num">4</div>
+          <div><strong>Provisioning Profile</strong> oluşturuldu ve .mobileprovision indirildi <span class="platform web" style="margin-left:4px;">🌐 Web</span></div>
+        </div>
+        <div class="final-item">
+          <div class="final-num">5</div>
+          <div><strong>App Store Connect API Key</strong> oluşturuldu, .p8 indirildi, Key ID ve Issuer ID not alındı <span class="platform web" style="margin-left:4px;">🌐 Web</span></div>
+        </div>
+        <div class="final-item">
+          <div class="final-num">6</div>
+          <div><strong>3 dosya Windows'ta:</strong> distribution.p12, .mobileprovision, .p8 <span class="platform win" style="margin-left:4px;">🪟 Win</span></div>
+        </div>
+        <div class="final-item">
+          <div class="final-num">7</div>
+          <div><strong>3 dosya base64'e çevrildi</strong> PowerShell komutuyla <span class="platform win" style="margin-left:4px;">🪟 Win</span></div>
+        </div>
+        <div class="final-item">
+          <div class="final-num">8</div>
+          <div><strong>9 GitHub Secret</strong> eklendi, hepsi listede görünüyor <span class="platform web" style="margin-left:4px;">🌐 Web</span></div>
+        </div>
+        <div class="final-item">
+          <div class="final-num">9</div>
+          <div><code>git tag v1.0.0 &amp;&amp; git push origin v1.0.0</code> çalıştırıldı <span class="platform win" style="margin-left:4px;">🪟 Win</span></div>
+        </div>
+        <div class="final-item">
+          <div class="final-num">10</div>
+          <div><strong>GitHub Actions</strong> yeşil ✓ ile tamamlandı <span class="platform web" style="margin-left:4px;">🌐 Web</span></div>
+        </div>
+        <div class="final-item">
+          <div class="final-num">11</div>
+          <div><strong>App Store Connect</strong>'te ekran görüntüleri, açıklama, build eklendi <span class="platform web" style="margin-left:4px;">🌐 Web</span></div>
+        </div>
+        <div class="final-item">
+          <div class="final-num">12</div>
+          <div><strong>Submit for Review</strong> tıklandı → Apple incelemesi bekleniyor 🎉</div>
+        </div>
+      </div>
+
+      <div class="callout note" style="margin-top:20px;">
+        <div class="callout-icon">🔁</div>
+        <div>
+          <strong>Bir sonraki sürümde</strong> (v1.0.1, v1.1.0 vb.) sadece <code>git tag v1.0.1</code> ve
+          <code>git push origin v1.0.1</code> yeterli. Sertifika ve secrets bir kez kurulunca her seferinde tekrar
+          gerekmez. Sadece App Store Connect'te yeni build'i seçip Submit edersin.
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>
