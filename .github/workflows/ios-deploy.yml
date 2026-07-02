@@ -126,9 +126,12 @@ jobs:
           echo -n "$APP_STORE_CONNECT_KEY_BASE64" | base64 --decode \
             -o ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8
 
+          IPA_PATH=$(find $RUNNER_TEMP/export -name "*.ipa" | head -1)
+          echo "IPA: $IPA_PATH"
+
           xcrun altool --upload-app \
             --type ios \
-            --file $RUNNER_TEMP/export/UzmanDiyet.ipa \
+            --file "$IPA_PATH" \
             --apiKey "$APP_STORE_CONNECT_KEY_ID" \
             --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
 
