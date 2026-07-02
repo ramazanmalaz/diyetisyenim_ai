@@ -96,6 +96,11 @@ jobs:
             <string>app-store-connect</string>
             <key>teamID</key>
             <string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.uzmandiyet.app</key>
+              <string>${{ secrets.PROVISIONING_PROFILE_NAME }}</string>
+            </dict>
             <key>uploadBitcode</key>
             <false/>
             <key>compileBitcode</key>
