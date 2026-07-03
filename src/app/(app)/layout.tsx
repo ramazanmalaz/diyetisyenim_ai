@@ -17,19 +17,19 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const profile = await requireProfile();
+  const supabase = await createClient();
+  const [profile, pricing, { data: waterCfg }] = await Promise.all([
+    requireProfile(),
+    getPricing(),
+    supabase
+      .from("profiles")
+      .select(
+        "water_reminder_enabled, water_start_hour, water_end_hour, water_interval_hours, water_amount_ml, meal_reminders_enabled, breakfast_time, lunch_time, dinner_time",
+      )
+      .maybeSingle(),
+  ]);
   const name = profile.full_name ?? "Danışan";
   const initial = name.trim().charAt(0).toUpperCase() || "D";
-  const pricing = await getPricing();
-
-  // Su hatırlatıcısı program/miktar ayarları (RLS: yalnızca kendi satırı).
-  const supabase = await createClient();
-  const { data: waterCfg } = await supabase
-    .from("profiles")
-    .select(
-      "water_reminder_enabled, water_start_hour, water_end_hour, water_interval_hours, water_amount_ml, meal_reminders_enabled, breakfast_time, lunch_time, dinner_time",
-    )
-    .maybeSingle();
 
   return (
     <div className="flex min-h-screen flex-col">

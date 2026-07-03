@@ -18,22 +18,38 @@ function formatDay(iso: string): string {
 const BUCKET = "progress-photos";
 
 export default async function IlerlemePage() {
-  await requireProfile();
   const supabase = await createClient();
-
   const today = new Date().toISOString().slice(0, 10);
 
-  const { data: entries } = await supabase
-    .from("progress_entries")
-    .select(
-      "id, entry_date, weight_kg, water_ml, waist_cm, hip_cm, note, photo_path",
-    )
-    .order("entry_date", { ascending: false })
-    .order("created_at", { ascending: false });
+  // Tur 1: tüm bağımsız sorgular paralel.
+  const [, { data: entries }, { data: intake }, { data: plan }] =
+    await Promise.all([
+      requireProfile(),
+      supabase
+        .from("progress_entries")
+        .select(
+          "id, entry_date, weight_kg, water_ml, waist_cm, hip_cm, note, photo_path",
+        )
+        .order("entry_date", { ascending: false })
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("intakes")
+        .select("current_weight_kg, goal_loss_kg")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("diet_plans")
+        .select("goal_loss_kg, valid_to")
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
   const rows = entries ?? [];
 
-  // Fotoğraflar için imzalı URL üret.
+  // Fotoğraflar için imzalı URL üret (progress_entries'e bağlı).
   const paths = rows
     .map((e) => e.photo_path)
     .filter((p): p is string => Boolean(p));
@@ -51,22 +67,6 @@ export default async function IlerlemePage() {
     .filter((e) => e.weight_kg != null)
     .reverse()
     .map((e) => ({ date: e.entry_date, weight: Number(e.weight_kg) }));
-
-  // Hedefe ilerleme: başlangıç (intake) + hedef (plan/intake) + güncel kilo.
-  const { data: intake } = await supabase
-    .from("intakes")
-    .select("current_weight_kg, goal_loss_kg")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { data: plan } = await supabase
-    .from("diet_plans")
-    .select("goal_loss_kg, valid_to")
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
 
   const goalLossKg = plan?.goal_loss_kg ?? intake?.goal_loss_kg ?? null;
   const startKg = intake?.current_weight_kg ?? null;

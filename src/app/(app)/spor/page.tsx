@@ -8,24 +8,25 @@ import type { WorkoutProgram } from "@/lib/workout";
 export const metadata = { title: "Spor Asistanı — UzmanDiyet" };
 
 export default async function SporPage() {
-  await requireProfile();
   const supabase = await createClient();
+  const todayKey = new Date().toISOString().slice(0, 10);
 
-  const { data: plan } = await supabase
-    .from("workout_plans")
-    .select("id, mode, level, goal, days_per_week, program, created_at")
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const [, { data: plan }, { data: logs }] = await Promise.all([
+    requireProfile(),
+    supabase
+      .from("workout_plans")
+      .select("id, mode, level, goal, days_per_week, program, created_at")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("workout_logs")
+      .select("day_index, exercise_index, log_date")
+      .eq("log_date", todayKey),
+  ]);
 
   if (!plan) redirect("/spor/baslangic");
-
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const { data: logs } = await supabase
-    .from("workout_logs")
-    .select("day_index, exercise_index, log_date")
-    .eq("log_date", todayKey);
 
   return (
     <WorkoutBoard

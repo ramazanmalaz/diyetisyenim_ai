@@ -9,61 +9,61 @@ import { createClient } from "@/lib/supabase/server";
 export const maxDuration = 60;
 
 export default async function PlanPage() {
-  const profile = await requireProfile();
   const supabase = await createClient();
-
-  // RLS sayesinde danışan yalnızca kendi planlarını görür.
-  const { data: plan } = await supabase
-    .from("diet_plans")
-    .select(
-      "id, title, status, daily_calorie_target, estimated_weeks, goal_loss_kg, valid_from, valid_to",
-    )
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { data: meals } = plan
-    ? await supabase
-        .from("meals")
-        .select(
-          "id, week_index, day_of_week, meal_type, content, calories, food_id, quantity, checked",
-        )
-        .eq("plan_id", plan.id)
-    : { data: [] };
-
-  const { data: foods } = await supabase
-    .from("foods")
-    .select("id, name, unit_label, kcal_per_unit")
-    .order("name");
-
-  // Bugünün su tüketimi (RLS: yalnızca kendi kaydı).
   const todayKey = new Date().toISOString().slice(0, 10);
-  const { data: water } = await supabase
-    .from("water_intake")
-    .select("total_ml")
-    .eq("day", todayKey)
-    .maybeSingle();
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const sinceKey = since.toISOString().slice(0, 10);
 
-  // Kullanıcının su ayarları (hedef + bardak miktarı + hatırlatıcı; varsayılanlar).
-  const { data: prefs } = await supabase
-    .from("profiles")
-    .select("water_goal_ml, water_amount_ml, water_reminder_enabled")
-    .maybeSingle();
+  // Tur 1: bağımsız sorgular paralel çalışır.
+  const [profile, { data: plan }, { data: foods }, { data: water }, { data: prefs }] =
+    await Promise.all([
+      requireProfile(),
+      supabase
+        .from("diet_plans")
+        .select(
+          "id, title, status, daily_calorie_target, estimated_weeks, goal_loss_kg, valid_from, valid_to",
+        )
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("foods")
+        .select("id, name, unit_label, kcal_per_unit")
+        .order("name"),
+      supabase
+        .from("water_intake")
+        .select("total_ml")
+        .eq("day", todayKey)
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("water_goal_ml, water_amount_ml, water_reminder_enabled")
+        .maybeSingle(),
+    ]);
+
   const waterGoalMl = prefs?.water_goal_ml ?? 2500;
   const waterGlassMl = prefs?.water_amount_ml ?? 200;
   const waterReminderEnabled = prefs?.water_reminder_enabled ?? true;
 
-  // Son ~30 günün öğün günlüğü (tarih-bazlı yedim/atladım; RLS: kendi kaydı).
-  const since = new Date();
-  since.setDate(since.getDate() - 30);
-  const sinceKey = since.toISOString().slice(0, 10);
-  const { data: mealLogs } = plan
-    ? await supabase
-        .from("meal_logs")
-        .select("meal_id, log_date, status")
-        .gte("log_date", sinceKey)
-    : { data: [] };
+  // Tur 2: plan.id gereken sorgular paralel çalışır.
+  const [{ data: meals }, { data: mealLogs }] = await Promise.all([
+    plan
+      ? supabase
+          .from("meals")
+          .select(
+            "id, week_index, day_of_week, meal_type, content, calories, food_id, quantity, checked",
+          )
+          .eq("plan_id", plan.id)
+      : { data: [] },
+    plan
+      ? supabase
+          .from("meal_logs")
+          .select("meal_id, log_date, status")
+          .gte("log_date", sinceKey)
+      : { data: [] },
+  ]);
 
   const todayIdx = (new Date().getDay() + 6) % 7; // 0=Pzt ... 6=Paz
 
