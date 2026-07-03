@@ -31,14 +31,7 @@ jobs:
       - name: Capacitor sync
         run: npx cap sync ios
 
-      # ── 4. Ruby + CocoaPods ────────────────────────────────────────────────
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.2"
-          bundler-cache: true
-
-      # ── 5. Sertifika + Provisioning Profile yükle ─────────────────────────
+      # ── 4. Sertifika + Provisioning Profile yükle ─────────────────────────
       - name: Import certificate
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
@@ -128,6 +121,10 @@ jobs:
 
           IPA_PATH=$(find $RUNNER_TEMP/export -name "*.ipa" | head -1)
           echo "IPA: $IPA_PATH"
+          if [ -z "$IPA_PATH" ]; then
+            echo "HATA: IPA dosyası bulunamadı — export başarısız olmuş olabilir."
+            exit 1
+          fi
 
           xcrun altool --upload-app \
             --type ios \

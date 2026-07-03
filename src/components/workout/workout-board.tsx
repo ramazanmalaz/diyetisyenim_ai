@@ -26,12 +26,6 @@ import {
 } from "@/lib/workout";
 import { cn } from "@/lib/utils";
 
-function youtubeSearch(name: string): string {
-  return `https://www.youtube.com/results?search_query=${encodeURIComponent(
-    `${name} nasıl yapılır`,
-  )}`;
-}
-
 // İnce film greni — OLED siyah üzerinde derinlik (Any Distance tarzı).
 const NOISE =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E";
@@ -368,11 +362,15 @@ export function WorkoutBoard({
           onClick={() => setDetail(null)}
         >
           <div
-            className="reveal w-full max-w-md rounded-t-[28px] border border-white/10 bg-zinc-950/95 p-5 sm:rounded-[28px]"
+            className="reveal w-full max-w-md overflow-y-auto rounded-t-[28px] border border-white/10 bg-zinc-950/95 sm:rounded-[28px]"
+            style={{ maxHeight: "85svh" }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
           >
+            {/* Sticky handle + header — her zaman görünür */}
+            <div className="sticky top-0 z-10 rounded-t-[28px] bg-zinc-950/98 px-5 pb-3 pt-4 backdrop-blur-sm">
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" />
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h3 className="font-display text-xl font-extrabold tracking-tight">
@@ -392,6 +390,10 @@ export function WorkoutBoard({
                 <X className="h-4 w-4" />
               </button>
             </div>
+            </div>{/* /sticky header */}
+
+            {/* Kaydırılabilir içerik */}
+            <div className="px-5 pb-6">
 
             {/* Hareket görseli: önce animasyonlu GIF (exercises-dataset), yoksa 2-kare animasyon */}
             {demo.loading && (
@@ -460,20 +462,10 @@ export function WorkoutBoard({
 
             <div className="mt-3 flex items-center gap-2 text-xs text-zinc-500">
               <Timer className="h-3.5 w-3.5" />
-              Setler arası ~{detail.rest || "60 sn"} dinlen.
+              Setler arası ~{detail.rest ?? "60 sn"} dinlen.
             </div>
 
-            <a
-              href={youtubeSearch(localizeExercise(detail))}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-bold text-black shadow-[0_10px_30px_-10px_rgba(255,255,255,0.4)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:bg-zinc-100 active:scale-[0.98]"
-            >
-              <Play className="h-4 w-4" fill="currentColor" /> Videolu anlatımı izle
-            </a>
-            <p className="mt-2 text-center text-[11px] text-zinc-600">
-              YouTube&apos;da arama açılır.
-            </p>
+            </div>{/* /scrollable content */}
           </div>
         </div>
       )}
