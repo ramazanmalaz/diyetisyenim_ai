@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { width: 1024px; height: 1024px; overflow: hidden; }
+</style>
+</head>
+<body>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Arka plan degradesi -->
+    <linearGradient id="bg" x1="15%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%"   stop-color="#3dcc82"/>
+      <stop offset="50%"  stop-color="#1aaa58"/>
+      <stop offset="100%" stop-color="#0a6637"/>
+    </linearGradient>
+
+    <!-- Üst parlaklık -->
+    <radialGradient id="shine" cx="38%" cy="22%" r="55%">
+      <stop offset="0%"   stop-color="rgba(255,255,255,0.22)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+
+    <!-- Yaprak damarı -->
+    <linearGradient id="vein" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#0a6637" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#0a6637" stop-opacity="0.15"/>
+    </linearGradient>
+
+    <!-- iOS köşe yuvarlama -->
+    <clipPath id="round">
+      <rect width="1024" height="1024" rx="226" ry="226"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#round)">
+    <!-- Arka plan -->
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+    <!-- Parlaklık -->
+    <rect width="1024" height="1024" fill="url(#shine)"/>
+
+    <!-- Kase (bowl) -->
+    <path d="M 188 730 Q 188 940 512 940 Q 836 940 836 730 Z" fill="white"/>
+    <ellipse cx="512" cy="730" rx="324" ry="54" fill="white"/>
+    <ellipse cx="512" cy="730" rx="310" ry="44"
+             fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="18"/>
+
+    <!-- Yaprak (leaf) -->
+    <path d="
+      M 512 748
+      C 370 698 262 572 268 408
+      C 274 228 384 122 512 105
+      C 640 122 750 228 756 408
+      C 762 572 654 698 512 748
+      Z
+    " fill="white"/>
+
+    <!-- Orta damar -->
+    <line x1="512" y1="730" x2="512" y2="124"
+          stroke="url(#vein)" stroke-width="13" stroke-linecap="round"/>
+
+    <!-- Sol damarlar -->
+    <path d="M 512 490 Q 422 444 386 378"
+          fill="none" stroke="url(#vein)" stroke-width="9" stroke-linecap="round"/>
+    <path d="M 512 370 Q 444 330 416 274"
+          fill="none" stroke="url(#vein)" stroke-width="7.5" stroke-linecap="round"/>
+    <path d="M 512 262 Q 456 232 438 190"
+          fill="none" stroke="url(#vein)" stroke-width="6" stroke-linecap="round"/>
+
+    <!-- Sağ damarlar -->
+    <path d="M 512 490 Q 602 444 638 378"
+          fill="none" stroke="url(#vein)" stroke-width="9" stroke-linecap="round"/>
+    <path d="M 512 370 Q 580 330 608 274"
+          fill="none" stroke="url(#vein)" stroke-width="7.5" stroke-linecap="round"/>
+    <path d="M 512 262 Q 568 232 586 190"
+          fill="none" stroke="url(#vein)" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</svg>
+</body>
+</html>
