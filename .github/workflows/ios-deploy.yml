@@ -57,7 +57,18 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      # ── 6. Xcode archive ───────────────────────────────────────────────────
+      # ── 6. Build numarasını tag'den belirle ────────────────────────────────
+      # Tag: v1.0.14 → MARKETING_VERSION=1.0.14, BUILD_NUMBER=14
+      - name: Set build number from tag
+        run: |
+          TAG="${{ github.ref_name }}"                          # v1.0.14
+          VERSION=$(echo "$TAG" | sed 's/^v//')                 # 1.0.14
+          BUILD=$(echo "$VERSION" | awk -F. '{print $NF}')      # 14
+          echo "Marketing version: $VERSION  Build: $BUILD"
+          xcrun agvtool new-marketing-version "$VERSION"
+          xcrun agvtool new-version -all "$BUILD"
+
+      # ── 7. Xcode archive ───────────────────────────────────────────────────
       # CODE_SIGN_STYLE=Manual sadece project.pbxproj'daki App target'ında set
       # edildi — global CLI override yok, RevenueCat SPM Automatic'te kalıyor.
       # APPLE_TEAM_ID ve PROVISIONING_PROFILE_NAME pbxproj'daki $(VAR) ile eşleşir.
