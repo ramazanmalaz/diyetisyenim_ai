@@ -1,7 +1,7 @@
 import { Check, Crown, Minus, ShieldCheck, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 
-import { CheckoutButton } from "@/components/payments/checkout-button";
+import { SmartCheckout } from "@/components/payments/smart-checkout";
 import { getEntitlement } from "@/lib/entitlements";
 import { requireProfile } from "@/lib/auth";
 import { LEGAL_LINKS } from "@/lib/legal";
@@ -55,7 +55,7 @@ function formatDate(iso: string): string {
 }
 
 /** Bir tarife kartı — fiyat, süre, (yıllıkta) tasarruf/ayda-eşdeğer ve ödeme butonu. */
-function PlanCard({ plan, savingTl }: { plan: Plan; savingTl?: number }) {
+function PlanCard({ plan, savingTl, userId }: { plan: Plan; savingTl?: number; userId: string }) {
   const annual = plan.key === "annual";
   const perMonth = annual ? Math.round(Number(plan.price) / 12) : null;
   return (
@@ -95,7 +95,8 @@ function PlanCard({ plan, savingTl }: { plan: Plan; savingTl?: number }) {
           : `${plan.days} gün premium erişim`}
       </p>
       <div className="mt-4">
-        <CheckoutButton
+        <SmartCheckout
+          userId={userId}
           price={plan.price}
           plan={plan.key}
           label={`${plan.price} ₺ — ${annual ? "Yıllık al" : "Aylık al"}`}
@@ -207,8 +208,8 @@ export default async function AbonelikPage({
 
       {/* Tarife kartları — aylık + yıllık */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <PlanCard plan={pricing.monthly} />
-        <PlanCard plan={pricing.annual} savingTl={saving} />
+        <PlanCard plan={pricing.monthly} userId={profile.id} />
+        <PlanCard plan={pricing.annual} savingTl={saving} userId={profile.id} />
       </div>
 
       {/* Güven sinyalleri */}

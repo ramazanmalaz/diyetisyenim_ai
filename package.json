@@ -28,6 +28,7 @@
     "@capacitor/status-bar": "^8.0.2",
     "@hookform/resolvers": "^5.4.0",
     "@radix-ui/react-slot": "^1.2.4",
+    "@revenuecat/purchases-capacitor": "^13.2.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",
     "@types/web-push": "^3.6.4",
