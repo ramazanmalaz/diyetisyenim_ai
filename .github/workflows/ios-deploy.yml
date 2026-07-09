@@ -3,8 +3,8 @@ name: iOS — App Store Deploy
 on:
   push:
     tags:
-      - "v*"          # v1.0.0 gibi bir tag push edilince tetiklenir
-  workflow_dispatch:   # manuel başlatma
+      - "v*"
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -47,21 +47,20 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
 
-      # ── 5. ASC API key yaz ─────────────────────────────────────────────────
-      # Archive + upload için aynı key kullanılır.
-      - name: Write App Store Connect API key
+      # ── 5. Provisioning profile yükle ──────────────────────────────────────
+      - name: Import provisioning profile
         env:
-          APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_KEY_BASE64 }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
         run: |
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo -n "$APP_STORE_CONNECT_KEY_BASE64" | base64 --decode \
-            -o ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
       # ── 6. Xcode archive ───────────────────────────────────────────────────
-      # CODE_SIGN_STYLE ve PROVISIONING_PROFILE_SPECIFIER kaldırıldı:
-      # Global override tüm SPM paketlerine (RevenueCat dahil) uygulanıyor
-      # ve "does not support provisioning profiles" hatasına yol açıyor.
-      # -allowProvisioningUpdates + ASC API key ile Xcode otomatik yönetir.
+      # CODE_SIGN_STYLE=Manual sadece project.pbxproj'daki App target'ında set
+      # edildi — global CLI override yok, RevenueCat SPM Automatic'te kalıyor.
+      # APPLE_TEAM_ID ve PROVISIONING_PROFILE_NAME pbxproj'daki $(VAR) ile eşleşir.
       - name: Build archive
         run: |
           xcodebuild archive \
@@ -70,11 +69,8 @@ jobs:
             -configuration Release \
             -archivePath $RUNNER_TEMP/UzmanDiyet.xcarchive \
             -destination "generic/platform=iOS" \
-            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8 \
-            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
-            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+            APPLE_TEAM_ID="${{ secrets.APPLE_TEAM_ID }}" \
+            PROVISIONING_PROFILE_NAME="${{ secrets.PROVISIONING_PROFILE_NAME }}"
 
       # ── 7. Export IPA ──────────────────────────────────────────────────────
       - name: Export IPA
@@ -88,6 +84,11 @@ jobs:
             <string>app-store-connect</string>
             <key>teamID</key>
             <string>TEAM_ID_PLACEHOLDER</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.uzmandiyet.app</key>
+              <string>PROFILE_NAME_PLACEHOLDER</string>
+            </dict>
             <key>uploadBitcode</key>
             <false/>
             <key>compileBitcode</key>
@@ -96,17 +97,17 @@ jobs:
           </plist>
           PLIST
 
-          # teamID'yi secret ile doldur
-          sed -i '' "s/TEAM_ID_PLACEHOLDER/${{ secrets.APPLE_TEAM_ID }}/g" $RUNNER_TEMP/ExportOptions.plist
+          sed -i '' \
+            "s/TEAM_ID_PLACEHOLDER/${{ secrets.APPLE_TEAM_ID }}/g" \
+            $RUNNER_TEMP/ExportOptions.plist
+          sed -i '' \
+            "s/PROFILE_NAME_PLACEHOLDER/${{ secrets.PROVISIONING_PROFILE_NAME }}/g" \
+            $RUNNER_TEMP/ExportOptions.plist
 
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/UzmanDiyet.xcarchive \
             -exportPath $RUNNER_TEMP/export \
-            -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8 \
-            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
-            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+            -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist
 
       # ── 8. App Store Connect'e yükle ───────────────────────────────────────
       - name: Find IPA
@@ -121,7 +122,13 @@ jobs:
           echo "path=$IPA_PATH" >> $GITHUB_OUTPUT
 
       - name: Upload to App Store Connect
+        env:
+          APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_KEY_BASE64 }}
         run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo -n "$APP_STORE_CONNECT_KEY_BASE64" | base64 --decode \
+            -o ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8
+
           xcrun altool --upload-app \
             --type ios \
             --file "${{ steps.ipa.outputs.path }}" \
