@@ -108,29 +108,31 @@ jobs:
             -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist
 
       # ── 7. App Store Connect'e yükle ───────────────────────────────────────
-      - name: Upload to App Store Connect
-        env:
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_KEY_BASE64 }}
+      - name: Find IPA
+        id: ipa
         run: |
-          # API key dosyasına yaz
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo -n "$APP_STORE_CONNECT_KEY_BASE64" | base64 --decode \
-            -o ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8
-
           IPA_PATH=$(find $RUNNER_TEMP/export -name "*.ipa" | head -1)
           echo "IPA: $IPA_PATH"
           if [ -z "$IPA_PATH" ]; then
             echo "HATA: IPA dosyası bulunamadı — export başarısız olmuş olabilir."
             exit 1
           fi
+          echo "path=$IPA_PATH" >> $GITHUB_OUTPUT
+
+      - name: Upload to App Store Connect
+        env:
+          APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_KEY_BASE64 }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo -n "$APP_STORE_CONNECT_KEY_BASE64" | base64 --decode \
+            -o ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8
 
           xcrun altool --upload-app \
             --type ios \
-            --file "$IPA_PATH" \
-            --apiKey "$APP_STORE_CONNECT_KEY_ID" \
-            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+            --file "${{ steps.ipa.outputs.path }}" \
+            --apiKey "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
+            --apiIssuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
+            --verbose
 
       # ── 8. Temizlik ────────────────────────────────────────────────────────
       - name: Clean up keychain
