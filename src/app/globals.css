@@ -50,13 +50,19 @@
   }
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
   background-color: var(--background);
-  /* Yumuşak yeşil gradyan mesh */
+  overflow-x: hidden;
+  /* Yumuşak yeşil gradyan mesh.
+     background-attachment:fixed iOS WKWebView'da desteklenmez — scroll kullanılıyor. */
   background-image:
     radial-gradient(
       55% 45% at 12% -5%,
@@ -69,7 +75,7 @@ body {
       transparent 60%
     ),
     radial-gradient(60% 50% at 50% 108%, rgb(106 166 33 / 0.1), transparent 60%);
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
 
 /* İnce grain dokusu */
