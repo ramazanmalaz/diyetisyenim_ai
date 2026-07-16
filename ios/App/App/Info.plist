@@ -73,5 +73,10 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 	</dict>
+
+	<!-- Export compliance: standart HTTPS/TLS dışında özel şifreleme yok —
+	     bu satır olmadan her yüklemede App Store Connect'te manuel soru çıkar. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
