@@ -1,3 +1,4 @@
+import { DeleteAccountSection } from "@/components/app/delete-account-section";
 import { NotificationSettings } from "@/components/app/notification-settings";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -40,6 +41,8 @@ export default async function SettingsPage() {
         dinner={data?.dinner_time ?? "19:00"}
         pomodoro={data?.pomodoro_reminders_enabled ?? true}
       />
+
+      <DeleteAccountSection />
     </div>
   );
 }

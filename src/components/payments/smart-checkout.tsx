@@ -3,7 +3,8 @@
 /**
  * Platform algılayan ödeme sarmalayıcı.
  *
- * iOS native  →  NativeCheckoutButton (RevenueCat / StoreKit 2)
+ * iOS native  →  uygulama içinde satın alma yok (App Store 2.1(b)/3.1.1
+ *                uyumu); premium'a yalnızca web üzerinden abone olunur.
  * Web         →  CheckoutButton (iyzico — değişmez)
  *
  * İlk render'da `isNative` false; useEffect'te Capacitor sorgulanır.
@@ -13,7 +14,6 @@
 import { useEffect, useState } from "react";
 
 import { CheckoutButton } from "@/components/payments/checkout-button";
-import { NativeCheckoutButton } from "@/components/payments/native-checkout-button";
 
 type Props = {
   userId: string;
@@ -22,7 +22,7 @@ type Props = {
   label?: string;
 };
 
-export function SmartCheckout({ userId, price, plan, label }: Props) {
+export function SmartCheckout({ price, plan, label }: Props) {
   const [isNative, setIsNative] = useState(false);
 
   useEffect(() => {
@@ -34,11 +34,10 @@ export function SmartCheckout({ userId, price, plan, label }: Props) {
 
   if (isNative) {
     return (
-      <NativeCheckoutButton
-        userId={userId}
-        plan={plan}
-        label={label ?? `${plan === "monthly" ? "Aylık" : "Yıllık"} Al`}
-      />
+      <p className="rounded-xl bg-gray-50 px-4 py-3 text-center text-xs text-gray-500 dark:bg-gray-800/50 dark:text-gray-400">
+        Premium&apos;a yalnızca uzmandiyet.com web sitesi üzerinden abone
+        olunabilir.
+      </p>
     );
   }
 
