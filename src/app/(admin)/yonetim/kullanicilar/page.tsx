@@ -1,3 +1,4 @@
+import { CreateDietitianForm } from "@/components/admin/create-dietitian-form";
 import { PremiumUserList } from "@/components/admin/premium-user-list";
 import { requireStaff } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -40,6 +41,7 @@ export default async function KullanicilarPage() {
           Kullanıcılara premium erişim ver, uzat veya kaldır.
         </p>
       </div>
+      <CreateDietitianForm />
       <PremiumUserList users={users} currentUserId={me.id} />
     </div>
   );

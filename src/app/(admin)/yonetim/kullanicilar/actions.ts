@@ -9,6 +9,43 @@ import { createClient } from "@/lib/supabase/server";
 
 export type ActionResult = { error: string } | { success: true };
 
+const createDietitianSchema = z.object({
+  email: z.string().email("Geçerli e-posta girin"),
+  full_name: z.string().min(2, "En az 2 karakter").max(100),
+  password: z.string().min(6, "En az 6 karakter").max(72),
+});
+
+/** Sıfırdan bir auth hesabı oluşturur ve rolünü 'dietitian' olarak işaretler. */
+export async function createDietitianAccount(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireStaff();
+  const parsed = createDietitianSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success)
+    return { error: parsed.error.issues[0]?.message ?? "Geçersiz giriş" };
+
+  const admin = createAdminClient();
+
+  const { data, error } = await admin.auth.admin.createUser({
+    email: parsed.data.email,
+    password: parsed.data.password,
+    email_confirm: true,
+    user_metadata: { full_name: parsed.data.full_name },
+  });
+  if (error) return { error: error.message };
+  if (!data.user) return { error: "Kullanıcı oluşturulamadı" };
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({ role: "dietitian", full_name: parsed.data.full_name })
+    .eq("id", data.user.id);
+  if (profileError) return { error: "Rol atanamadı." };
+
+  revalidatePath("/yonetim/kullanicilar");
+  return { success: true };
+}
+
 /**
  * Kullanıcının rolünü değiştirir. profiles üzerindeki guard tetikleyicisi rol
  * değişikliğini auth.uid() personel mi diye denetlediği için service-role değil,
