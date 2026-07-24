@@ -279,7 +279,11 @@ async function respondWithAi(
       ];
       answer = await generateDietAnswer(prompt, rules, planContext);
     }
-  } catch {
+  } catch (err) {
+    console.error(
+      "[respondWithAi]",
+      err instanceof Error ? err.message : err,
+    );
     answer = "Şu anda yanıt veremiyorum, lütfen biraz sonra tekrar dene.";
   }
   if (!answer) return null;

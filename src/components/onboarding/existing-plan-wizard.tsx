@@ -96,7 +96,7 @@ export function ExistingPlanWizard() {
   async function handleRead() {
     const files = filesFromInput();
     if (files.length === 0) {
-      setError("Önce bir görsel seç.");
+      setError("Önce bir görsel veya PDF seç.");
       return;
     }
     setBusy("read");
@@ -128,14 +128,14 @@ export function ExistingPlanWizard() {
       }
       return next;
     });
-    setNote(res.note || "Görsel okundu. Yanlış varsa düzelt, sonra kaydet.");
+    setNote(res.note || "Dosya okundu. Yanlış varsa düzelt, sonra kaydet.");
     if (fileRef.current) fileRef.current.value = "";
   }
 
   async function handleUpload() {
     const files = filesFromInput();
     if (files.length === 0) {
-      setError("Önce bir görsel seç.");
+      setError("Önce bir görsel veya PDF seç.");
       return;
     }
     setBusy("upload");
@@ -147,7 +147,7 @@ export function ExistingPlanWizard() {
       return;
     }
     setPhotoPaths((p) => [...p, ...res.photoPaths]);
-    setNote(`${res.photoPaths.length} görsel referans olarak eklendi.`);
+    setNote(`${res.photoPaths.length} dosya referans olarak eklendi.`);
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -187,17 +187,17 @@ export function ExistingPlanWizard() {
       {/* 1) Görsel */}
       <section className="space-y-3 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
         <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-          <ImagePlus className="h-4 w-4" /> Planının fotoğrafı (opsiyonel)
+          <ImagePlus className="h-4 w-4" /> Planının fotoğrafı veya PDF&apos;i (opsiyonel)
         </div>
         <p className="text-xs text-gray-600 dark:text-gray-400">
-          Diyetisyeninden aldığın listenin fotoğrafını yükle; asistan okuyup
-          öğünleri (haftalıksa günlere göre) doldursun. Dilersen aşağıdan elle de
-          girebilirsin.
+          Diyetisyeninden aldığın listenin fotoğrafını ya da PDF&apos;ini yükle;
+          asistan okuyup öğünleri (haftalıksa günlere göre) doldursun. Dilersen
+          aşağıdan elle de girebilirsin.
         </p>
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
           multiple
           className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-emerald-700 dark:text-gray-300"
         />
@@ -213,7 +213,7 @@ export function ExistingPlanWizard() {
         </div>
         {photoPaths.length > 0 && (
           <p className="text-xs text-emerald-700 dark:text-emerald-300">
-            ✓ {photoPaths.length} görsel eklendi
+            ✓ {photoPaths.length} dosya eklendi
           </p>
         )}
         {note && <p className="text-xs text-gray-600 dark:text-gray-400">{note}</p>}

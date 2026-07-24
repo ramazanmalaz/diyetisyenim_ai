@@ -6,6 +6,7 @@ import { generateWeeklyPrograms } from "@/lib/ai/plan";
 import {
   analyzePlanPhoto,
   type ImageMediaType,
+  type PlanAttachment,
   type PlanPhotoScan,
 } from "@/lib/ai/respond";
 import { getActiveDietitianRules } from "@/lib/ai/rules";
@@ -25,6 +26,9 @@ export type GenerateResult = { error: string };
 
 const PLAN_BUCKET = "progress-photos";
 const MAX_PLAN_PHOTOS = 4;
+const MAX_PLAN_PDF_BYTES = 10 * 1024 * 1024; // 10 MB tekil dosya
+const MAX_PLAN_TOTAL_BYTES = 20 * 1024 * 1024; // Base64'e çevrilince ~27 MB — Claude'un 32 MB istek sınırının altında
+const ALLOWED_PLAN_FILE_TYPES = [...ALLOWED_PHOTO_TYPES, "application/pdf"];
 
 const SEX_LABEL = { female: "Kadın", male: "Erkek" } as const;
 
@@ -163,11 +167,16 @@ async function uploadPlanFiles(
 
   const paths: string[] = [];
   for (const [i, file] of valid.entries()) {
-    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
-      return { error: "Yalnızca JPEG, PNG veya WEBP yükleyebilirsin." };
+    if (!ALLOWED_PLAN_FILE_TYPES.includes(file.type)) {
+      return { error: "Yalnızca JPEG, PNG, WEBP veya PDF yükleyebilirsin." };
     }
-    if (file.size > MAX_PHOTO_BYTES) {
-      return { error: "Her görsel en fazla 5 MB olabilir." };
+    const isPdf = file.type === "application/pdf";
+    if (file.size > (isPdf ? MAX_PLAN_PDF_BYTES : MAX_PHOTO_BYTES)) {
+      return {
+        error: isPdf
+          ? "PDF en fazla 15 MB olabilir."
+          : "Her görsel en fazla 5 MB olabilir.",
+      };
     }
     const ext = file.name.split(".").pop() ?? "jpg";
     const path = `${userId}/plans/${Date.now()}-${i}.${ext}`;
@@ -212,25 +221,40 @@ export async function extractPlanFromPhoto(
   const files = (formData.getAll("photos") as File[]).filter(
     (f) => f instanceof File && f.size > 0,
   );
-  if (files.length === 0) return { error: "Önce bir görsel seç." };
+  if (files.length === 0) return { error: "Önce bir görsel veya PDF seç." };
 
-  // Freemium: günde 1 ücretsiz foto analizi; üstü premium → popup. (Elle giriş hep ücretsiz.)
+  // Freemium: günde 1 ücretsiz foto/PDF analizi; üstü premium → popup. (Elle giriş hep ücretsiz.)
   const credit = await consumeAiCredit(user.id, "vision");
   if (!credit.ok) {
     return { quota: true };
   }
 
-  // Vision için base64 hazırla (yüklemeden önce; aynı File buffer'ları).
-  const images: { base64: string; mediaType: ImageMediaType }[] = [];
-  for (const file of files.slice(0, MAX_PLAN_PHOTOS)) {
-    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
-      return { error: "Yalnızca JPEG, PNG veya WEBP." };
+  const selected = files.slice(0, MAX_PLAN_PHOTOS);
+  const totalBytes = selected.reduce((s, f) => s + f.size, 0);
+  if (totalBytes > MAX_PLAN_TOTAL_BYTES) {
+    return { error: "Seçilen dosyalar toplamda çok büyük. Daha azını dene." };
+  }
+
+  // Vision/döküman için base64 hazırla (yüklemeden önce; aynı File buffer'ları).
+  const attachments: PlanAttachment[] = [];
+  for (const file of selected) {
+    const isPdf = file.type === "application/pdf";
+    if (!ALLOWED_PLAN_FILE_TYPES.includes(file.type)) {
+      return { error: "Yalnızca JPEG, PNG, WEBP veya PDF yükleyebilirsin." };
     }
-    if (file.size > MAX_PHOTO_BYTES) {
-      return { error: "Her görsel en fazla 5 MB olabilir." };
+    if (file.size > (isPdf ? MAX_PLAN_PDF_BYTES : MAX_PHOTO_BYTES)) {
+      return {
+        error: isPdf
+          ? "PDF en fazla 10 MB olabilir."
+          : "Her görsel en fazla 5 MB olabilir.",
+      };
     }
     const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
-    images.push({ base64, mediaType: file.type as ImageMediaType });
+    attachments.push(
+      isPdf
+        ? { kind: "pdf", base64 }
+        : { kind: "image", base64, mediaType: file.type as ImageMediaType },
+    );
   }
 
   const res = await uploadPlanFiles(supabase, user.id, files);
@@ -238,14 +262,18 @@ export async function extractPlanFromPhoto(
 
   const rules = await getActiveDietitianRules();
   try {
-    const scan = await analyzePlanPhoto({ images, dietitianRules: rules });
+    const scan = await analyzePlanPhoto({ attachments, dietitianRules: rules });
     return { photoPaths: res.paths, meals: scan.meals, note: scan.note };
-  } catch {
+  } catch (err) {
+    console.error(
+      "[extractPlanFromPhoto]",
+      err instanceof Error ? err.message : err,
+    );
     // Yükleme yine de başarılı; kullanıcı elle doldurabilir.
     return {
       photoPaths: res.paths,
       meals: [],
-      note: "Görsel okunamadı; öğünleri elle girebilirsin.",
+      note: "Dosya okunamadı; öğünleri elle girebilirsin.",
     };
   }
 }

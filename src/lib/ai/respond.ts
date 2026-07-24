@@ -249,6 +249,11 @@ const planPhotoSchema = z.object({
 
 export type PlanPhotoScan = z.infer<typeof planPhotoSchema>;
 
+/** Plan okuma için tek bir ek — ya fotoğraf (image) ya da PDF (document). */
+export type PlanAttachment =
+  | { kind: "image"; base64: string; mediaType: ImageMediaType }
+  | { kind: "pdf"; base64: string };
+
 const PLANPHOTO_SCHEMA: AnthropicNS.Tool.InputSchema = {
   type: "object",
   properties: {
@@ -283,12 +288,12 @@ const PLANPHOTO_SCHEMA: AnthropicNS.Tool.InputSchema = {
 };
 
 /**
- * Kullanıcının HAZIR diyet planının fotoğraf(lar)ını okur ve TEK GÜNLÜK bir
- * öğün şablonu (meal_type + öğe + kalori) olarak yapılandırır. Plan birden çok
- * gün içeriyorsa temsili bir günü baz alır. Sadece kalori/okuma yapar; reçete vermez.
+ * Kullanıcının HAZIR diyet planının fotoğraf(lar)ını/PDF'ini okur ve TEK GÜNLÜK
+ * bir öğün şablonu (meal_type + öğe + kalori) olarak yapılandırır. Plan birden
+ * çok gün içeriyorsa temsili bir günü baz alır. Sadece kalori/okuma yapar; reçete vermez.
  */
 export async function analyzePlanPhoto(params: {
-  images: { base64: string; mediaType: ImageMediaType }[];
+  attachments: PlanAttachment[];
   dietitianRules: string | null;
 }): Promise<PlanPhotoScan> {
   const system = buildSystemPrompt(params.dietitianRules);
@@ -304,7 +309,7 @@ export async function analyzePlanPhoto(params: {
     tools: [
       {
         name: "save_plan_template",
-        description: "Fotoğraftan okunan günlük öğün şablonunu kaydeder.",
+        description: "Görsel/PDF'ten okunan günlük öğün şablonunu kaydeder.",
         input_schema: PLANPHOTO_SCHEMA,
       },
     ],
@@ -313,20 +318,28 @@ export async function analyzePlanPhoto(params: {
       {
         role: "user",
         content: [
-          ...params.images.map(
-            (img) =>
-              ({
-                type: "image",
-                source: {
-                  type: "base64",
-                  media_type: img.mediaType,
-                  data: img.base64,
-                },
-              }) as const,
+          ...params.attachments.map((a) =>
+            a.kind === "pdf"
+              ? ({
+                  type: "document",
+                  source: {
+                    type: "base64",
+                    media_type: "application/pdf",
+                    data: a.base64,
+                  },
+                } as const)
+              : ({
+                  type: "image",
+                  source: {
+                    type: "base64",
+                    media_type: a.mediaType,
+                    data: a.base64,
+                  },
+                } as const),
           ),
           {
             type: "text",
-            text: `Bu görsel(ler) kullanıcının elindeki HAZIR bir diyet/beslenme planı. İçindeki öğünleri çıkar:
+            text: `Bu görsel(ler)/PDF kullanıcının elindeki HAZIR bir diyet/beslenme planı. İçindeki öğünleri çıkar:
 - Görselde HAFTANIN GÜNLERİ (Pzt, Sal, ... veya 1.gün, 2.gün) ayrı ayrı yazıyorsa, her öğeyi doğru day_of_week'e (0=Pazartesi ... 6=Pazar) ata ve multi_day=true yap.
 - Aynı gün adı BİRDEN FAZLA sütunda görünüyorsa (örn. tablo Perşembe'den başlayıp Perşembe'de bitiyorsa), o günü YALNIZCA İLK görüldüğü sütundan al; tekrar eden sütunu yok say. Her gün (0–6) en fazla bir kez doldurulmalı.
 - Görselde tek bir günlük şablon varsa tüm öğeleri day_of_week=0 yap ve multi_day=false.
