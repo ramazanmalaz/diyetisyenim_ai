@@ -409,7 +409,7 @@ export function RemindersApp({
             </p>
             {lists.length === 0 ? (
               <div className="rounded-2xl bg-white px-4 py-6 text-center text-sm text-gray-400 dark:bg-gray-900">
-                Henüz liste yok. Aşağıdan "Liste Ekle" ile başla.
+                Henüz liste yok. Aşağıdan &ldquo;Liste Ekle&rdquo; ile başla.
               </div>
             ) : (
               <div className="overflow-hidden rounded-2xl bg-white dark:bg-gray-900">

@@ -20,10 +20,11 @@ export default async function SporPage() {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // Tarihe göre filtrelemiyoruz: bir egzersiz işaretlendiğinde, hangi güne
+    // ait olursa olsun (uygulama kapatılıp açılsa da) işaretli kalmalı.
     supabase
       .from("workout_logs")
-      .select("day_index, exercise_index, log_date")
-      .eq("log_date", todayKey),
+      .select("day_index, exercise_index, log_date"),
   ]);
 
   if (!plan) redirect("/spor/baslangic");

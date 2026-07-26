@@ -91,12 +91,7 @@ Netflix, Spotify, Amazon Kindle'ın kullandığı yöntem.
 
 ---
 
-### SEÇENEK B — Apple In-App Purchase (StoreKit) uygula (Uzun vadeli)
-
-**Nasıl çalışır:**
-- Apple'ın StoreKit 2 framework'ü kullanılır
-- Abonelik ürünleri App Store Connect'te tanımlanır
-- Ödeme tamamen Apple üzerinden geçer
+### 
 - Apple **%30 komisyon** alır (yıllık geliri 1M$'ın altındaki geliştiriciler için %15)
 
 **Avantajları:**

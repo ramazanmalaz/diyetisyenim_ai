@@ -6,6 +6,7 @@ import {
   Crown,
   Stethoscope,
   Tag,
+  UserPlus,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -24,6 +25,13 @@ type Section = {
 };
 
 const SECTIONS: Section[] = [
+  {
+    title: "Danışanlarım",
+    desc: "Danışan ekle, plan ata, istatistikleri gör.",
+    href: "/yonetim/danisanlar",
+    icon: UserPlus,
+    tint: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
+  },
   {
     title: "AI Kuralları",
     desc: "Yapay zekâ diyetisyenin davranışını ayarla.",

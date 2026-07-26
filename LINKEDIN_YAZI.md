@@ -4,7 +4,7 @@
 
 Sıfırdan bir AI diyet uygulaması inşa ettim ve App Store'a gönderdim. İşte 3 aylık yolculuk 👇
 
-Bir gün "yapay zeka gerçekten kişisel diyetisyen gibi davranabilir mi?" diye sordum kendime. Cevabı test etmek yerine, inşa etmeye karar verdim.
+Bir gün "yapay zeka gerçekten kişisel diyetisyen gibi d/avranabilir mi?" diye sordum kendime. Cevabı test etmek yerine, inşa etmeye karar verdim.
 
 Sonuç: **UzmanDiyet** — yapay zekâ destekli kişisel diyet asistanı.
 

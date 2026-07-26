@@ -18,7 +18,7 @@
 /.screenshots
 /.frames
 /hatalar
-/Hatalar
+/Hatalar*
 
 # next.js
 /.next/
@@ -63,3 +63,13 @@ next-env.d.ts
 # geçici önizleme/screenshot dosyaları
 _preview.*
 _shot.mjs
+
+# App Store imzalama anahtarları/sertifikaları — SIR, asla commit edilmez
+/app-store-assets/
+*.p8
+*.p12
+*.mobileprovision
+*.certSigningRequest
+
+# Supabase CLI yerel durum/önbellek dosyaları
+/supabase/.temp/

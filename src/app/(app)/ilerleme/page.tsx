@@ -85,12 +85,7 @@ export default async function IlerlemePage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
-      <div>
-        <h1 className="text-2xl font-bold">İlerleme Takibi</h1>
-        <p className="text-sm text-gray-500">
-          Kilonu, ölçülerini ve fotoğraflarını kaydet; değişimi gör.
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold">İlerleme Takibi</h1>
 
       {showGoal && (
         <GoalProgress

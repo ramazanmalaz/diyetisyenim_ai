@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 
-import { InstallPrompt } from "@/components/app/install-prompt";
 import { PwaRegister } from "@/components/app/pwa-register";
 import "./globals.css";
 
@@ -60,7 +59,6 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         {children}
         <PwaRegister />
-        <InstallPrompt />
       </body>
     </html>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { LineChart, RotateCcw } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import {
@@ -9,14 +8,12 @@ import {
   regeneratePlan,
   setMealStatus,
 } from "@/app/(app)/plan/actions";
-import { openAssistant } from "@/app/(app)/sohbet/actions";
 import { CalorieFigure } from "@/components/plan/calorie-figure";
 import { CalorieHero } from "@/components/plan/calorie-hero";
 import { DailySummary } from "@/components/plan/daily-summary";
 import { WaterTracker } from "@/components/plan/water-tracker";
 import { EditableMeals, type Meal } from "@/components/plan/editable-meals";
 import { MedicalDisclaimer } from "@/components/medical-disclaimer";
-import { Button } from "@/components/ui/button";
 import { DAYS } from "@/lib/diet";
 import type { Food } from "@/lib/foods";
 import { computeStreak, last7Days, slotDate } from "@/lib/plan/streak";
@@ -176,8 +173,6 @@ export function PlanBoard({
 
   return (
     <div className="space-y-6">
-      <MedicalDisclaimer />
-
       {/* Çok-haftalık program bandı */}
       {(weekCount > 1 || totalWeeks > 1) && (
         <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
@@ -222,13 +217,6 @@ export function PlanBoard({
         plannedToday={plannedDay}
         consumedToday={consumedDay}
       />
-
-      {/* Öğünler — ekranın özü, hemen özetin altında */}
-      <p className="px-1 text-xs text-gray-400">
-        Öğünü açmak için başlığa dokun. Bir besine dokununca miktarını/içeriğini
-        değiştirebilir, her öğünün tabağını fotoğrafla paylaşabilirsin. Kalori
-        otomatik güncellenir.
-      </p>
 
       <EditableMeals
         meals={meals}
@@ -303,6 +291,8 @@ export function PlanBoard({
           Mevcut planın arşivlenir; istediğin zaman yeni plan oluşturabilirsin.
         </p>
       </form>
+
+      <MedicalDisclaimer />
 
       {/* Yüzen, sürüklenebilir Ümüş Teyze (sabit konumlu — akışta yer kaplamaz) */}
       <CalorieFigure

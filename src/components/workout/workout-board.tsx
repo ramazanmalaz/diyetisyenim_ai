@@ -6,6 +6,7 @@ import {
   Info,
   Play,
   RotateCcw,
+  Target,
   Timer,
   X,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import {
   setExerciseDone,
   type ExerciseDemoResult,
 } from "@/app/(app)/spor/actions";
+import { BodyPicker } from "@/components/workout/body-picker";
 import { localizeExercise } from "@/lib/exercise-tr";
 import {
   GOAL_LABEL,
@@ -86,14 +88,11 @@ export function WorkoutBoard({
   const days = program?.days ?? [];
 
   const [activeDay, setActiveDay] = useState(0);
-  // Bugün tamamlanan egzersizler: "dayIndex|exerciseIndex"
+  // Tamamlanan egzersizler: "dayIndex|exerciseIndex" — işaretlenen egzersiz,
+  // hangi tarihte yapıldıysa yapılsın, kullanıcı tekrar kaldırana kadar işaretli kalır.
   const [done, setDone] = useState<Set<string>>(
     () =>
-      new Set(
-        initialLogs
-          .filter((l) => l.log_date === todayDate)
-          .map((l) => `${l.day_index}|${l.exercise_index}`),
-      ),
+      new Set(initialLogs.map((l) => `${l.day_index}|${l.exercise_index}`)),
   );
   const [detail, setDetail] = useState<Exercise | null>(null);
   const [demo, setDemo] = useState<ExerciseDemoResult & { loading: boolean }>({
@@ -105,6 +104,7 @@ export function WorkoutBoard({
     loading: false,
   });
   const [frameIdx, setFrameIdx] = useState(0);
+  const [bodyPickerOpen, setBodyPickerOpen] = useState(false);
 
   const day = days[activeDay];
 
@@ -211,6 +211,29 @@ export function WorkoutBoard({
             </div>
           </div>
         </section>
+
+        {/* ===== Bölgeye göre egzersiz bul (kas haritası) ===== */}
+        <button
+          type="button"
+          onClick={() => setBodyPickerOpen(true)}
+          className="flex w-full items-center gap-3 rounded-2xl border border-lime-400/20 bg-lime-400/[0.06] px-4 py-3.5 text-left transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-lime-400/10 active:scale-[0.98]"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lime-400/15 text-lime-300">
+            <Target className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-white">
+              Bölgeye göre egzersiz bul
+            </span>
+            <span className="block text-xs text-zinc-400">
+              Vücut haritasından çalıştırmak istediğin bölgeye dokun
+            </span>
+          </span>
+        </button>
+
+        {bodyPickerOpen && (
+          <BodyPicker onClose={() => setBodyPickerOpen(false)} />
+        )}
 
         {program?.note && (
           <div className="flex gap-2.5 rounded-2xl border border-lime-400/15 bg-lime-400/[0.06] p-3.5 text-sm text-lime-100/90">

@@ -3,12 +3,14 @@ import Link from "next/link";
 
 import { cancelAppointment } from "@/app/(app)/randevu/actions";
 import { DietitianAvatar } from "@/components/dietitians/dietitian-avatar";
+import { DirectAppointmentForm } from "@/components/randevu/direct-appointment-form";
 import {
   APPOINTMENT_STATUS_LABEL,
   formatDateTime,
   googleCalendarUrl,
 } from "@/lib/appointments";
 import { requireProfile } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { AppointmentStatus } from "@/types/database";
 
@@ -108,8 +110,20 @@ export default async function RandevuPage({
   searchParams: Promise<{ ok?: string }>;
 }) {
   const { ok } = await searchParams;
-  await requireProfile();
+  const profile = await requireProfile();
   const supabase = await createClient();
+
+  // Atanmış diyetisyenin adını çek (varsa)
+  let assignedDietitianName: string | null = null;
+  if (profile.dietitian_id) {
+    const admin = createAdminClient();
+    const { data: dProfile } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", profile.dietitian_id)
+      .single();
+    assignedDietitianName = dProfile?.full_name ?? null;
+  }
 
   const { data: appointments } = await supabase
     .from("appointments")
@@ -141,12 +155,14 @@ export default async function RandevuPage({
             Diyetisyen randevularını buradan yönet.
           </p>
         </div>
-        <Link
-          href="/diyetisyen-bul"
-          className="shrink-0 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_16px_-8px_rgba(5,150,105,0.7)] transition hover:brightness-105 active:scale-[0.97]"
-        >
-          Yeni randevu
-        </Link>
+        {!assignedDietitianName && (
+          <Link
+            href="/diyetisyen-bul"
+            className="shrink-0 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_16px_-8px_rgba(5,150,105,0.7)] transition hover:brightness-105 active:scale-[0.97]"
+          >
+            Yeni randevu
+          </Link>
+        )}
       </div>
 
       {ok && (
@@ -156,6 +172,10 @@ export default async function RandevuPage({
         </div>
       )}
 
+      {assignedDietitianName && (
+        <DirectAppointmentForm dietitianName={assignedDietitianName} />
+      )}
+
       {rows.length === 0 ? (
         <div className="rounded-3xl border border-gray-200 bg-white/60 px-6 py-12 text-center dark:border-gray-800 dark:bg-gray-900/50">
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300">
@@ -163,14 +183,18 @@ export default async function RandevuPage({
           </span>
           <p className="mt-4 font-semibold">Henüz randevun yok</p>
           <p className="mx-auto mt-1 max-w-xs text-sm text-gray-500">
-            Bir diyetisyen seçip uygun bir saate kolayca randevu alabilirsin.
+            {assignedDietitianName
+              ? "Yukarıdaki formdan diyetisyenine randevu talebi gönderebilirsin."
+              : "Bir diyetisyen seçip uygun bir saate kolayca randevu alabilirsin."}
           </p>
-          <Link
-            href="/diyetisyen-bul"
-            className="mt-5 inline-flex rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgba(5,150,105,0.7)] transition hover:brightness-105 active:scale-[0.98]"
-          >
-            Diyetisyen seç
-          </Link>
+          {!assignedDietitianName && (
+            <Link
+              href="/diyetisyen-bul"
+              className="mt-5 inline-flex rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgba(5,150,105,0.7)] transition hover:brightness-105 active:scale-[0.98]"
+            >
+              Diyetisyen seç
+            </Link>
+          )}
         </div>
       ) : (
         <div className="space-y-6">

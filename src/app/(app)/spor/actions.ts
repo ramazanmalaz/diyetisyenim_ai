@@ -11,7 +11,11 @@ import {
 import { getUser } from "@/lib/auth";
 import { consumeAiCredit } from "@/lib/entitlements";
 import { resolveExerciseFrames } from "@/lib/exercise-db";
-import { findExercise, loadExercisesDataset } from "@/lib/exercises-dataset";
+import {
+  findExercise,
+  loadExercisesDataset,
+  type DatasetExercise,
+} from "@/lib/exercises-dataset";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { GOAL_LABEL, LEVEL_LABEL, STYLE_LABEL } from "@/lib/workout";
 import {
@@ -199,13 +203,14 @@ export async function setExerciseDone(values: unknown): Promise<WorkoutLogResult
     );
     if (error) return { error: "Kaydedilemedi." };
   } else {
+    // Tarihe bakmaksızın bu egzersize ait TÜM kayıtları temizle — aksi halde
+    // önceki bir tarihte işaretlenmiş satır kalıp tekrar "yapıldı" görünebilir.
     const { error } = await admin
       .from("workout_logs")
       .delete()
       .eq("client_id", user.id)
       .eq("day_index", parsed.data.dayIndex)
-      .eq("exercise_index", parsed.data.exerciseIndex)
-      .eq("log_date", parsed.data.date);
+      .eq("exercise_index", parsed.data.exerciseIndex);
     if (error) return { error: "Güncellenemedi." };
   }
   return { ok: true };
@@ -220,13 +225,43 @@ export type ExerciseCard = {
   trInstructions: string | null;
 };
 
-/** exercises-dataset'ten body_part'a göre egzersiz listesi döndürür. */
-export async function getExercisesByBodyPart(
-  bodyPart: string,
+/**
+ * Vücut haritasındaki 16 kas grubu → dataset'in body_part/muscle_group
+ * alanlarına eşleme. Bazı kas grupları (biceps/triceps, quadriceps/
+ * hamstrings/glutes, calves/soleus) aynı body_part'ı paylaştığından
+ * muscle_group ile daraltılır; adductors için dataset'te ayrı bir
+ * muscle_group olmadığından isimde arama yapılır.
+ */
+const MUSCLE_GROUP_FILTERS: Record<string, (x: DatasetExercise) => boolean> = {
+  shoulders: (x) => x.bodyPart === "shoulders" || x.muscleGroup === "deltoids",
+  chest: (x) => x.bodyPart === "chest",
+  back: (x) =>
+    x.bodyPart === "back" &&
+    x.muscleGroup !== "traps" &&
+    x.muscleGroup !== "trapezius",
+  trapezius: (x) => x.muscleGroup === "traps" || x.muscleGroup === "trapezius",
+  biceps: (x) => x.muscleGroup === "biceps",
+  triceps: (x) => x.muscleGroup === "triceps",
+  abdominals: (x) => x.bodyPart === "waist" && x.muscleGroup !== "obliques",
+  obliques: (x) => x.muscleGroup === "obliques",
+  forearms: (x) => x.bodyPart === "lower arms" || x.muscleGroup === "forearms",
+  glutes: (x) => x.muscleGroup === "glutes",
+  quadriceps: (x) => x.muscleGroup === "quadriceps",
+  hamstrings: (x) => x.muscleGroup === "hamstrings",
+  calves: (x) => x.muscleGroup === "calves",
+  soleus: (x) => x.muscleGroup === "soleus",
+  adductors: (x) => /adduct/i.test(x.name),
+};
+
+/** exercises-dataset'ten seçilen kas grubuna göre egzersiz listesi döndürür. */
+export async function getExercisesByMuscleGroup(
+  muscleSlug: string,
 ): Promise<ExerciseCard[]> {
+  const filter = MUSCLE_GROUP_FILTERS[muscleSlug];
+  if (!filter) return [];
   const dataset = await loadExercisesDataset();
   return dataset
-    .filter((x) => x.bodyPart.toLowerCase() === bodyPart.toLowerCase())
+    .filter(filter)
     .slice(0, 50)
     .map((x) => ({
       id: x.id,

@@ -8,6 +8,45 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { appointmentSchema } from "@/lib/validations/appointment";
 
+export type DirectApptState = { error?: string; ok?: boolean } | null;
+
+export async function requestDirectAppointment(
+  _prev: DirectApptState,
+  formData: FormData,
+): Promise<DirectApptState> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const scheduledAt = (formData.get("scheduled_at") as string)?.trim();
+  const notes = (formData.get("notes") as string | null)?.trim() || null;
+
+  if (!scheduledAt) return { error: "Tarih ve saat seçin." };
+
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("dietitian_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.dietitian_id)
+    return { error: "Atanmış diyetisyen bulunamadı." };
+
+  const { error } = await supabase.from("appointments").insert({
+    client_id: user.id,
+    dietitian_id: profile.dietitian_id,
+    scheduled_at: new Date(scheduledAt).toISOString(),
+    notes,
+    status: "requested",
+  });
+
+  if (error) return { error: "Randevu talebi oluşturulamadı." };
+
+  revalidatePath("/randevu");
+  return { ok: true };
+}
+
 export type ActionResult = { error: string } | { success: true };
 
 export async function requestAppointment(

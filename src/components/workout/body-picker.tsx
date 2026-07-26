@@ -4,142 +4,85 @@ import { ArrowLeft, RotateCcw, X } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import {
-  getExercisesByBodyPart,
+  getExercisesByMuscleGroup,
   type ExerciseCard,
 } from "@/app/(app)/spor/actions";
 import { MuscleExerciseFeed } from "@/components/workout/muscle-exercise-feed";
+import {
+  BACK_BODY_PATH,
+  BACK_REGIONS,
+  BACK_VIEW_BOX,
+  FRONT_BODY_PATH,
+  FRONT_REGIONS,
+  FRONT_VIEW_BOX,
+} from "@/components/workout/muscle-map-data";
 import { cn } from "@/lib/utils";
 
-// ─── Tipler ──────────────────────────────────────────────────────────────────
+// ─── Kas grupları ─────────────────────────────────────────────────────────────
+
+export type MuscleSlug =
+  | "shoulders"
+  | "chest"
+  | "back"
+  | "trapezius"
+  | "biceps"
+  | "triceps"
+  | "abdominals"
+  | "obliques"
+  | "forearms"
+  | "glutes"
+  | "quadriceps"
+  | "hamstrings"
+  | "calves"
+  | "adductors";
+
+const LABELS: Record<MuscleSlug, string> = {
+  shoulders: "Omuz",
+  chest: "Göğüs",
+  back: "Sırt",
+  trapezius: "Trapez",
+  biceps: "Pazı",
+  triceps: "Arka Kol",
+  abdominals: "Karın",
+  obliques: "Yan Karın",
+  forearms: "Ön Kol",
+  glutes: "Kalça",
+  quadriceps: "Ön Uyluk",
+  hamstrings: "Arka Uyluk",
+  calves: "Baldır",
+  adductors: "İç Uyluk",
+};
+
+// ─── Bölge tanımları — anatomik SVG'den (kas-haritasi-svg-hizalama-v4)
+// hizalanmış tıklanabilir kas grubu path'leri. Her bölge gerçek kas şeklini
+// takip eder (elips yaklaşıklaması değil).
+
+// Kaynak SVG'de bu üç grup, çizim üzerine tam oturması için kendi merkezi
+// etrafında hafifçe küçültülmüştü (orijinal <style> bloğundaki kural). Bu
+// ölçek atlanınca özellikle "obliques" (ince şerit) belirgin kaymış görünüyordu.
+const REGION_SCALE: Partial<Record<MuscleSlug, string>> = {
+  abdominals: "scale(0.955)",
+  trapezius: "scale(0.965)",
+  obliques: "scale(0.90, 0.965)",
+};
 
 type BodyView = "front" | "back";
 
-type BodyPart =
-  | "chest"
-  | "waist"
-  | "shoulders"
-  | "upper arms"
-  | "upper legs"
-  | "lower legs"
-  | "back"
-  | "neck";
+function getRegions(view: BodyView) {
+  return view === "front" ? FRONT_REGIONS : BACK_REGIONS;
+}
 
-const LABELS: Record<BodyPart, string> = {
-  chest:        "Göğüs",
-  waist:        "Karın / Core",
-  shoulders:    "Omuzlar",
-  "upper arms": "Kollar",
-  "upper legs": "Bacaklar",
-  "lower legs": "Alt Bacak",
-  back:         "Sırt",
-  neck:         "Boyun",
-};
+function getViewBox(view: BodyView): string {
+  return view === "front" ? FRONT_VIEW_BOX : BACK_VIEW_BOX;
+}
 
-// ─── Görünüm konfigürasyonu ───────────────────────────────────────────────────
+function getBodyPath(view: BodyView): string {
+  return view === "front" ? FRONT_BODY_PATH : BACK_BODY_PATH;
+}
 
-type Region = { id: BodyPart; d: string };
-
-/**
- * Ön görünüm: anatomy-front.svg (864 × 1821)
- * Koordinatlar Playwright ile kalibrasyon.html üzerinden ölçüldü.
- */
-const FRONT_REGIONS: Region[] = [
-  // Boyun — x:319-481, y:234-364
-  { id: "neck",
-    d: "M319 234 L481 234 L481 364 L319 364 Z" },
-  // Göğüs — x:205-654, y:345-654
-  { id: "chest",
-    d: "M205 345 L654 345 L654 654 L205 654 Z" },
-  // Karın / Core — x:224-602, y:654-891
-  { id: "waist",
-    d: "M224 654 L602 654 L602 891 L224 891 Z" },
-  // Sol omuz — x:127-276, y:309-491
-  { id: "shoulders",
-    d: "M127 309 L276 309 L276 491 L127 491 Z" },
-  // Sağ omuz — x:501-689, y:309-491
-  { id: "shoulders",
-    d: "M501 309 L689 309 L689 491 L501 491 Z" },
-  // Sol üst kol (bicep) — x:42-215, y:491-855
-  { id: "upper arms",
-    d: "M42 491 L215 491 L215 855 L42 855 Z" },
-  // Sağ üst kol — x:569-741, y:491-836
-  { id: "upper arms",
-    d: "M569 491 L741 491 L741 836 L569 836 Z" },
-  // Sol üst bacak — x:189-429, y:911-1366
-  { id: "upper legs",
-    d: "M189 911 L429 911 L429 1366 L189 1366 Z" },
-  // Sağ üst bacak — x:387-621, y:911-1366
-  { id: "upper legs",
-    d: "M387 911 L621 911 L621 1366 L387 1366 Z" },
-  // Sol alt bacak — x:189-397, y:1382-1710
-  { id: "lower legs",
-    d: "M189 1382 L397 1382 L397 1710 L189 1710 Z" },
-  // Sağ alt bacak — x:377-585, y:1382-1710
-  { id: "lower legs",
-    d: "M377 1382 L585 1382 L585 1710 L377 1710 Z" },
-];
-
-/**
- * Arka görünüm: anatomy-back.svg (619 × 1468)
- * Koordinatlar Playwright ile kalibrasyon.html üzerinden ölçüldü.
- */
-const BACK_REGIONS: Region[] = [
-  // Boyun — x:247-370, y:176-278
-  { id: "neck",
-    d: "M247 176 L370 176 L370 278 L247 278 Z" },
-  // Sol omuz — x:85-221, y:233-367
-  { id: "shoulders",
-    d: "M85 233 L221 233 L221 367 L85 367 Z" },
-  // Sağ omuz — x:384-530, y:233-367
-  { id: "shoulders",
-    d: "M384 233 L530 233 L530 367 L384 367 Z" },
-  // Sırt (trapez + lat + lomber) — x:148-470, y:278-763
-  { id: "back",
-    d: "M148 278 L470 278 L470 763 L148 763 Z" },
-  // Sol üst kol (tricep) — x:48-140, y:351-689
-  { id: "upper arms",
-    d: "M48 351 L140 351 L140 689 L48 689 Z" },
-  // Sağ üst kol — x:462-567, y:351-689
-  { id: "upper arms",
-    d: "M462 351 L567 351 L567 689 L462 689 Z" },
-  // Sol üst bacak (glute + hamstring) — x:135-308, y:763-1203
-  { id: "upper legs",
-    d: "M135 763 L308 763 L308 1203 L135 1203 Z" },
-  // Sağ üst bacak — x:302-475, y:763-1203
-  { id: "upper legs",
-    d: "M302 763 L475 763 L475 1203 L302 1203 Z" },
-  // Sol alt bacak (baldır) — x:135-297, y:1216-1423
-  { id: "lower legs",
-    d: "M135 1216 L297 1216 L297 1423 L135 1423 Z" },
-  // Sağ alt bacak — x:297-462, y:1216-1423
-  { id: "lower legs",
-    d: "M297 1216 L462 1216 L462 1423 L297 1423 Z" },
-];
-
-// ─── Beden Haritası ───────────────────────────────────────────────────────────
-
-type ViewConfig = {
-  imgSrc: string;
-  aspectW: number;
-  aspectH: number;
-  regions: Region[];
-};
-
-function getViewConfig(view: BodyView): ViewConfig {
-  if (view === "front") {
-    return {
-      imgSrc:  "/images/anatomy-front.svg",
-      aspectW: 864,
-      aspectH: 1821,
-      regions: FRONT_REGIONS,
-    };
-  }
-  return {
-    imgSrc:  "/images/anatomy-back.svg",
-    aspectW: 619,
-    aspectH: 1468,
-    regions: BACK_REGIONS,
-  };
+function getAspectRatio(view: BodyView): string {
+  const [, , width, height] = getViewBox(view).split(" ");
+  return `${width} / ${height}`;
 }
 
 function BodyMap({
@@ -148,41 +91,49 @@ function BodyMap({
   onSelect,
 }: {
   view: BodyView;
-  selected: BodyPart | null;
-  onSelect: (bp: BodyPart) => void;
+  selected: MuscleSlug | null;
+  onSelect: (id: MuscleSlug) => void;
 }) {
-  const cfg = getViewConfig(view);
+  // Hover, tek bir path elemanı yerine slug bazlı tutulur — aynı kas grubunun
+  // simetrik (sol/sağ) bölgeleri birlikte vurgulanır (CSS :hover tek elemana özeldir).
+  const [hovered, setHovered] = useState<MuscleSlug | null>(null);
 
   return (
     <div
-      className="relative h-full select-none"
-      style={{ aspectRatio: `${cfg.aspectW} / ${cfg.aspectH}` }}
+      className="relative mx-auto h-full select-none"
+      style={{ aspectRatio: getAspectRatio(view) }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={cfg.imgSrc}
-        alt="Vücut haritası"
-        className="absolute inset-0 h-full w-full"
-        style={{ objectFit: "fill" }}
-        draggable={false}
-      />
-
-      {/* Tıklanabilir overlay — görsel koordinat uzayında */}
       <svg
-        viewBox={`0 0 ${cfg.aspectW} ${cfg.aspectH}`}
+        viewBox={getViewBox(view)}
         className="absolute inset-0 h-full w-full"
         style={{ touchAction: "manipulation" }}
       >
-        {cfg.regions.map((r, i) => (
+        <path d={getBodyPath(view)} fill="#12161b" fillRule="evenodd" />
+        {getRegions(view).map((r, i) => (
           <path
             key={i}
             d={r.d}
-            onClick={() => onSelect(r.id)}
+            onClick={() => onSelect(r.slug)}
+            onMouseEnter={() => setHovered(r.slug)}
+            onMouseLeave={() =>
+              setHovered((h) => (h === r.slug ? null : h))
+            }
+            style={
+              REGION_SCALE[r.slug]
+                ? {
+                    transformBox: "fill-box",
+                    transformOrigin: "center",
+                    transform: REGION_SCALE[r.slug],
+                  }
+                : undefined
+            }
             className={cn(
-              "cursor-pointer transition-[fill,stroke] duration-200",
-              selected === r.id
-                ? "fill-red-500/40 stroke-red-600 stroke-[6]"
-                : "fill-transparent stroke-transparent hover:fill-red-400/20 hover:stroke-red-400/50 hover:stroke-[4]",
+              "cursor-pointer transition-[fill,opacity] duration-200",
+              selected === r.slug
+                ? "fill-red-500/70 stroke-red-600 stroke-2"
+                : hovered === r.slug
+                  ? "fill-red-400/35 stroke-transparent"
+                  : "fill-red-400/0 stroke-transparent",
             )}
           />
         ))}
@@ -194,17 +145,17 @@ function BodyMap({
 // ─── Ana bileşen ──────────────────────────────────────────────────────────────
 
 export function BodyPicker({ onClose }: { onClose: () => void }) {
-  const [view,     setView]     = useState<BodyView>("front");
-  const [selected, setSelected] = useState<BodyPart | null>(null);
+  const [view, setView] = useState<BodyView>("front");
+  const [selected, setSelected] = useState<MuscleSlug | null>(null);
   const [exercises, setExercises] = useState<ExerciseCard[]>([]);
-  const [feedOpen,  setFeedOpen]  = useState(false);
+  const [feedOpen, setFeedOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  function handleSelect(bp: BodyPart) {
-    setSelected(bp);
+  function handleSelect(id: MuscleSlug) {
+    setSelected(id);
     setFeedOpen(false);
     startTransition(async () => {
-      const data = await getExercisesByBodyPart(bp);
+      const data = await getExercisesByMuscleGroup(id);
       setExercises(data);
       setFeedOpen(true);
     });
@@ -246,11 +197,9 @@ export function BodyPicker({ onClose }: { onClose: () => void }) {
             ) : (
               <div className="w-9" />
             )}
-
             <h2 className="text-sm font-bold text-zinc-800 tracking-tight">
               {feedOpen && selected ? LABELS[selected] : "Bölgeye Göre Egzersiz"}
             </h2>
-
             <button
               type="button"
               onClick={onClose}
@@ -263,7 +212,6 @@ export function BodyPicker({ onClose }: { onClose: () => void }) {
           {/* ── Beden haritası ── */}
           {!feedOpen && (
             <>
-              {/* Kontroller */}
               <div className="flex shrink-0 items-center justify-end px-4 pb-2">
                 <button
                   type="button"
@@ -271,11 +219,10 @@ export function BodyPicker({ onClose }: { onClose: () => void }) {
                   className="flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
-                  {view === "front" ? "Öne Dön" : "Arkaya Dön"}
+                  {view === "front" ? "Arkaya Dön" : "Öne Dön"}
                 </button>
               </div>
 
-              {/* İpucu / yükleniyor */}
               <div className="flex shrink-0 h-5 items-center justify-center">
                 {pending ? (
                   <span className="text-[11px] text-red-500 animate-pulse">
@@ -288,16 +235,10 @@ export function BodyPicker({ onClose }: { onClose: () => void }) {
                 )}
               </div>
 
-              {/* Görsel + overlay */}
               <div className="flex-1 min-h-0 flex items-center justify-center py-1 px-2">
-                <BodyMap
-                  view={view}
-                  selected={selected}
-                  onSelect={handleSelect}
-                />
+                <BodyMap view={view} selected={selected} onSelect={handleSelect} />
               </div>
 
-              {/* Seçili bölge */}
               {selected && !pending ? (
                 <div className="shrink-0 px-4 pb-5 pt-1">
                   <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-2.5 text-center">

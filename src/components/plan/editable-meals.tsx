@@ -49,12 +49,45 @@ export type Meal = {
   checked: boolean;
 };
 
-const DOT: Record<MealType, string> = {
-  breakfast: "bg-amber-400",
-  snack_morning: "bg-lime-400",
-  lunch: "bg-emerald-400",
-  snack_afternoon: "bg-yellow-400",
-  dinner: "bg-rose-400",
+const MEAL_STYLES: Record<
+  MealType,
+  { headerBg: string; badgeBg: string; badgeText: string; borderOpen: string }
+> = {
+  breakfast: {
+    headerBg:
+      "bg-amber-50/80 hover:bg-amber-50 dark:bg-amber-950/15 dark:hover:bg-amber-950/25",
+    badgeBg: "bg-amber-100 dark:bg-amber-900/40",
+    badgeText: "text-amber-700 dark:text-amber-300",
+    borderOpen: "border-amber-200 dark:border-amber-900/50",
+  },
+  snack_morning: {
+    headerBg:
+      "bg-lime-50/80 hover:bg-lime-50 dark:bg-lime-950/15 dark:hover:bg-lime-950/25",
+    badgeBg: "bg-lime-100 dark:bg-lime-900/40",
+    badgeText: "text-lime-700 dark:text-lime-300",
+    borderOpen: "border-lime-200 dark:border-lime-900/50",
+  },
+  lunch: {
+    headerBg:
+      "bg-emerald-50/80 hover:bg-emerald-50 dark:bg-emerald-950/15 dark:hover:bg-emerald-950/25",
+    badgeBg: "bg-emerald-100 dark:bg-emerald-900/40",
+    badgeText: "text-emerald-700 dark:text-emerald-300",
+    borderOpen: "border-emerald-200 dark:border-emerald-900/50",
+  },
+  snack_afternoon: {
+    headerBg:
+      "bg-yellow-50/80 hover:bg-yellow-50 dark:bg-yellow-950/15 dark:hover:bg-yellow-950/25",
+    badgeBg: "bg-yellow-100 dark:bg-yellow-900/40",
+    badgeText: "text-yellow-700 dark:text-yellow-300",
+    borderOpen: "border-yellow-200 dark:border-yellow-900/50",
+  },
+  dinner: {
+    headerBg:
+      "bg-rose-50/80 hover:bg-rose-50 dark:bg-rose-950/15 dark:hover:bg-rose-950/25",
+    badgeBg: "bg-rose-100 dark:bg-rose-900/40",
+    badgeText: "text-rose-700 dark:text-rose-300",
+    borderOpen: "border-rose-200 dark:border-rose-900/50",
+  },
 };
 
 const cleanName = (m: Meal) =>
@@ -120,9 +153,7 @@ export function EditableMeals({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [expanded, setExpanded] = useState<Partial<Record<MealType, boolean>>>({
-    breakfast: true,
-  });
+  const [expanded, setExpanded] = useState<Partial<Record<MealType, boolean>>>({});
   const [editing, setEditing] = useState<Meal | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   // Öğün detayı (makro + tarif) — mealId bazında cache + yükleme durumu.
@@ -360,49 +391,60 @@ export function EditableMeals({
         ))}
       </div>
 
-      <p className="text-center text-[11px] text-gray-400">
-        Öğünün yanındaki yuvarlağa dokun: bir kez <b>yedim</b> ✓, tekrar{" "}
-        <b>atladım</b>, tekrar boş. Gün otomatik sıfırlanır.
-      </p>
-
       {/* Öğün accordion'ları */}
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         {MEAL_TYPES.map((mt) => {
           const items = dayMeals.filter((m) => m.meal_type === mt.value);
           const total = items.reduce((s, m) => s + (m.calories ?? 0), 0);
           const open = !!expanded[mt.value];
           const scanHere = scanType === mt.value;
+          const style = MEAL_STYLES[mt.value];
           return (
             <div
               key={mt.value}
-              className="glass overflow-hidden rounded-3xl shadow-[var(--shadow-soft)]"
+              className="overflow-hidden rounded-3xl bg-white/70 shadow-[var(--shadow-soft)] ring-1 ring-black/5 dark:bg-gray-900/40 dark:ring-white/10"
             >
               <button
                 type="button"
                 onClick={() =>
                   setExpanded((e) => ({ ...e, [mt.value]: !e[mt.value] }))
                 }
-                className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                className={cn(
+                  "flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors duration-200",
+                  style.headerBg,
+                )}
               >
                 <span
-                  className={cn("h-2.5 w-2.5 rounded-full", DOT[mt.value])}
-                />
-                <MealIcon type={mt.value} className="h-4 w-4 text-emerald-600" />
-                <span className="font-semibold">{mt.label}</span>
-                <span className="ml-auto text-sm tabular-nums text-gray-500">
-                  {total} kcal
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                    style.badgeBg,
+                  )}
+                >
+                  <MealIcon type={mt.value} className={cn("h-5 w-5", style.badgeText)} />
+                </span>
+                <span className="text-[15px] font-bold tracking-tight">
+                  {mt.label}
+                </span>
+                <span className="ml-auto text-sm font-bold tabular-nums text-gray-600 dark:text-gray-300">
+                  {total}
+                  <span className="font-medium text-gray-400"> kcal</span>
                 </span>
                 <ChevronDown
                   className={cn(
-                    "h-4 w-4 text-gray-400 transition-transform",
+                    "h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200",
                     open && "rotate-180",
                   )}
                 />
               </button>
 
               {open && (
-                <div className="border-t border-gray-100/70 dark:border-gray-800/70">
-                  <ul className="divide-y divide-gray-100/70 dark:divide-gray-800/70">
+                <div
+                  className={cn(
+                    "border-t-2 bg-white/60 dark:bg-gray-900/30",
+                    style.borderOpen,
+                  )}
+                >
+                  <ul className="divide-y divide-gray-100 dark:divide-gray-800">
                     {items.length === 0 && (
                       <li className="px-4 py-3 text-sm text-gray-400">
                         Henüz öğe yok.
@@ -416,7 +458,7 @@ export function EditableMeals({
                       return (
                       <li
                         key={m.id}
-                        className="flex items-center gap-3 px-4 py-2.5"
+                        className="flex items-center gap-3 px-4 py-3"
                       >
                         <button
                           type="button"

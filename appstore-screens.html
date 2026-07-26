@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>UzmanDiyet — App Store Screens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; background: #09090f; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+  /* ── Token System ────────────────────────────────── */
+  :root {
+    --bg:       #09090f;
+    --surface:  #12131e;
+    --surface2: #1a1c2e;
+    --border:   #ffffff12;
+    --teal:     #3ecfbe;
+    --teal-dim: #3ecfbe22;
+    --coral:    #ff6b6b;
+    --gold:     #f5c842;
+    --text:     #f0f2f5;
+    --muted:    #7a8799;
+    --muted2:   #3d4558;
+    --mono:     'DM Mono', monospace;
+    --r:        20px;
+  }
+
+  /* ── Screen Container ────────────────────────────── */
+  .screen {
+    display: none;
+    width: 100%;
+    min-height: 100vh;
+    background: var(--bg);
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .screen.active { display: flex; }
+
+  /* ── Status Bar ──────────────────────────────────── */
+  .statusbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: .01em;
+  }
+  .statusbar .icons { display: flex; gap: 6px; align-items: center; }
+  .sb-notch {
+    width: 126px; height: 34px;
+    background: #000;
+    border-radius: 0 0 20px 20px;
+    position: absolute;
+    top: 0; left: 50%; transform: translateX(-50%);
+  }
+
+  /* ── Ambient glow ────────────────────────────────── */
+  .glow-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+    opacity: .4;
+  }
+
+  /* ════════════════════════════════════════════════════
+     SCREEN 1 — Karşılama
+  ═════════════════════════════════════════════════════ */
+  #s1 { background: #07080f; }
+
+  .s1-orb-t { width: 340px; height: 340px; background: #3ecfbe; top: -60px; left: 50%; transform: translateX(-50%); }
+  .s1-orb-b { width: 220px; height: 220px; background: #7b5ea7; bottom: 160px; right: -60px; }
+
+  .s1-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 28px 0;
+  }
+
+  .ai-avatar {
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3ecfbe 0%, #7b5ea7 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 0 1px #3ecfbe44, 0 0 40px #3ecfbe55, 0 24px 48px #00000088;
+    position: relative;
+  }
+  .ai-avatar::after {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #3ecfbe;
+    border: 3px solid #07080f;
+    bottom: 4px; right: 4px;
+  }
+
+  .s1-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 12px;
+  }
+
+  .s1-headline {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1.15;
+    text-align: center;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .s1-headline em { font-style: normal; color: var(--teal); }
+
+  .s1-sub {
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.65;
+    margin-bottom: 32px;
+    max-width: 280px;
+  }
+
+  .s1-pills {
+    display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    margin-bottom: 36px;
+  }
+  .s1-pill {
+    padding: 7px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .s1-pill span { margin-right: 5px; }
+
+  .s1-preview {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r) var(--r) 0 0;
+    padding: 20px 20px 0;
+    flex: 1;
+  }
+  .s1-preview-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .bubble {
+    display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px;
+  }
+  .bubble.user { flex-direction: row-reverse; }
+
+  .bubble-avatar {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #3ecfbe, #7b5ea7);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .bubble.user .bubble-avatar { background: var(--surface2); }
+
+  .bubble-text {
+    max-width: 75%;
+    padding: 11px 14px;
+    border-radius: 16px 16px 16px 4px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+  .bubble.user .bubble-text {
+    border-radius: 16px 16px 4px 16px;
+    background: linear-gradient(135deg, #3ecfbe22, #7b5ea722);
+    border-color: #3ecfbe44;
+  }
+
+  .cta-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, #3ecfbe, #2aa8a0);
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #07080f;
+    margin: 16px 0 32px;
+    box-shadow: 0 12px 32px #3ecfbe44;
+  }
+
+  /* ════════════════════════════════════════════════════
+     SCREEN 2 — Hedef Sorusu
+  ═════════════════════════════════════════════════════ */
+  #s2 { background: #07080f; }
+  .s2-orb { width: 300px; height: 300px; background: #3ecfbe; top: 80px; right: -100px; }
+
+  .s2-header {
+    padding: 8px 24px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .s2-header-av {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: linear-gradient(135deg, #3ecfbe, #7b5ea7);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+  }
+  .s2-header-info {}
+  .s2-header-name { font-size: 13.5px; font-weight: 700; color: var(--text); }
+  .s2-header-status { font-size: 11px; color: var(--teal); font-weight: 500; }
+
+  .s2-chat {
+    flex: 1;
+    padding: 8px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+  }
+
+  .s2-date {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted2);
+    font-weight: 500;
+    margin: 4px 0 8px;
+  }
+
+  .ai-question-bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px 16px 16px 16px;
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text);
+    max-width: 88%;
+  }
+  .ai-question-bubble strong { color: var(--teal); }
+
+  .choice-cards {
+    display: flex; flex-direction: column; gap: 10px; margin-top: 4px;
+  }
+  .choice-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text);
+    transition: border-color .2s;
+  }
+  .choice-card.selected {
+    border-color: var(--teal);
+    background: var(--teal-dim);
+  }
+  .choice-icon { font-size: 20px; flex-shrink: 0; }
+  .choice-label { flex: 1; }
+  .choice-label .main { display: block; font-weight: 600; }
+  .choice-label .sub { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .choice-check {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid var(--muted2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .choice-card.selected .choice-check {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: #07080f;
+    font-size: 11px;
+  }
+
+  .s2-bottom {
+    padding: 16px 20px 40px;
+  }
+  .s2-progress {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+  }
+  .s2-progress-track {
+    flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden;
+  }
+  .s2-progress-fill { width: 40%; height: 100%; background: var(--teal); border-radius: 2px; }
+  .s2-progress-label { font-size: 11px; color: var(--muted); font-weight: 500; flex-shrink: 0; }
+
+  /* ════════════════════════════════════════════════════
+     SCREEN 3 — Diyet Planı
+  ═════════════════════════════════════════════════════ */
+  #s3 { background: #07080f; }
+  .s3-orb { width: 280px; height: 280px; background: #52c41a; top: 60px; left: -80px; }
+
+  .s3-top {
+    padding: 8px 24px 24px;
+  }
+  .s3-title-row {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;
+  }
+  .s3-title { font-size: 22px; font-weight: 800; color: var(--text); }
+  .s3-badge {
+    padding: 5px 12px;
+    background: #52c41a22;
+    border: 1px solid #52c41a44;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #52c41a;
+  }
+
+  .calorie-hero {
+    background: linear-gradient(135deg, #1a1c2e, #141727);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .calorie-main {}
+  .calorie-number {
+    font-family: var(--mono);
+    font-size: 38px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: -.02em;
+    line-height: 1;
+  }
+  .calorie-number em { font-style: normal; font-size: 20px; color: var(--muted); margin-left: 4px; }
+  .calorie-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .calorie-ring {
+    width: 72px; height: 72px; position: relative;
+  }
+  .calorie-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .calorie-ring-label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--text);
+  }
+
+  .macro-row {
+    display: flex; gap: 10px; margin-bottom: 20px;
+  }
+  .macro-chip {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+  .macro-val { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--text); }
+  .macro-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .meals-section { padding: 0 24px 40px; flex: 1; }
+  .meals-section-title {
+    font-size: 13px; font-weight: 600; color: var(--muted);
+    letter-spacing: .06em; text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .meal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .meal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .meal-type-row { display: flex; align-items: center; gap: 8px; }
+  .meal-icon { font-size: 20px; }
+  .meal-type { font-size: 14px; font-weight: 700; color: var(--text); }
+  .meal-time { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .meal-kcal {
+    font-family: var(--mono);
+    font-size: 14px; font-weight: 500; color: var(--teal);
+  }
+
+  .meal-items { display: flex; flex-direction: column; gap: 6px; }
+  .meal-item {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12.5px;
+  }
+  .meal-item-name { color: var(--muted); }
+  .meal-item-cal { color: var(--muted2); font-family: var(--mono); font-size: 11.5px; }
+
+  /* ════════════════════════════════════════════════════
+     SCREEN 4 — AI Danışma (Chat)
+  ═════════════════════════════════════════════════════ */
+  #s4 { background: #07080f; }
+
+  .s4-header {
+    padding: 8px 20px 14px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border);
+    background: #09090f;
+  }
+  .s4-av {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, #3ecfbe, #7b5ea7);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 16px #3ecfbe44;
+  }
+  .s4-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .s4-status { font-size: 11px; color: var(--teal); font-weight: 500; }
+
+  .s4-chat {
+    flex: 1;
+    padding: 20px 18px;
+    display: flex; flex-direction: column; gap: 16px;
+    overflow: hidden;
+  }
+
+  .chat-ai { display: flex; gap: 10px; align-items: flex-start; }
+  .chat-user { display: flex; gap: 10px; align-items: flex-start; flex-direction: row-reverse; }
+
+  .chat-av-sm {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #3ecfbe, #7b5ea7);
+    display: flex; align-items: center; justify-content: center; font-size: 13px;
+  }
+  .chat-user .chat-av-sm { background: var(--surface2); }
+
+  .chat-bubble {
+    max-width: 82%;
+    padding: 12px 14px;
+    font-size: 13px; line-height: 1.6; color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px 16px 16px 16px;
+  }
+  .chat-user .chat-bubble {
+    border-radius: 16px 4px 16px 16px;
+    background: linear-gradient(135deg, #3ecfbe18, #7b5ea718);
+    border-color: #3ecfbe33;
+  }
+  .chat-bubble .highlight { color: var(--teal); font-weight: 600; }
+  .chat-bubble .warn { color: var(--coral); font-weight: 600; }
+
+  .approval-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #52c41a18;
+    border: 1px solid #52c41a44;
+    border-radius: 100px;
+    padding: 5px 12px;
+    font-size: 12px; font-weight: 600; color: #52c41a;
+    margin-top: 10px;
+  }
+
+  .calorie-compare {
+    display: flex; gap: 8px; margin-top: 10px;
+  }
+  .cc-item {
+    flex: 1; background: var(--surface2); border-radius: 10px; padding: 8px 10px;
+    font-size: 11px;
+  }
+  .cc-item .cc-label { color: var(--muted); margin-bottom: 2px; }
+  .cc-item .cc-val { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--text); }
+  .cc-item.better .cc-val { color: #52c41a; }
+
+  .s4-input-area {
+    padding: 12px 16px 36px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+  .s4-input {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 10px 16px;
+  }
+  .s4-input-text { flex: 1; font-size: 13px; color: var(--muted); }
+  .s4-input-btn {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--teal);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: #07080f;
+  }
+
+  /* ════════════════════════════════════════════════════
+     SCREEN 5 — İlerleme
+  ═════════════════════════════════════════════════════ */
+  #s5 { background: #07080f; }
+
+  .s5-top {
+    padding: 8px 24px 20px;
+  }
+  .s5-title { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .s5-sub { font-size: 13px; color: var(--muted); }
+
+  .progress-hero {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 20px;
+    margin: 0 24px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .ph-left {}
+  .ph-change {
+    font-family: var(--mono);
+    font-size: 40px;
+    font-weight: 500;
+    color: #52c41a;
+    letter-spacing: -.02em;
+    line-height: 1;
+  }
+  .ph-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .ph-weeks {
+    background: #52c41a18;
+    border: 1px solid #52c41a44;
+    border-radius: 100px;
+    padding: 4px 10px;
+    font-size: 11px; font-weight: 600; color: #52c41a;
+    margin-top: 8px; display: inline-block;
+  }
+  .ph-right {
+    text-align: right;
+  }
+  .ph-goal-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .ph-goal-bar { width: 80px; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
+  .ph-goal-fill { width: 32%; height: 100%; background: linear-gradient(90deg, #3ecfbe, #52c41a); border-radius: 4px; }
+  .ph-goal-pct { font-size: 12px; font-weight: 700; color: var(--teal); }
+
+  .chart-area {
+    margin: 0 24px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 16px 16px 10px;
+  }
+  .chart-title-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .chart-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .chart-range {
+    font-size: 11px; color: var(--teal); font-weight: 500;
+    background: var(--teal-dim); border-radius: 100px; padding: 3px 10px;
+  }
+  .chart-svg { width: 100%; height: 90px; overflow: visible; }
+
+  .entries { padding: 0 24px 40px; }
+  .entries-title {
+    font-size: 13px; font-weight: 600; color: var(--muted);
+    letter-spacing: .06em; text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .entry-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .entry-left { display: flex; align-items: center; gap: 12px; }
+  .entry-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); }
+  .entry-date { font-size: 13px; color: var(--muted); }
+  .entry-right { display: flex; align-items: center; gap: 8px; }
+  .entry-weight { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--text); }
+  .entry-delta { font-size: 11px; font-weight: 600; color: #52c41a; }
+
+  /* ════════════════════════════════════════════════════
+     iPad adaptations (min-width: 768px)
+  ═════════════════════════════════════════════════════ */
+  @media (min-width: 768px) {
+    .s1-headline { font-size: 44px; }
+    .s1-sub { font-size: 18px; max-width: 400px; }
+    .ai-avatar { width: 120px; height: 120px; font-size: 52px; }
+    .s1-body { padding: 20px 60px 0; }
+    .s1-preview { padding: 28px 28px 0; }
+    .bubble-text { font-size: 16px; }
+    .ai-question-bubble { font-size: 16px; }
+    .choice-card { padding: 18px 20px; font-size: 15px; }
+    .s3-title { font-size: 28px; }
+    .calorie-number { font-size: 48px; }
+    .meal-type { font-size: 16px; }
+    .meals-section { padding: 0 32px 40px; }
+    .s3-top { padding: 8px 32px 28px; }
+    .macro-chip { padding: 14px 16px; }
+    .macro-val { font-size: 20px; }
+    .chat-bubble { font-size: 15px; }
+    .s4-name { font-size: 17px; }
+    .s5-title { font-size: 28px; }
+    .ph-change { font-size: 52px; }
+    .entry-date { font-size: 15px; }
+    .entry-weight { font-size: 18px; }
+    .entries { padding: 0 32px 40px; }
+    .progress-hero { margin: 0 32px 20px; padding: 24px; }
+    .chart-area { margin: 0 32px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ SCREEN 1 ══════════════════════════════════════ -->
+<div class="screen" id="s1">
+  <div class="sb-notch"></div>
+  <div class="glow-orb s1-orb-t"></div>
+  <div class="glow-orb s1-orb-b"></div>
+
+  <div class="statusbar">
+    <span>9:41</span>
+    <div class="icons">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><rect x="0" y="3" width="3" height="9" rx="1" fill="white" opacity=".4"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="white" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="white" opacity=".8"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="white"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 2.5C10.5 2.5 12.7 3.5 14.3 5.2L15.5 4C13.5 1.9 10.9.7 8 .7c-2.9 0-5.5 1.2-7.5 3.3L1.7 5.2C3.3 3.5 5.5 2.5 8 2.5z" fill="white"/><path d="M8 5.5c1.7 0 3.3.7 4.4 1.8L13.8 6c-1.5-1.5-3.5-2.4-5.8-2.4S3.7 4.5 2.2 6l1.4 1.3C4.7 6.2 6.3 5.5 8 5.5z" fill="white" opacity=".8"/><circle cx="8" cy="10" r="1.5" fill="white"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="white" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="white"/><path d="M23 4.5v3a1.5 1.5 0 0 0 0-3z" fill="white" opacity=".4"/></svg>
+    </div>
+  </div>
+
+  <div class="s1-body">
+    <div class="ai-avatar">🥗</div>
+    <div class="s1-eyebrow">Yapay Zekâ Diyetisyen</div>
+    <h1 class="s1-headline">Hedefine<br/><em>akıllıca</em> ulaş</h1>
+    <p class="s1-sub">Kişisel AI diyetisyenin sorular sorar, sana özel plan hazırlar ve her adımda yanında olur.</p>
+    <div class="s1-pills">
+      <div class="s1-pill"><span>🎯</span>Kişisel plan</div>
+      <div class="s1-pill"><span>📸</span>Fotoğraf analizi</div>
+      <div class="s1-pill"><span>💬</span>Sohbet desteği</div>
+      <div class="s1-pill"><span>🔥</span>Kalori takibi</div>
+    </div>
+
+    <div class="s1-preview">
+      <div class="s1-preview-label">Şimdi başlıyor…</div>
+      <div class="bubble">
+        <div class="bubble-avatar">🥗</div>
+        <div class="bubble-text">Merhaba! Ben senin kişisel diyet asistanınım. Sana özel bir plan hazırlamak için birkaç soru sormak istiyorum. 😊</div>
+      </div>
+      <div class="bubble user">
+        <div class="bubble-avatar">👤</div>
+        <div class="bubble-text">Harika! Hazırım, başlayalım.</div>
+      </div>
+      <div class="bubble">
+        <div class="bubble-avatar">🥗</div>
+        <div class="bubble-text">Önce sana sormam gereken en önemli soru: <strong>Ne kadar sürede kaç kilo vermek istiyorsun?</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 2 ══════════════════════════════════════ -->
+<div class="screen" id="s2">
+  <div class="sb-notch"></div>
+  <div class="glow-orb s2-orb"></div>
+
+  <div class="statusbar">
+    <span>9:41</span>
+    <div class="icons">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><rect x="0" y="3" width="3" height="9" rx="1" fill="white"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="white"/><rect x="9" y="0" width="3" height="12" rx="1" fill="white"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="white"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 2.5C10.5 2.5 12.7 3.5 14.3 5.2L15.5 4C13.5 1.9 10.9.7 8 .7c-2.9 0-5.5 1.2-7.5 3.3L1.7 5.2C3.3 3.5 5.5 2.5 8 2.5z" fill="white"/><path d="M8 5.5c1.7 0 3.3.7 4.4 1.8L13.8 6c-1.5-1.5-3.5-2.4-5.8-2.4S3.7 4.5 2.2 6l1.4 1.3C4.7 6.2 6.3 5.5 8 5.5z" fill="white" opacity=".8"/><circle cx="8" cy="10" r="1.5" fill="white"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="white" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="white"/><path d="M23 4.5v3a1.5 1.5 0 0 0 0-3z" fill="white" opacity=".4"/></svg>
+    </div>
+  </div>
+
+  <div class="s2-header">
+    <div class="s2-header-av">🥗</div>
+    <div class="s2-header-info">
+      <div class="s2-header-name">Diyet Asistanı</div>
+      <div class="s2-header-status">● Şu an aktif</div>
+    </div>
+  </div>
+
+  <div class="s2-chat">
+    <div class="s2-date">Bugün, 09:41</div>
+
+    <div style="display:flex;gap:10px;align-items:flex-start;">
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecfbe,#7b5ea7);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🥗</div>
+      <div class="ai-question-bubble">
+        Boy, kilo ve yaşını öğrendim. Şimdi en önemli soru: <strong>Ne kadar sürede kaç kilo vermek istiyorsun?</strong><br/><br/>En uygun seçeneği seç, planını buna göre hazırlayayım 👇
+      </div>
+    </div>
+
+    <div class="choice-cards">
+      <div class="choice-card">
+        <div class="choice-icon">⚡</div>
+        <div class="choice-label">
+          <span class="main">1 ayda 3–5 kg</span>
+          <span class="sub">Hızlı başlangıç programı</span>
+        </div>
+        <div class="choice-check"></div>
+      </div>
+      <div class="choice-card selected">
+        <div class="choice-icon">🎯</div>
+        <div class="choice-label">
+          <span class="main">3 ayda 8–12 kg</span>
+          <span class="sub">Dengeli ve sürdürülebilir ✓</span>
+        </div>
+        <div class="choice-check">✓</div>
+      </div>
+      <div class="choice-card">
+        <div class="choice-icon">🏃</div>
+        <div class="choice-label">
+          <span class="main">6 ayda 15–20 kg</span>
+          <span class="sub">Orta tempo, uzun soluklu</span>
+        </div>
+        <div class="choice-check"></div>
+      </div>
+      <div class="choice-card">
+        <div class="choice-icon">🌱</div>
+        <div class="choice-label">
+          <span class="main">1 yılda 20+ kg</span>
+          <span class="sub">Yavaş ama kalıcı değişim</span>
+        </div>
+        <div class="choice-check"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="s2-bottom">
+    <div class="s2-progress">
+      <div class="s2-progress-track"><div class="s2-progress-fill"></div></div>
+      <div class="s2-progress-label">2 / 5 soru</div>
+    </div>
+    <div class="cta-btn">
+      <span>Devam Et</span>
+      <span>→</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 3 ══════════════════════════════════════ -->
+<div class="screen" id="s3">
+  <div class="sb-notch"></div>
+  <div class="glow-orb s3-orb"></div>
+
+  <div class="statusbar">
+    <span>9:41</span>
+    <div class="icons">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><rect x="0" y="3" width="3" height="9" rx="1" fill="white"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="white"/><rect x="9" y="0" width="3" height="12" rx="1" fill="white"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="white"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="white" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="white"/><path d="M23 4.5v3a1.5 1.5 0 0 0 0-3z" fill="white" opacity=".4"/></svg>
+    </div>
+  </div>
+
+  <div class="s3-top">
+    <div class="s3-title-row">
+      <div class="s3-title">Diyet Planın</div>
+      <div class="s3-badge">✦ Hazır</div>
+    </div>
+
+    <div class="calorie-hero">
+      <div class="calorie-main">
+        <div class="calorie-number">1.650<em>kcal</em></div>
+        <div class="calorie-label">Günlük kalori hedefin</div>
+        <div style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:#3ecfbe18;border:1px solid #3ecfbe33;border-radius:100px;padding:5px 12px;font-size:11px;font-weight:600;color:#3ecfbe;">
+          📅 ~11 haftada hedefe ulaşırsın
+        </div>
+      </div>
+      <div class="calorie-ring">
+        <svg viewBox="0 0 72 72">
+          <circle cx="36" cy="36" r="30" fill="none" stroke="#ffffff10" stroke-width="8"/>
+          <circle cx="36" cy="36" r="30" fill="none" stroke="#3ecfbe" stroke-width="8"
+            stroke-dasharray="188.5" stroke-dashoffset="128" stroke-linecap="round"/>
+        </svg>
+        <div class="calorie-ring-label">32%</div>
+      </div>
+    </div>
+
+    <div class="macro-row">
+      <div class="macro-chip">
+        <div class="macro-val" style="color:#3ecfbe">160g</div>
+        <div class="macro-lbl">Protein</div>
+      </div>
+      <div class="macro-chip">
+        <div class="macro-val" style="color:#f5c842">180g</div>
+        <div class="macro-lbl">Karbonhidrat</div>
+      </div>
+      <div class="macro-chip">
+        <div class="macro-val" style="color:#ff6b6b">55g</div>
+        <div class="macro-lbl">Yağ</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="meals-section">
+    <div class="meals-section-title">Bugünün Öğünleri</div>
+
+    <div class="meal-card">
+      <div class="meal-header">
+        <div class="meal-type-row">
+          <span class="meal-icon">🌅</span>
+          <div>
+            <div class="meal-type">Kahvaltı</div>
+            <div class="meal-time">07:30 – 08:30</div>
+          </div>
+        </div>
+        <div class="meal-kcal">450 kcal</div>
+      </div>
+      <div class="meal-items">
+        <div class="meal-item"><span class="meal-item-name">Yumurta (2 adet, haşlanmış)</span><span class="meal-item-cal">140 kcal</span></div>
+        <div class="meal-item"><span class="meal-item-name">Tam buğday ekmek (1 dilim)</span><span class="meal-item-cal">80 kcal</span></div>
+        <div class="meal-item"><span class="meal-item-name">Beyaz peynir (40g)</span><span class="meal-item-cal">100 kcal</span></div>
+        <div class="meal-item"><span class="meal-item-name">Domates, salatalık</span><span class="meal-item-cal">30 kcal</span></div>
+        <div class="meal-item"><span class="meal-item-name">Çay (sütsüz)</span><span class="meal-item-cal">— kcal</span></div>
+      </div>
+    </div>
+
+    <div class="meal-card">
+      <div class="meal-header">
+        <div class="meal-type-row">
+          <span class="meal-icon">☀️</span>
+          <div>
+            <div class="meal-type">Öğle</div>
+            <div class="meal-time">12:30 – 13:30</div>
+          </div>
+        </div>
+        <div class="meal-kcal">580 kcal</div>
+      </div>
+      <div class="meal-items">
+        <div class="meal-item"><span class="meal-item-name">Izgara tavuk göğsü (150g)</span><span class="meal-item-cal">250 kcal</span></div>
+        <div class="meal-item"><span class="meal-item-name">Bulgur pilavı (1 kase)</span><span class="meal-item-cal">180 kcal</span></div>
+        <div class="meal-item"><span class="meal-item-name">Mevsim salatası (zeytinyağsız)</span><span class="meal-item-cal">60 kcal</span></div>
+        <div class="meal-item"><span class="meal-item-name">Ayran (200ml)</span><span class="meal-item-cal">90 kcal</span></div>
+      </div>
+    </div>
+
+    <div class="meal-card">
+      <div class="meal-header">
+        <div class="meal-type-row">
+          <span class="meal-icon">🌙</span>
+          <div>
+            <div class="meal-type">Akşam</div>
+            <div class="meal-time">19:00 – 20:00</div>
+          </div>
+        </div>
+        <div class="meal-kcal">480 kcal</div>
+      </div>
+      <div class="meal-items">
+        <div class="meal-item"><span class="meal-item-name">Mercimek çorbası (1 kase)</span><span class="meal-item-cal">160 kcal</span></div>
+        <div class="meal-item"><span class="meal-item-name">Izg. somon fileto (130g)</span><span class="meal-item-cal">220 kcal</span></div>
+        <div class="meal-item"><span class="meal-item-name">Buharda brokoli (150g)</span><span class="meal-item-cal">55 kcal</span></div>
+        <div class="meal-item"><span class="meal-item-name">Zeytinyağı (1 tatlı k.)</span><span class="meal-item-cal">45 kcal</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 4 ══════════════════════════════════════ -->
+<div class="screen" id="s4">
+  <div class="sb-notch"></div>
+
+  <div class="statusbar">
+    <span>9:41</span>
+    <div class="icons">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><rect x="0" y="3" width="3" height="9" rx="1" fill="white"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="white"/><rect x="9" y="0" width="3" height="12" rx="1" fill="white"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="white"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="white" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="white"/><path d="M23 4.5v3a1.5 1.5 0 0 0 0-3z" fill="white" opacity=".4"/></svg>
+    </div>
+  </div>
+
+  <div class="s4-header">
+    <div class="s4-av">🥗</div>
+    <div>
+      <div class="s4-name">Diyet Asistanı</div>
+      <div class="s4-status">● Aktif • Plan: Gün 12</div>
+    </div>
+  </div>
+
+  <div class="s4-chat">
+    <div class="chat-user">
+      <div class="chat-av-sm">👤</div>
+      <div class="chat-bubble">Kahvaltıda beyaz peynir yerine omlet yiyebilir miyim?</div>
+    </div>
+
+    <div class="chat-ai">
+      <div class="chat-av-sm">🥗</div>
+      <div class="chat-bubble">
+        Evet, omlet <span class="highlight">mükemmel bir ikame</span>! Hatta protein açısından daha avantajlı.<br/><br/>
+        2 yumurtalı omlet (1 tatlı k. zeytinyağı ile) — diyet planınla tamamen uyumlu.
+        <div class="calorie-compare">
+          <div class="cc-item">
+            <div class="cc-label">Beyaz peynir 40g</div>
+            <div class="cc-val">100 kcal</div>
+          </div>
+          <div class="cc-item better">
+            <div class="cc-label">Omlet (2 yumurta)</div>
+            <div class="cc-val">140 kcal</div>
+          </div>
+        </div>
+        <div class="approval-badge">✓ Günlük kalori hedefin korunuyor</div>
+      </div>
+    </div>
+
+    <div class="chat-user">
+      <div class="chat-av-sm">👤</div>
+      <div class="chat-bubble">Peki akşam somon yerine tavuk yesem olur mu?</div>
+    </div>
+
+    <div class="chat-ai">
+      <div class="chat-av-sm">🥗</div>
+      <div class="chat-bubble">
+        Olur! <span class="highlight">150g ızgara tavuk göğsü</span> ile değiştir — kalori neredeyse aynı, protein oranı da yüksek. Somon'daki omega-3'ü haftada 2 kez balık yiyerek tamamlaman yeterli. 👍
+        <div class="approval-badge">✓ Uygundur</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="s4-input-area">
+    <div class="s4-input">
+      <div class="s4-input-text">Bir şey sor veya fotoğraf ekle…</div>
+      <div class="s4-input-btn">↑</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 5 ══════════════════════════════════════ -->
+<div class="screen" id="s5">
+  <div class="sb-notch"></div>
+
+  <div class="statusbar">
+    <span>9:41</span>
+    <div class="icons">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><rect x="0" y="3" width="3" height="9" rx="1" fill="white"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="white"/><rect x="9" y="0" width="3" height="12" rx="1" fill="white"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="white"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="white" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="white"/><path d="M23 4.5v3a1.5 1.5 0 0 0 0-3z" fill="white" opacity=".4"/></svg>
+    </div>
+  </div>
+
+  <div class="s5-top">
+    <div class="s5-title">İlerleme</div>
+    <div class="s5-sub">3 haftadır devam ediyorsun 🔥</div>
+  </div>
+
+  <div class="progress-hero">
+    <div class="ph-left">
+      <div class="ph-change">−3.2 kg</div>
+      <div class="ph-label">Başlangıçtan bu yana</div>
+      <div class="ph-weeks">3 haftada</div>
+    </div>
+    <div class="ph-right">
+      <div class="ph-goal-label">Hedefe ilerleme</div>
+      <div class="ph-goal-bar"><div class="ph-goal-fill"></div></div>
+      <div class="ph-goal-pct">32%</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Hedef: −10 kg</div>
+    </div>
+  </div>
+
+  <div class="chart-area">
+    <div class="chart-title-row">
+      <div class="chart-label">Kilo Grafiği</div>
+      <div class="chart-range">Son 21 gün</div>
+    </div>
+    <svg class="chart-svg" viewBox="0 0 320 90">
+      <defs>
+        <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#3ecfbe" stop-opacity=".3"/>
+          <stop offset="100%" stop-color="#3ecfbe" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <!-- Grid lines -->
+      <line x1="0" y1="20" x2="320" y2="20" stroke="#ffffff08" stroke-width="1"/>
+      <line x1="0" y1="45" x2="320" y2="45" stroke="#ffffff08" stroke-width="1"/>
+      <line x1="0" y1="70" x2="320" y2="70" stroke="#ffffff08" stroke-width="1"/>
+      <!-- Area -->
+      <path d="M0,15 L40,22 L80,25 L120,35 L160,42 L200,50 L240,58 L280,65 L320,72 L320,90 L0,90 Z" fill="url(#cg)"/>
+      <!-- Line -->
+      <path d="M0,15 L40,22 L80,25 L120,35 L160,42 L200,50 L240,58 L280,65 L320,72" fill="none" stroke="#3ecfbe" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Points -->
+      <circle cx="0" cy="15" r="4" fill="#3ecfbe"/>
+      <circle cx="320" cy="72" r="4" fill="#3ecfbe"/>
+      <!-- Labels -->
+      <text x="4" y="11" fill="#7a8799" font-size="9" font-family="DM Mono, monospace">82.0</text>
+      <text x="298" y="68" fill="#3ecfbe" font-size="9" font-family="DM Mono, monospace">78.8</text>
+    </svg>
+  </div>
+
+  <div class="entries">
+    <div class="entries-title">Son Kayıtlar</div>
+    <div class="entry-row">
+      <div class="entry-left"><div class="entry-dot"></div><div class="entry-date">2 Tem, Çar</div></div>
+      <div class="entry-right"><div class="entry-weight">78.8 kg</div><div class="entry-delta">−0.3</div></div>
+    </div>
+    <div class="entry-row">
+      <div class="entry-left"><div class="entry-dot" style="background:#7a8799"></div><div class="entry-date">1 Tem, Sal</div></div>
+      <div class="entry-right"><div class="entry-weight">79.1 kg</div><div class="entry-delta">−0.4</div></div>
+    </div>
+    <div class="entry-row">
+      <div class="entry-left"><div class="entry-dot" style="background:#7a8799"></div><div class="entry-date">29 Haz, Paz</div></div>
+      <div class="entry-right"><div class="entry-weight">79.5 kg</div><div class="entry-delta">−0.5</div></div>
+    </div>
+    <div class="entry-row">
+      <div class="entry-left"><div class="entry-dot" style="background:#7a8799"></div><div class="entry-date">27 Haz, Cum</div></div>
+      <div class="entry-right"><div class="entry-weight">80.0 kg</div><div class="entry-delta">−0.6</div></div>
+    </div>
+    <div class="entry-row">
+      <div class="entry-left"><div class="entry-dot" style="background:#7a8799"></div><div class="entry-date">24 Haz, Sal</div></div>
+      <div class="entry-right"><div class="entry-weight">80.6 kg</div><div class="entry-delta">−0.7</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ?s=1..5 parametresine göre ekranı göster
+  const params = new URLSearchParams(location.search);
+  const s = params.get('s') || '1';
+  const target = document.getElementById('s' + s);
+  if (target) target.classList.add('active');
+  else document.getElementById('s1').classList.add('active');
+</script>
+</body>
+</html>

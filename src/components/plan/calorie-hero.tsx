@@ -8,8 +8,8 @@ type Props = {
 };
 
 /**
- * "Bugünün özeti" — yarım daire kalori göstergesi (NUTRIFLOW çizgisi).
- * Gösterge, tiklenen (alınan) kalorinin günlük hedefe oranını gösterir.
+ * "Bugünün özeti" — kompakt tek satırlık halka göstergesi. Halka, alınan
+ * kalorinin günlük hedefe oranını gösterir; hedef aşılınca kehribar renge döner.
  */
 export function CalorieHero({
   dailyTarget,
@@ -23,106 +23,105 @@ export function CalorieHero({
   const ratio = target > 0 ? Math.min(consumedToday / target, 1) : 0;
   const pct = Math.round(ratio * 100);
   const left = Math.max(target - consumedToday, 0);
+  const over = target > 0 && consumedToday > target;
 
-  // Yarım daire ark
-  const R = 90;
-  const len = Math.PI * R; // ≈ 282.7
-  const dash = len * ratio;
+  // Halka
+  const R = 30;
+  const C = 2 * Math.PI * R;
+  const dash = C * ratio;
 
   return (
-    // Double-Bezel: dış kabuk + iç çekirdek (eş merkezli yarıçaplar)
-    <section className="reveal rounded-[1.75rem] bg-white/40 p-1.5 shadow-[var(--shadow-float)] ring-1 ring-black/5 dark:bg-white/5 dark:ring-white/10">
-      <div className="glass relative overflow-hidden rounded-[calc(1.75rem-0.375rem)] p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.5)]">
+    <section className="reveal rounded-[1.5rem] bg-white/40 p-1.5 shadow-[var(--shadow-float)] ring-1 ring-black/5 dark:bg-white/5 dark:ring-white/10">
+      <div className="glass relative overflow-hidden rounded-[calc(1.5rem-0.375rem)] px-4 py-3.5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.5)]">
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-20 -right-16 h-52 w-52 rounded-full bg-emerald-200/50 blur-3xl"
+          className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full bg-emerald-200/40 blur-2xl"
         />
 
         <div className="relative flex items-center justify-between">
           <p className="text-[10px] font-semibold tracking-[0.18em] text-gray-500 uppercase dark:text-gray-400">
             {title}
           </p>
-          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
             {goalLossKg ?? "—"} kg · ~{estimatedWeeks ?? "—"} hf
           </span>
         </div>
 
-        {/* Üst stat: Hedef · Harcanan (vurgulu) · Kalan */}
-        <div className="relative mt-4 grid grid-cols-3 items-end gap-2 text-center">
-          <Stat label="Hedef" value={`${target}`} />
-          <div className="rounded-2xl bg-emerald-50 px-2 py-2 dark:bg-emerald-950/40">
-            <p className="text-3xl leading-none font-extrabold text-emerald-600 tabular-nums">
-              {consumedToday}
+        <div className="relative mt-2.5 flex items-center gap-3.5">
+          {/* Halka gösterge */}
+          <div className="relative h-[64px] w-[64px] shrink-0">
+            <svg viewBox="0 0 72 72" className="h-full w-full -rotate-90">
+              <circle
+                cx="36"
+                cy="36"
+                r={R}
+                strokeWidth={7}
+                fill="none"
+                className="stroke-gray-100 dark:stroke-gray-800"
+              />
+              <circle
+                cx="36"
+                cy="36"
+                r={R}
+                strokeWidth={7}
+                fill="none"
+                strokeLinecap="round"
+                stroke={over ? "#f59e0b" : "url(#heroRingGrad)"}
+                strokeDasharray={C}
+                strokeDashoffset={C - dash}
+                className="gauge-arc"
+              />
+              <defs>
+                <linearGradient id="heroRingGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#a3e635" />
+                  <stop offset="100%" stopColor="#6aa621" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-[15px] font-extrabold tabular-nums leading-none">
+                %{pct}
+              </span>
+            </div>
+          </div>
+
+          {/* Alınan kalori — birincil odak */}
+          <div className="min-w-0 flex-1">
+            <p className="flex items-baseline gap-1 leading-none">
+              <span className="text-2xl font-extrabold tabular-nums text-emerald-600">
+                {consumedToday}
+              </span>
+              <span className="text-xs font-semibold text-gray-400">
+                kcal alındı
+              </span>
             </p>
-            <p className="mt-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-              Harcanan
+            <p className="mt-1 text-xs text-gray-500">
+              Planlanan {plannedToday} kcal
             </p>
           </div>
-          <Stat label="Kalan" value={`${left}`} accent />
-        </div>
 
-        {/* Yarım daire gösterge */}
-        <div className="relative mx-auto mt-1 w-full max-w-[280px]">
-          <svg viewBox="0 0 220 124" className="w-full">
-            <defs>
-              <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#a3e635" />
-                <stop offset="100%" stopColor="#6aa621" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M 20 112 A 90 90 0 0 1 200 112"
-              fill="none"
-              strokeWidth={16}
-              strokeLinecap="round"
-              className="stroke-gray-100 dark:stroke-gray-800"
-            />
-            <path
-              className="gauge-arc"
-              d="M 20 112 A 90 90 0 0 1 200 112"
-              fill="none"
-              strokeWidth={16}
-              strokeLinecap="round"
-              stroke="url(#gaugeGrad)"
-              strokeDasharray={len}
-              strokeDashoffset={len - dash}
-            />
-          </svg>
-          <div className="absolute inset-x-0 bottom-1 flex flex-col items-center">
-            <span className="text-3xl font-bold tabular-nums">%{pct}</span>
-            <span className="text-xs text-gray-500">tamamlandı</span>
+          {/* Hedef / Kalan mini istatistikler */}
+          <div className="ml-auto flex shrink-0 gap-3 border-l border-gray-200/70 pl-3 text-right dark:border-gray-700/60">
+            <div>
+              <p className="text-sm font-bold tabular-nums">{target}</p>
+              <p className="text-[10px] text-gray-400">Hedef</p>
+            </div>
+            <div>
+              <p
+                className={
+                  "text-sm font-bold tabular-nums " +
+                  (over ? "text-amber-600" : "text-emerald-600")
+                }
+              >
+                {over ? `+${consumedToday - target}` : left}
+              </p>
+              <p className="text-[10px] text-gray-400">
+                {over ? "Aşım" : "Kalan"}
+              </p>
+            </div>
           </div>
         </div>
-
-        {/* Alt bilgi */}
-        <p className="relative mt-1 text-center text-xs text-gray-500">
-          Planlanan {plannedToday} kcal · günlük hedef {target} kcal
-        </p>
       </div>
     </section>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <div className="flex-1">
-      <p
-        className={
-          accent ? "text-xl font-bold text-emerald-600" : "text-xl font-bold"
-        }
-      >
-        {value}
-        <span className="text-xs font-normal text-gray-400"> kcal</span>
-      </p>
-      <p className="text-xs text-gray-500">{label}</p>
-    </div>
   );
 }

@@ -29,7 +29,6 @@ export function WaterTracker({
 }) {
   const GOAL_ML = goalMl > 0 ? goalMl : 2500; // günlük hedef (kullanıcı ayarı)
   const GLASS_ML = glassMl > 0 ? glassMl : WATER_GLASS_ML; // bardak (ayar)
-  const GLASSES = Math.max(1, Math.round(GOAL_ML / GLASS_ML)); // bardak sayısı
   const [total, setTotal] = useState(initialMl);
   const [reminderOn, setReminderOn] = useState(reminderEnabled);
   const [custom, setCustom] = useState("");
@@ -58,8 +57,6 @@ export function WaterTracker({
   }, []);
 
   const pct = Math.min(100, Math.round((total / GOAL_ML) * 100));
-  const filled = Math.min(GLASSES, Math.floor(total / GLASS_ML)); // dolu bardak sayısı
-  const glassesExact = Math.round((total / GLASS_ML) * 10) / 10;
   const remainingMl = Math.max(0, GOAL_ML - total);
   const remainingGlasses = Math.ceil(remainingMl / GLASS_ML);
   const reached = total >= GOAL_ML;
@@ -76,14 +73,6 @@ export function WaterTracker({
       setTotal(res.total);
       broadcastWater(res.total); // diğer açık su bileşenleriyle senkron
     }
-  }
-
-  // Bir bardağa dokununca o seviyeye ayarla (mutlak → delta).
-  function tapGlass(index: number) {
-    const target = (index + 1) * GLASS_ML;
-    // Zaten o seviyedeyse (son dolu bardağa dokunma) → bir bardak geri al.
-    const next = total === target ? index * GLASS_ML : target;
-    void change(next - total);
   }
 
   async function addCustom() {
@@ -117,13 +106,11 @@ export function WaterTracker({
     <section className="relative overflow-hidden rounded-3xl border border-sky-200/80 bg-gradient-to-br from-sky-50 to-cyan-50/40 p-5 shadow-[var(--shadow-soft)] dark:border-sky-900/50 dark:from-sky-950/30 dark:to-cyan-950/10">
       <style>{`
         @keyframes wt-rise { from { transform: translateY(8px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-        @keyframes wt-pop { 0%{transform:scale(1)} 40%{transform:scale(1.18)} 100%{transform:scale(1)} }
-        @keyframes wt-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-2px)} }
+        @keyframes wt-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
         .wt-glass { animation: wt-rise .45s var(--ease-out) backwards; }
-        .wt-pop { animation: wt-pop .5s var(--ease-out); }
         .wt-bob { animation: wt-bob 2.6s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) {
-          .wt-glass, .wt-pop, .wt-bob { animation: none; }
+          .wt-glass, .wt-bob { animation: none; }
         }
       `}</style>
 
@@ -156,100 +143,120 @@ export function WaterTracker({
         </button>
       </div>
 
-      {/* Büyük sayı + ilerleme çubuğu */}
-      <div className="mt-4 flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <p className="flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold tabular-nums tracking-tight text-sky-900 dark:text-sky-50">
-              {liters}
-              <span className="ml-0.5 text-lg font-semibold text-sky-500">L</span>
-            </span>
-            <span className="text-sm text-gray-400">
-              / {(GOAL_ML / 1000).toFixed(1).replace(".", ",")} L
-            </span>
-          </p>
-          <p className="mt-0.5 text-sm font-medium text-sky-700/90 dark:text-sky-300/90">
-            {reached ? (
-              <>Hedefe ulaştın 🎉</>
-            ) : (
-              <>
-                <span className="tabular-nums">{remainingGlasses}</span> bardak (
-                {(remainingMl / 1000).toFixed(1)} L) kaldı
-              </>
-            )}
-          </p>
-        </div>
-        <span
-          className={
-            "shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums " +
-            (reached
-              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-              : "bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300")
-          }
+      {/* Tek büyük bardak — su ekledikçe dolar */}
+      <div className="mt-4 flex flex-col items-center">
+        <button
+          type="button"
+          onClick={() => change(GLASS_ML)}
+          disabled={busy || reached}
+          aria-label="Bardağa dokun, bir bardak su ekle"
+          className="wt-glass group relative h-44 w-32 shrink-0 disabled:cursor-not-allowed"
         >
-          %{pct}
-        </span>
-      </div>
-
-      <div className="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-sky-100 dark:bg-sky-950/60">
-        <div
-          className={
-            "h-full rounded-full transition-[width] duration-700 ease-[var(--ease-out)] " +
-            (reached
-              ? "bg-gradient-to-r from-emerald-400 to-sky-400"
-              : "bg-gradient-to-r from-sky-400 to-cyan-400")
-          }
-          style={{ width: `${Math.max(pct, total > 0 ? 5 : 0)}%` }}
-        />
-      </div>
-
-      {/* Dokunsal bardak dizisi */}
-      <div className="mt-4">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-sky-800/80 dark:text-sky-200/70">
-            <span className="tabular-nums font-semibold text-sky-700 dark:text-sky-300">
-              {glassesExact}
-            </span>{" "}
-            / {GLASSES} bardak
-          </p>
-          <p className="text-[11px] text-gray-400">Bardağa dokunup işaretle</p>
-        </div>
-        <div
-          className="mt-2 grid gap-1.5"
-          style={{
-            gridTemplateColumns: `repeat(${Math.min(GLASSES, 10)}, minmax(0, 1fr))`,
-          }}
-        >
-          {Array.from({ length: GLASSES }).map((_, i) => {
-            const isFull = i < filled;
-            return (
-              <button
-                key={i}
-                type="button"
-                disabled={busy}
-                onClick={() => tapGlass(i)}
-                aria-label={`${i + 1}. bardak${isFull ? " (dolu)" : ""}`}
-                className={
-                  "wt-glass group grid aspect-[3/4] place-items-center rounded-lg ring-1 transition-[transform,background-color,box-shadow] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 active:scale-90 disabled:opacity-60 " +
-                  (isFull
-                    ? reached
-                      ? "bg-gradient-to-b from-emerald-400 to-emerald-500 text-white ring-emerald-300 shadow-[0_4px_10px_-3px_rgba(16,185,129,0.55)] dark:ring-emerald-700"
-                      : "bg-gradient-to-b from-sky-400 to-cyan-500 text-white ring-sky-300 shadow-[0_4px_10px_-3px_rgba(14,165,233,0.55)] dark:ring-sky-700"
-                    : "bg-white/70 text-sky-300 ring-sky-200/80 hover:bg-sky-50 dark:bg-white/5 dark:text-sky-700 dark:ring-sky-900")
-                }
-                style={{ animationDelay: `${i * 35}ms` }}
-              >
-                <GlassWater
-                  className={
-                    "h-4 w-4 " +
-                    (isFull && i === filled - 1 ? "wt-pop" : "")
-                  }
-                  strokeWidth={2}
+          {/* Bardak silueti tanımı — geniş ağız, dar taban, yuvarlatılmış köşeler */}
+          <svg width="0" height="0" aria-hidden className="absolute">
+            <defs>
+              <clipPath id="wt-glass-clip" clipPathUnits="objectBoundingBox">
+                <path
+                  d="M0.14,0
+                     L0.86,0
+                     Q0.94,0 0.92,0.057
+                     L0.80,0.943
+                     Q0.79,1 0.72,1
+                     L0.28,1
+                     Q0.21,1 0.20,0.943
+                     L0.08,0.057
+                     Q0.06,0 0.14,0
+                     Z"
                 />
-              </button>
-            );
-          })}
-        </div>
+              </clipPath>
+            </defs>
+          </svg>
+
+          {/* Bardak silueti */}
+          <div
+            className="absolute inset-0 overflow-hidden bg-white/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6)] ring-2 ring-inset ring-sky-200/80 transition-transform duration-200 ease-[var(--ease-out)] group-active:scale-[0.97] dark:bg-white/5 dark:ring-sky-900/60"
+            style={{ clipPath: "url(#wt-glass-clip)" }}
+          >
+            {/* Sıvı dolumu */}
+            <div
+              className={
+                "absolute inset-x-0 bottom-0 transition-[height] duration-700 ease-[var(--ease-out)] " +
+                (reached
+                  ? "bg-gradient-to-b from-emerald-300 to-emerald-500"
+                  : "bg-gradient-to-b from-sky-300 to-sky-500")
+              }
+              style={{ height: `${Math.max(pct, total > 0 ? 4 : 0)}%` }}
+            >
+              <div className="absolute inset-x-0 top-0 h-2 bg-white/40" />
+              <span
+                className="wt-bob absolute bottom-3 left-[30%] h-1.5 w-1.5 rounded-full bg-white/50"
+                style={{ animationDelay: "0.2s" }}
+              />
+              <span
+                className="wt-bob absolute bottom-7 left-[55%] h-1 w-1 rounded-full bg-white/40"
+                style={{ animationDelay: "0.9s" }}
+              />
+              <span
+                className="wt-bob absolute bottom-2 left-[70%] h-1.5 w-1.5 rounded-full bg-white/40"
+                style={{ animationDelay: "1.5s" }}
+              />
+            </div>
+            {/* Cam parlaklığı — sol kenarda ince ışık vurgusu */}
+            <div className="absolute inset-y-0 left-[16%] w-[8%] bg-white/35" />
+          </div>
+
+          {/* Ağız (rim) çizgisi — bardağın üstten görünüşünü ima eder */}
+          <svg
+            viewBox="0 0 100 20"
+            preserveAspectRatio="none"
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-5 w-full overflow-visible"
+          >
+            <ellipse
+              cx="50"
+              cy="6"
+              rx="36"
+              ry="3.2"
+              className="fill-none stroke-sky-300/70 dark:stroke-sky-700/70"
+              strokeWidth="1.4"
+            />
+          </svg>
+
+          {/* Yüzde rozeti */}
+          <span
+            className={
+              "absolute -top-2 left-1/2 -translate-x-1/2 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums shadow-sm " +
+              (reached
+                ? "bg-emerald-500 text-white"
+                : "bg-white text-sky-700 ring-1 ring-sky-200 dark:bg-gray-900 dark:text-sky-300 dark:ring-sky-900")
+            }
+          >
+            %{pct}
+          </span>
+        </button>
+
+        <p className="mt-3 flex items-baseline gap-1.5">
+          <span className="text-3xl font-bold tabular-nums tracking-tight text-sky-900 dark:text-sky-50">
+            {liters}
+            <span className="ml-0.5 text-lg font-semibold text-sky-500">L</span>
+          </span>
+          <span className="text-sm text-gray-400">
+            / {(GOAL_ML / 1000).toFixed(1).replace(".", ",")} L
+          </span>
+        </p>
+        <p className="text-sm font-medium text-sky-700/90 dark:text-sky-300/90">
+          {reached ? (
+            <>Hedefe ulaştın 🎉</>
+          ) : (
+            <>
+              <span className="tabular-nums">{remainingGlasses}</span> bardak (
+              {(remainingMl / 1000).toFixed(1)} L) kaldı
+            </>
+          )}
+        </p>
+        <p className="mt-0.5 text-[11px] text-gray-400">
+          Bardağa dokun, bir bardak eklensin
+        </p>
       </div>
 
       {/* Birincil aksiyon + yardımcılar */}

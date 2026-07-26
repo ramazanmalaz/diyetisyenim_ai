@@ -135,6 +135,7 @@ export function IntakeWizard() {
   // Yükleme slideları — 4sn'de bir otomatik ilerle
   useEffect(() => {
     if (!submitting) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSlideIdx(0);
       return;
     }

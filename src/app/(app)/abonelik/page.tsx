@@ -127,17 +127,6 @@ export default async function AbonelikPage({
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
-      {odeme === "basarili" && (
-        <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-          Ödemen başarıyla alındı. Premium aktif, teşekkürler! 🎉
-        </p>
-      )}
-      {odeme === "hata" && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">
-          Ödeme tamamlanamadı. Lütfen tekrar dene.
-        </p>
-      )}
-
       {ent.isPremium && ent.premiumUntil ? (
         /* --- Premium aktif --- */
         <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/50 p-6 text-center shadow-[var(--shadow-soft)] dark:border-amber-900/50 dark:from-amber-950/20 dark:to-orange-950/10">
@@ -301,6 +290,17 @@ export default async function AbonelikPage({
           className="hidden h-7 w-auto dark:block"
         />
       </div>
+
+      {odeme === "basarili" && (
+        <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+          Ödemen başarıyla alındı. Premium aktif, teşekkürler! 🎉
+        </p>
+      )}
+      {odeme === "hata" && (
+        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">
+          Ödeme tamamlanamadı. Lütfen tekrar dene.
+        </p>
+      )}
 
       <nav className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-gray-100 pt-4 text-xs text-gray-400 dark:border-gray-800">
         {LEGAL_LINKS.map((l) => (
