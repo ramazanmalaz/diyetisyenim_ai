@@ -52,6 +52,20 @@ export async function requireStaff(): Promise<Profile> {
   return profile;
 }
 
+/**
+ * Yalnızca admin. Diyetisyen buraya giremez — sistem geneli sayfalar
+ * (kullanıcılar, ödemeler, tarifeler, AI kuralları) için.
+ */
+export async function requireAdmin(): Promise<Profile> {
+  const profile = await requireStaff();
+  if (profile.role !== "admin") redirect("/yonetim");
+  return profile;
+}
+
 export function isStaff(role: UserRole): boolean {
   return role === "dietitian" || role === "admin";
+}
+
+export function isAdmin(role: UserRole): boolean {
+  return role === "admin";
 }

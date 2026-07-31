@@ -2,44 +2,6 @@ import type { createAdminClient } from "@/lib/supabase/admin";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-/** Diyetisyenin grup konuşmasını bulur; yoksa oluşturur. */
-export async function resolveGroupConvId(
-  admin: AdminClient,
-  dietitianId: string,
-  dietitianName: string | null,
-): Promise<string | null> {
-  const { data: existing } = await admin
-    .from("conversations")
-    .select("id")
-    .eq("created_by", dietitianId)
-    .eq("type", "group")
-    .eq("ai_enabled", false)
-    .limit(1)
-    .maybeSingle();
-
-  if (existing) return existing.id;
-
-  const { data: conv } = await admin
-    .from("conversations")
-    .insert({
-      type: "group",
-      title: `${dietitianName ?? "Diyetisyen"} Grubu`,
-      ai_enabled: false,
-      created_by: dietitianId,
-    })
-    .select("id")
-    .single();
-
-  if (!conv) return null;
-
-  await admin.from("conversation_members").insert({
-    conversation_id: conv.id,
-    user_id: dietitianId,
-  });
-
-  return conv.id;
-}
-
 /** Diyetisyen-danışan birebir konuşmasını bulur; yoksa oluşturur. */
 export async function resolveDirectConvId(
   admin: AdminClient,

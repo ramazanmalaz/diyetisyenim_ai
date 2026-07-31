@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireStaff } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -20,7 +20,7 @@ export async function createDietitianAccount(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireStaff();
+  await requireAdmin();
   const parsed = createDietitianSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success)
     return { error: parsed.error.issues[0]?.message ?? "Geçersiz giriş" };
@@ -52,7 +52,7 @@ export async function createDietitianAccount(
  * personelin OTURUMLU (server) istemcisi kullanılır. Kendi rolünü değiştirmek engellenir.
  */
 export async function changeRole(values: unknown): Promise<ActionResult> {
-  const me = await requireStaff();
+  const me = await requireAdmin();
   const parsed = z
     .object({
       userId: z.string().uuid(),
@@ -87,7 +87,7 @@ const grantSchema = z
 
 /** Kullanıcıya premium tanımlar: gün ekler (mevcut süreye) veya kesin tarihe ayarlar. */
 export async function grantPremium(values: unknown): Promise<ActionResult> {
-  await requireStaff();
+  await requireAdmin();
   const parsed = grantSchema.safeParse(values);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Geçersiz veri." };
@@ -127,7 +127,7 @@ export async function grantPremium(values: unknown): Promise<ActionResult> {
 
 /** Kullanıcının premium erişimini kaldırır (ücretsiz plana döndürür). */
 export async function revokePremium(values: unknown): Promise<ActionResult> {
-  await requireStaff();
+  await requireAdmin();
   const parsed = z
     .object({ userId: z.string().uuid() })
     .safeParse(values);

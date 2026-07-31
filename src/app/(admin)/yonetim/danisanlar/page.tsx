@@ -15,11 +15,15 @@ export default async function DanisanlarPage() {
   const dietitian = await requireStaff();
   const admin = createAdminClient();
 
-  const { data: clients } = await admin
+  // Diyetisyen yalnızca kendi danışanlarını, admin tüm danışanları görür.
+  const clientsQuery = admin
     .from("profiles")
     .select("id, full_name, premium_until, created_at")
-    .eq("dietitian_id", dietitian.id)
     .order("full_name");
+  if (dietitian.role === "admin") clientsQuery.eq("role", "client");
+  else clientsQuery.eq("dietitian_id", dietitian.id);
+
+  const { data: clients } = await clientsQuery;
 
   const clientIds = (clients ?? []).map((c) => c.id);
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { requireStaff } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { PaymentStatus } from "@/types/database";
 
@@ -12,7 +12,7 @@ const STATUS_LABEL: Record<PaymentStatus, string> = {
 };
 
 export default async function OdemelerPage() {
-  await requireStaff();
+  await requireAdmin();
   const supabase = await createClient();
 
   const { data: payments } = await supabase

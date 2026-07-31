@@ -1,11 +1,11 @@
 import { PricingEditor } from "@/components/admin/pricing-editor";
-import { requireStaff } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { getPricing } from "@/lib/settings";
 
 export const metadata = { title: "Tarife & Fiyatlandırma — Yönetim" };
 
 export default async function AyarlarPage() {
-  await requireStaff();
+  await requireAdmin();
   const pricing = await getPricing();
 
   return (

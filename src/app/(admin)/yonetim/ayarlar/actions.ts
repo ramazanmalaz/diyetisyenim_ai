@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireStaff } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ActionResult = { error: string } | { success: true };
@@ -21,7 +21,7 @@ const schema = z.object({
 
 /** Aylık + yıllık tarife ayarlarını app_settings'e yazar. */
 export async function savePricing(values: unknown): Promise<ActionResult> {
-  await requireStaff();
+  await requireAdmin();
   const parsed = schema.safeParse(values);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Geçersiz veri." };

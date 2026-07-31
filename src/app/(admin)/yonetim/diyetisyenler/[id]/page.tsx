@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AvailabilityCalendar } from "@/components/admin/availability-calendar";
 import { DietitianForm } from "@/components/admin/dietitian-form";
-import { requireStaff } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -16,7 +16,7 @@ export default async function AdminDietitianEditPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireStaff();
+  await requireAdmin();
   const supabase = await createClient();
 
   const { data } = await supabase

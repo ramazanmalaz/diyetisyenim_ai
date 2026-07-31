@@ -1,12 +1,12 @@
 import { CreateDietitianForm } from "@/components/admin/create-dietitian-form";
 import { PremiumUserList } from "@/components/admin/premium-user-list";
-import { requireStaff } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = { title: "Kullanıcılar & Premium — Yönetim" };
 
 export default async function KullanicilarPage() {
-  const me = await requireStaff();
+  const me = await requireAdmin();
   const admin = createAdminClient();
 
   const { data: profiles } = await admin

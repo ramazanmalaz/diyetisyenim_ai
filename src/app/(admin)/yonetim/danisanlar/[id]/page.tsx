@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 
 import {
   openClientChat,
-  openGroupChat,
   unlinkClient,
 } from "@/app/(admin)/yonetim/danisanlar/actions";
 import { ClientAssignPlan } from "@/components/admin/client-assign-plan";
@@ -89,7 +88,19 @@ export default async function DanisanDetailPage({
     });
   }
 
-  if (!profile || profile.dietitian_id !== dietitian.id) notFound();
+  if (!profile) notFound();
+  if (dietitian.role !== "admin" && profile.dietitian_id !== dietitian.id)
+    notFound();
+
+  // Danışanın üyesi olduğu gruplar
+  const { data: groupRows } = await admin
+    .from("client_group_members")
+    .select("client_groups (id, name)")
+    .eq("client_id", id);
+
+  const memberGroups = (groupRows ?? [])
+    .map((r) => r.client_groups as unknown as { id: string; name: string } | null)
+    .filter((g): g is { id: string; name: string } => g != null);
 
   const premium = isPremiumActive(profile.premium_until);
 
@@ -151,15 +162,28 @@ export default async function DanisanDetailPage({
             <MessageCircle className="h-4 w-4 text-emerald-600" /> Mesaj gönder
           </button>
         </form>
-        <form action={openGroupChat}>
-          <button
-            type="submit"
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium shadow-[var(--shadow-soft)] transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
-          >
-            <Users className="h-4 w-4 text-emerald-600" /> Gruba yaz
-          </button>
-        </form>
+        <Link
+          href="/yonetim/gruplar"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium shadow-[var(--shadow-soft)] transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
+        >
+          <Users className="h-4 w-4 text-emerald-600" /> Gruplar
+        </Link>
       </div>
+
+      {/* Üye olduğu gruplar */}
+      {memberGroups.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {memberGroups.map((g) => (
+            <Link
+              key={g.id}
+              href={`/yonetim/gruplar/${g.id}`}
+              className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300"
+            >
+              {g.name}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* İstatistikler */}
       <div className="grid grid-cols-2 gap-3">

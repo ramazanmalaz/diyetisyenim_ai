@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireStaff } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionResult = { error: string } | { success: true; id?: string };
@@ -44,7 +44,7 @@ function parseForm(formData: FormData) {
 }
 
 export async function createDietitian(formData: FormData): Promise<ActionResult> {
-  await requireStaff();
+  await requireAdmin();
   const parsed = parseForm(formData);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Geçersiz veri." };
@@ -74,7 +74,7 @@ export async function createDietitian(formData: FormData): Promise<ActionResult>
 }
 
 export async function updateDietitian(formData: FormData): Promise<ActionResult> {
-  await requireStaff();
+  await requireAdmin();
   const id = z.string().uuid().safeParse(formData.get("id"));
   if (!id.success) return { error: "Geçersiz kayıt." };
   const parsed = parseForm(formData);
@@ -106,7 +106,7 @@ export async function updateDietitian(formData: FormData): Promise<ActionResult>
 }
 
 export async function deleteDietitian(formData: FormData): Promise<void> {
-  await requireStaff();
+  await requireAdmin();
   const id = z.string().uuid().safeParse(formData.get("id"));
   if (!id.success) return;
   const supabase = await createClient();
@@ -119,7 +119,7 @@ const SLOT_HOURS = z
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/, "Geçersiz tarih/saat.");
 
 export async function addSlot(formData: FormData): Promise<void> {
-  await requireStaff();
+  await requireAdmin();
   const dietitianId = z.string().uuid().safeParse(formData.get("dietitianId"));
   const startAt = SLOT_HOURS.safeParse(formData.get("startAt"));
   if (!dietitianId.success || !startAt.success) return;
@@ -135,7 +135,7 @@ export async function addSlot(formData: FormData): Promise<void> {
 }
 
 export async function deleteSlot(formData: FormData): Promise<void> {
-  await requireStaff();
+  await requireAdmin();
   const id = z.string().uuid().safeParse(formData.get("id"));
   const dietitianId = z.string().uuid().safeParse(formData.get("dietitianId"));
   if (!id.success) return;

@@ -2,17 +2,21 @@ import Link from "next/link";
 
 import { CreatePlanForm } from "@/components/admin/create-plan-form";
 import { requireStaff } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function YeniPlanPage() {
-  await requireStaff();
+  const staff = await requireStaff();
 
-  const supabase = await createClient();
-  const { data: clients } = await supabase
+  const admin = createAdminClient();
+  // Diyetisyen yalnızca kendi danışanlarına plan açabilir.
+  const clientsQuery = admin
     .from("profiles")
     .select("id, full_name")
     .eq("role", "client")
     .order("full_name");
+  if (staff.role !== "admin") clientsQuery.eq("dietitian_id", staff.id);
+
+  const { data: clients } = await clientsQuery;
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-6 px-4 py-8">

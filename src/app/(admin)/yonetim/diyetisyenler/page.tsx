@@ -3,14 +3,14 @@ import Link from "next/link";
 import { deleteDietitian } from "@/app/(admin)/yonetim/diyetisyenler/actions";
 import { DietitianForm } from "@/components/admin/dietitian-form";
 import { DietitianAvatar } from "@/components/dietitians/dietitian-avatar";
-import { requireStaff } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
 type DietitianRow = Database["public"]["Tables"]["dietitians"]["Row"];
 
 export default async function AdminDietitiansPage() {
-  await requireStaff();
+  await requireAdmin();
   const supabase = await createClient();
 
   const { data } = await supabase

@@ -6,24 +6,25 @@ import {
   formatDateTime,
 } from "@/lib/appointments";
 import { requireStaff } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function RandevularPage() {
-  await requireStaff();
-  const supabase = await createClient();
+  const staff = await requireStaff();
+  const admin = createAdminClient();
 
-  const { data: appointments } = await supabase
+  // Diyetisyen yalnızca kendisine gelen randevuları görür.
+  const apptQuery = admin
     .from("appointments")
     .select("id, client_id, scheduled_at, status, notes")
     .order("scheduled_at", { ascending: false });
+  if (staff.role !== "admin") apptQuery.eq("dietitian_id", staff.id);
+
+  const { data: appointments } = await apptQuery;
 
   const rows = appointments ?? [];
   const clientIds = [...new Set(rows.map((a) => a.client_id))];
   const { data: clients } = clientIds.length
-    ? await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", clientIds)
+    ? await admin.from("profiles").select("id, full_name").in("id", clientIds)
     : { data: [] };
   const nameById = new Map((clients ?? []).map((c) => [c.id, c.full_name]));
 

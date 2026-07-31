@@ -1,9 +1,9 @@
 import { AiRulesEditor } from "@/components/admin/ai-rules-editor";
-import { requireStaff } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AiKurallariPage() {
-  await requireStaff();
+  await requireAdmin();
 
   const supabase = await createClient();
   const { data } = await supabase

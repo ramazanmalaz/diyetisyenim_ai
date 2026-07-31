@@ -439,6 +439,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      client_groups: {
+        Row: {
+          id: string;
+          dietitian_id: string;
+          name: string;
+          note: string | null;
+          conversation_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          dietitian_id: string;
+          name: string;
+          note?: string | null;
+          conversation_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          dietitian_id?: string;
+          name?: string;
+          note?: string | null;
+          conversation_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      client_group_members: {
+        Row: {
+          group_id: string;
+          client_id: string;
+          added_at: string;
+        };
+        Insert: {
+          group_id: string;
+          client_id: string;
+          added_at?: string;
+        };
+        Update: {
+          group_id?: string;
+          client_id?: string;
+          added_at?: string;
+        };
+        Relationships: [];
+      };
       conversation_members: {
         Row: {
           conversation_id: string;

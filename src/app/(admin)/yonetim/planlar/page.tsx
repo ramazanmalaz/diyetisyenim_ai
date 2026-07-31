@@ -3,21 +3,43 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { requireStaff } from "@/lib/auth";
 import { PLAN_STATUS_LABEL } from "@/lib/diet";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function PlanlarPage() {
-  await requireStaff();
-  const supabase = await createClient();
+  const staff = await requireStaff();
+  const admin = createAdminClient();
 
-  const { data: plans } = await supabase
+  // Diyetisyen yalnızca kendi danışanlarının + kendi oluşturduğu planları görür.
+  let clientIdFilter: string[] | null = null;
+  if (staff.role !== "admin") {
+    const { data: myClients } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("dietitian_id", staff.id);
+    clientIdFilter = (myClients ?? []).map((c) => c.id);
+  }
+
+  const plansQuery = admin
     .from("diet_plans")
     .select("id, title, status, client_id, created_at")
     .order("created_at", { ascending: false });
 
+  if (clientIdFilter) {
+    // Kendi danışanına ait VEYA kendi oluşturduğu (henüz atanmamış) planlar.
+    const ids = clientIdFilter.length > 0 ? clientIdFilter.join(",") : null;
+    plansQuery.or(
+      ids
+        ? `client_id.in.(${ids}),created_by.eq.${staff.id}`
+        : `created_by.eq.${staff.id}`,
+    );
+  }
+
+  const { data: plans } = await plansQuery;
+
   // Danışan adlarını ayrı sorguyla çöz (FK embedding'e gerek yok).
   const clientIds = [...new Set((plans ?? []).map((p) => p.client_id))];
   const { data: clientRows } = clientIds.length
-    ? await supabase.from("profiles").select("id, full_name").in("id", clientIds)
+    ? await admin.from("profiles").select("id, full_name").in("id", clientIds)
     : { data: [] };
   const nameById = new Map(
     (clientRows ?? []).map((c) => [c.id, c.full_name]),

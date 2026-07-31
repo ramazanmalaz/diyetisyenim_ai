@@ -5,10 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
-import {
-  resolveDirectConvId,
-  resolveGroupConvId,
-} from "@/lib/chat/conversations";
+import { resolveDirectConvId } from "@/lib/chat/conversations";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ActionResult = { error: string } | { ok: true };
@@ -45,18 +42,7 @@ export async function createClientAccount(
     .update({ dietitian_id: dietitian.id, full_name: parsed.data.full_name })
     .eq("id", data.user.id);
 
-  // Grup sohbetine ekle
-  const groupId = await resolveGroupConvId(
-    admin,
-    dietitian.id,
-    dietitian.full_name,
-  );
-  if (groupId) {
-    await admin
-      .from("conversation_members")
-      .upsert({ conversation_id: groupId, user_id: data.user.id });
-  }
-
+  // Gruplara ekleme artık açık bir adım (/yonetim/gruplar) — otomatik değil.
   revalidatePath("/yonetim/danisanlar");
   return { ok: true };
 }
@@ -171,22 +157,20 @@ export async function openClientChat(formData: FormData): Promise<void> {
     .parse(formData.get("client_id") as string);
 
   const admin = createAdminClient();
+
+  // Sahiplik: yalnızca kendi danışanıyla birebir sohbet açılabilir.
+  const { data: target } = await admin
+    .from("profiles")
+    .select("dietitian_id")
+    .eq("id", clientId)
+    .single();
+  if (dietitian.role !== "admin" && target?.dietitian_id !== dietitian.id)
+    throw new Error("Yetkisiz işlem");
+
   const id = await resolveDirectConvId(
     admin,
     dietitian.id,
     clientId,
-    dietitian.full_name,
-  );
-  redirect(id ? `/sohbet/${id}` : "/sohbet");
-}
-
-// ─── Grup sohbetini aç ───────────────────────────────────────────────────────
-export async function openGroupChat(): Promise<void> {
-  const dietitian = await requireStaff();
-  const admin = createAdminClient();
-  const id = await resolveGroupConvId(
-    admin,
-    dietitian.id,
     dietitian.full_name,
   );
   redirect(id ? `/sohbet/${id}` : "/sohbet");

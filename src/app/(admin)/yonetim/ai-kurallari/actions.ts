@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireStaff } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 const ruleSchema = z.object({
@@ -14,7 +14,7 @@ const ruleSchema = z.object({
 export type SaveResult = { error: string } | { success: true };
 
 export async function saveAiRule(values: unknown): Promise<SaveResult> {
-  const profile = await requireStaff();
+  const profile = await requireAdmin();
 
   const parsed = ruleSchema.safeParse(values);
   if (!parsed.success) {
