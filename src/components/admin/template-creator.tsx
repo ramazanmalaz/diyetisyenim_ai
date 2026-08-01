@@ -1,19 +1,21 @@
 "use client";
 
-import { PlusCircle, Sparkles, X } from "lucide-react";
-import { useActionState, useState } from "react";
+import { Camera, PlusCircle, Sparkles, X } from "lucide-react";
+import { useActionState, useRef, useState } from "react";
 
 import {
   createTemplate,
+  createTemplateFromPhoto,
   createTemplateWithAi,
   type TemplateResult,
 } from "@/app/(admin)/yonetim/planlar/template-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { downscaleImage } from "@/lib/image-downscale";
 import { cn } from "@/lib/utils";
 
-type Mode = "ai" | "manual";
+type Mode = "ai" | "photo" | "manual";
 
 export function TemplateCreator() {
   const [open, setOpen] = useState(false);
@@ -23,12 +25,17 @@ export function TemplateCreator() {
     TemplateResult | null,
     FormData
   >(createTemplateWithAi, null);
+  const [photoState, photoAction, photoPending] = useActionState<
+    TemplateResult | null,
+    FormData
+  >(createTemplateFromPhoto, null);
   const [manualState, manualAction, manualPending] = useActionState<
     TemplateResult | null,
     FormData
   >(createTemplate, null);
 
-  const state = mode === "ai" ? aiState : manualState;
+  const state =
+    mode === "ai" ? aiState : mode === "photo" ? photoState : manualState;
 
   if (!open) {
     return (
@@ -62,7 +69,8 @@ export function TemplateCreator() {
         {(
           [
             { id: "ai" as const, label: "AI ile üret", icon: Sparkles },
-            { id: "manual" as const, label: "Elle oluştur", icon: PlusCircle },
+            { id: "photo" as const, label: "Fotoğraftan oku", icon: Camera },
+            { id: "manual" as const, label: "Elle", icon: PlusCircle },
           ]
         ).map(({ id, label, icon: Icon }) => (
           <button
@@ -88,7 +96,9 @@ export function TemplateCreator() {
         </p>
       )}
 
-      {mode === "ai" ? (
+      {mode === "photo" ? (
+        <PhotoTemplateForm action={photoAction} pending={photoPending} />
+      ) : mode === "ai" ? (
         <form action={aiAction} className="space-y-3">
           <div className="space-y-1">
             <Label htmlFor="tpl_ai_title">Şablon adı</Label>
@@ -164,5 +174,118 @@ export function TemplateCreator() {
         </form>
       )}
     </div>
+  );
+}
+
+/**
+ * Fotoğraf/PDF'ten şablon okuma formu.
+ *
+ * Görseller GÖNDERMEDEN ÖNCE tarayıcıda küçültülür: mobil fotoğrafları 3-8 MB
+ * olabiliyor (5 MB sınırını aşar, iOS'ta HEIC gelir). Küçültülmüş dosyalar
+ * DataTransfer ile input'a geri yazılır ki form action'a onlar gitsin.
+ */
+function PhotoTemplateForm({
+  action,
+  pending,
+}: {
+  action: (formData: FormData) => void;
+  pending: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [names, setNames] = useState<string[]>([]);
+  const [preparing, setPreparing] = useState(false);
+
+  async function onFilesChange() {
+    const input = inputRef.current;
+    if (!input?.files || input.files.length === 0) {
+      setNames([]);
+      return;
+    }
+    setPreparing(true);
+    const originals = Array.from(input.files);
+    const prepared: File[] = [];
+
+    for (const f of originals) {
+      if (f.type === "application/pdf") {
+        prepared.push(f);
+        continue;
+      }
+      try {
+        const blob = await downscaleImage(f);
+        prepared.push(
+          new File([blob], f.name.replace(/\.[^.]+$/, "") + ".jpg", {
+            type: "image/jpeg",
+          }),
+        );
+      } catch {
+        // Küçültme başarısızsa orijinali gönder — sunucu limitleri yine korur.
+        prepared.push(f);
+      }
+    }
+
+    const dt = new DataTransfer();
+    for (const f of prepared) dt.items.add(f);
+    input.files = dt.files;
+
+    setNames(prepared.map((f) => f.name));
+    setPreparing(false);
+  }
+
+  return (
+    <form action={action} className="space-y-3">
+      <div className="space-y-1">
+        <Label htmlFor="tpl_ph_title">Şablon adı</Label>
+        <Input
+          id="tpl_ph_title"
+          name="title"
+          placeholder="Diyetisyen Programı — Ocak"
+          required
+          autoComplete="off"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="tpl_ph_files">Program görseli ya da PDF</Label>
+        <input
+          id="tpl_ph_files"
+          ref={inputRef}
+          name="files"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          multiple
+          required
+          onChange={onFilesChange}
+          className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-emerald-700 dark:border-gray-700 dark:bg-gray-950"
+        />
+        <p className="text-xs text-gray-400">
+          En fazla 4 dosya · görsel 5 MB, PDF 10 MB. Haftanın günleri ayrı ayrı
+          yazıyorsa günlere göre okunur; tek günlük şablonsa 7 güne uygulanır.
+        </p>
+      </div>
+
+      {names.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5">
+          {names.map((n) => (
+            <li
+              key={n}
+              className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+            >
+              {n}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Button
+        type="submit"
+        disabled={pending || preparing || names.length === 0}
+        className="w-full"
+      >
+        {preparing
+          ? "Dosyalar hazırlanıyor…"
+          : pending
+            ? "Okunuyor… (~20-40 sn)"
+            : "Görselden programı oku"}
+      </Button>
+    </form>
   );
 }

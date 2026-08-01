@@ -18,17 +18,16 @@ import { createClient } from "@/lib/supabase/server";
 import { DIET_TYPE_LABEL, intakeSchema } from "@/lib/validations/intake";
 import { manualPlanSchema } from "@/lib/validations/manual-plan";
 import {
-  ALLOWED_PHOTO_TYPES,
+  ALLOWED_PLAN_FILE_TYPES,
   MAX_PHOTO_BYTES,
-} from "@/lib/validations/progress";
+  MAX_PLAN_PDF_BYTES,
+  MAX_PLAN_PHOTOS,
+  MAX_PLAN_TOTAL_BYTES,
+} from "@/lib/validations/plan-upload";
 
 export type GenerateResult = { error: string };
 
 const PLAN_BUCKET = "progress-photos";
-const MAX_PLAN_PHOTOS = 4;
-const MAX_PLAN_PDF_BYTES = 10 * 1024 * 1024; // 10 MB tekil dosya
-const MAX_PLAN_TOTAL_BYTES = 20 * 1024 * 1024; // Base64'e çevrilince ~27 MB — Claude'un 32 MB istek sınırının altında
-const ALLOWED_PLAN_FILE_TYPES = [...ALLOWED_PHOTO_TYPES, "application/pdf"];
 
 const SEX_LABEL = { female: "Kadın", male: "Erkek" } as const;
 

@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { analyzeGym, generateWorkout } from "@/app/(app)/spor/actions";
+import { downscaleImage } from "@/lib/image-downscale";
 import { triggerPremiumWall } from "@/lib/premium-wall";
 import { cn } from "@/lib/utils";
 import {
@@ -617,45 +618,4 @@ function Chip({
       {children}
     </button>
   );
-}
-
-/**
- * Fotoğrafı tarayıcıda küçültüp JPEG blob'una çevirir (en uzun kenar ~1280px).
- * Mobil büyük fotoğrafları hızlandırır, 5 MB sınırını aşmaz; iOS HEIC'i Safari
- * <img> ile çözdüğü için JPEG'e dönüşür (sunucuya geçerli image/jpeg gider).
- */
-function downscaleImage(file: File): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const MAX = 1280;
-      let { width, height } = img;
-      if (width > MAX || height > MAX) {
-        const r = Math.min(MAX / width, MAX / height);
-        width = Math.round(width * r);
-        height = Math.round(height * r);
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      URL.revokeObjectURL(url);
-      if (!ctx) {
-        reject(new Error("canvas"));
-        return;
-      }
-      ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("blob"))),
-        "image/jpeg",
-        0.82,
-      );
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("img"));
-    };
-    img.src = url;
-  });
 }
