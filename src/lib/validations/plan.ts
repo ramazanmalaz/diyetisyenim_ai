@@ -18,6 +18,13 @@ export const mealSchema = z.object({
     "dinner",
   ]),
   content: z.string().min(1, "İçerik boş olamaz.").max(1000),
+  calories: z.coerce.number().int().min(0).max(5000).nullable().optional(),
+});
+
+export const updateMealSchema = z.object({
+  mealId: z.string().uuid(),
+  content: z.string().min(1, "İçerik boş olamaz.").max(1000),
+  calories: z.coerce.number().int().min(0).max(5000).nullable().optional(),
 });
 
 export const planStatusSchema = z.object({

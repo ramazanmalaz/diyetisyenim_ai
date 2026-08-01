@@ -10,6 +10,7 @@ export function MealForm({ planId }: { planId: string }) {
   const [dayOfWeek, setDayOfWeek] = useState(0);
   const [mealType, setMealType] = useState(MEAL_TYPES[0].value);
   const [content, setContent] = useState("");
+  const [calories, setCalories] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -19,13 +20,20 @@ export function MealForm({ planId }: { planId: string }) {
   async function onAdd() {
     setError(null);
     setSaving(true);
-    const result = await addMeal({ planId, dayOfWeek, mealType, content });
+    const result = await addMeal({
+      planId,
+      dayOfWeek,
+      mealType,
+      content,
+      calories: calories.trim() === "" ? null : Number(calories),
+    });
     setSaving(false);
     if ("error" in result) {
       setError(result.error);
       return;
     }
     setContent("");
+    setCalories("");
   }
 
   return (
@@ -56,6 +64,16 @@ export function MealForm({ planId }: { planId: string }) {
             </option>
           ))}
         </select>
+        <input
+          type="number"
+          min={0}
+          max={5000}
+          value={calories}
+          onChange={(e) => setCalories(e.target.value)}
+          placeholder="kcal"
+          aria-label="Kalori (opsiyonel)"
+          className={`${selectClass} w-24`}
+        />
       </div>
       <textarea
         value={content}

@@ -10,6 +10,7 @@ import {
   createPlanSchema,
   mealSchema,
   planStatusSchema,
+  updateMealSchema,
 } from "@/lib/validations/plan";
 
 export type ActionResult = { error: string } | { success: true };
@@ -75,11 +76,59 @@ export async function addMeal(values: unknown): Promise<ActionResult> {
     day_of_week: parsed.data.dayOfWeek,
     meal_type: parsed.data.mealType,
     content: parsed.data.content,
+    calories: parsed.data.calories ?? null,
   });
 
   if (error) return { error: "Öğün eklenemedi." };
 
   revalidatePath(`/yonetim/planlar/${parsed.data.planId}`);
+  return { success: true };
+}
+
+/** Var olan öğünün içeriğini/kalorisini günceller (atanan plan üzerinde düzenleme). */
+export async function updateMeal(values: unknown): Promise<ActionResult> {
+  await requireStaff();
+  const parsed = updateMealSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Geçersiz öğün." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("meals")
+    .update({
+      content: parsed.data.content,
+      calories: parsed.data.calories ?? null,
+    })
+    .eq("id", parsed.data.mealId)
+    .select("plan_id")
+    .single();
+
+  // RLS engellerse satır dönmez → yetkisiz düzenleme sessizce geçmesin.
+  if (error || !data) return { error: "Öğün güncellenemedi." };
+
+  revalidatePath(`/yonetim/planlar/${data.plan_id}`);
+  return { success: true };
+}
+
+/** Öğünü id ile siler (satır içi editör için — form action değil). */
+export async function deleteMealById(mealId: unknown): Promise<ActionResult> {
+  await requireStaff();
+  const parsed = z.string().uuid().safeParse(mealId);
+  if (!parsed.success) return { error: "Geçersiz öğün." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("meals")
+    .delete()
+    .eq("id", parsed.data)
+    .select("plan_id")
+    .single();
+
+  // RLS engellerse satır dönmez → yetkisiz silme sessizce başarılı görünmesin.
+  if (error || !data) return { error: "Öğün silinemedi." };
+
+  revalidatePath(`/yonetim/planlar/${data.plan_id}`);
   return { success: true };
 }
 

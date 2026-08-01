@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
 import { resolveDirectConvId } from "@/lib/chat/conversations";
+import { assignPlanCopy } from "@/lib/diet/assign";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ActionResult = { error: string } | { ok: true };
@@ -65,23 +66,29 @@ export async function assignPlan(
     .eq("id", clientId.data)
     .single();
 
-  if (profile?.dietitian_id !== dietitian.id)
+  if (dietitian.role !== "admin" && profile?.dietitian_id !== dietitian.id)
     return { error: "Yetkisiz işlem" };
 
-  // Mevcut aktif planları arşivle
-  await admin
+  // Kaynak plan bu diyetisyene ait olmalı (başkasının planı atanamaz).
+  const { data: source } = await admin
     .from("diet_plans")
-    .update({ status: "archived" })
-    .eq("client_id", clientId.data)
-    .eq("status", "active");
+    .select("created_by")
+    .eq("id", planId.data)
+    .single();
+  if (!source) return { error: "Plan bulunamadı." };
+  if (dietitian.role !== "admin" && source.created_by !== dietitian.id)
+    return { error: "Yetkisiz işlem" };
 
-  // Seçilen planı bu danışana ata ve aktifleştir
-  await admin
-    .from("diet_plans")
-    .update({ client_id: clientId.data, status: "active" })
-    .eq("id", planId.data);
+  // KOPYALAYARAK ata — şablon tükenmesin, danışanın kopyası bağımsız düzenlensin.
+  const result = await assignPlanCopy(admin, {
+    sourcePlanId: planId.data,
+    clientId: clientId.data,
+    createdBy: dietitian.id,
+  });
+  if ("error" in result) return result;
 
   revalidatePath(`/yonetim/danisanlar/${clientId.data}`);
+  revalidatePath("/yonetim/planlar");
   return { ok: true };
 }
 

@@ -53,11 +53,13 @@ export default async function DanisanDetailPage({
       .eq("status", "active")
       .limit(1)
       .maybeSingle(),
+    // Atanabilecekler: kendi şablonlarım + kendi oluşturduğum arşivsiz planlar.
     admin
       .from("diet_plans")
-      .select("id, title, status")
+      .select("id, title, status, is_template, daily_calorie_target")
       .eq("created_by", dietitian.id)
       .neq("status", "archived")
+      .order("is_template", { ascending: false })
       .order("created_at", { ascending: false }),
     admin
       .from("progress_entries")
@@ -114,9 +116,10 @@ export default async function DanisanDetailPage({
       ? +(latestWeight - prevWeight).toFixed(1)
       : null;
 
-  // Plans created by this dietitian, excluding archived ones
-  // Include active plan even if from another dietitian
-  const assignablePlans = allPlans ?? [];
+  // Atama şablonu KOPYALAR — bu yüzden danışanın kendi planları listede olmaz.
+  const assignablePlans = (allPlans ?? []).filter(
+    (p) => p.id !== activePlan?.id,
+  );
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
@@ -243,11 +246,7 @@ export default async function DanisanDetailPage({
       </div>
 
       {/* Plan ata */}
-      <ClientAssignPlan
-        clientId={profile.id}
-        plans={assignablePlans}
-        activePlanId={activePlan?.id ?? null}
-      />
+      <ClientAssignPlan clientId={profile.id} plans={assignablePlans} />
 
       {/* Premium yönetimi */}
       <div className="space-y-3">

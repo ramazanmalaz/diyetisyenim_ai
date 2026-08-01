@@ -196,10 +196,12 @@ export type Database = {
       diet_plans: {
         Row: {
           id: string;
-          client_id: string;
+          // Şablonlarda null (is_template=true) — henüz bir danışana ait değil.
+          client_id: string | null;
           created_by: string | null;
           title: string;
           status: PlanStatus;
+          is_template: boolean;
           valid_from: string | null;
           valid_to: string | null;
           daily_calorie_target: number | null;
@@ -212,10 +214,11 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          client_id: string;
+          client_id?: string | null;
           created_by?: string | null;
           title: string;
           status?: PlanStatus;
+          is_template?: boolean;
           valid_from?: string | null;
           valid_to?: string | null;
           daily_calorie_target?: number | null;
@@ -228,10 +231,11 @@ export type Database = {
         };
         Update: {
           id?: string;
-          client_id?: string;
+          client_id?: string | null;
           created_by?: string | null;
           title?: string;
           status?: PlanStatus;
+          is_template?: boolean;
           valid_from?: string | null;
           valid_to?: string | null;
           daily_calorie_target?: number | null;

@@ -9,33 +9,40 @@ import {
 } from "@/app/(admin)/yonetim/danisanlar/actions";
 import { Button } from "@/components/ui/button";
 
-type PlanRow = { id: string; title: string; status: string };
+type PlanRow = {
+  id: string;
+  title: string;
+  status: string;
+  is_template: boolean;
+  daily_calorie_target: number | null;
+};
 
 export function ClientAssignPlan({
   clientId,
   plans,
-  activePlanId,
 }: {
   clientId: string;
   plans: PlanRow[];
-  activePlanId: string | null;
 }) {
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(
     assignPlan,
     null,
   );
 
+  const templates = plans.filter((p) => p.is_template);
+  const others = plans.filter((p) => !p.is_template);
+
   if (plans.length === 0) {
     return (
       <div className="space-y-2">
-        <h2 className="font-semibold">Plan Ata</h2>
+        <h2 className="font-semibold">Program Ata</h2>
         <p className="text-sm text-gray-500">
-          Atanabilecek plan yok.{" "}
+          Henüz şablonun yok.{" "}
           <Link
-            href="/yonetim/planlar/yeni"
+            href="/yonetim/planlar"
             className="text-emerald-600 hover:underline"
           >
-            Yeni plan oluştur →
+            Şablon oluştur (elle ya da AI ile) →
           </Link>
         </p>
       </div>
@@ -44,39 +51,61 @@ export function ClientAssignPlan({
 
   return (
     <div className="space-y-3">
-      <h2 className="font-semibold">Plan Ata</h2>
+      <h2 className="font-semibold">Program Ata</h2>
       {state && "error" in state && (
         <p className="text-sm text-red-600">{state.error}</p>
       )}
       {state && "ok" in state && (
-        <p className="text-sm text-emerald-600">Plan atandı!</p>
+        <p className="text-sm text-emerald-600">
+          Program atandı — kopyası oluşturuldu, aşağıdan düzenleyebilirsin.
+        </p>
       )}
       <form action={action} className="flex gap-2">
         <input type="hidden" name="client_id" value={clientId} />
         <select
           name="plan_id"
-          defaultValue={activePlanId ?? ""}
+          required
+          defaultValue=""
           className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900"
         >
           <option value="" disabled>
-            Plan seç…
+            Şablon seç…
           </option>
-          {plans.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.title}
-              {p.id === activePlanId ? " (aktif)" : ""}
-            </option>
-          ))}
+          {templates.length > 0 && (
+            <optgroup label="Şablonlarım">
+              {templates.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                  {p.daily_calorie_target
+                    ? ` · ${p.daily_calorie_target} kcal`
+                    : ""}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {others.length > 0 && (
+            <optgroup label="Diğer planlar">
+              {others.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
         <Button type="submit" disabled={pending} className="shrink-0">
           {pending ? "Atanıyor…" : "Ata"}
         </Button>
       </form>
+      <p className="text-xs text-gray-400">
+        Atama şablonu kopyalar — şablon bozulmaz, danışanın programı bağımsız
+        düzenlenir.
+      </p>
       <Link
-        href="/yonetim/planlar/yeni"
+        href="/yonetim/planlar"
         className="block text-xs text-emerald-600 hover:underline"
       >
-        + Yeni plan oluştur
+        + Şablon kütüphanesi
       </Link>
     </div>
   );
