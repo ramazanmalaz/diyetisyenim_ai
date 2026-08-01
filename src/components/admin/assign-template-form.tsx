@@ -8,8 +8,10 @@ import {
   type TemplateResult,
 } from "@/app/(admin)/yonetim/planlar/template-actions";
 import { Button } from "@/components/ui/button";
+import { ASSIGN_WEEK_OPTIONS } from "@/lib/validations/plan";
 
 type ClientOption = { id: string; full_name: string | null };
+
 
 export function AssignTemplateForm({
   planId,
@@ -39,30 +41,45 @@ export function AssignTemplateForm({
       {state && "error" in state && (
         <p className="text-sm text-red-600">{state.error}</p>
       )}
-      <form action={action} className="flex gap-2">
+      <form action={action} className="space-y-2">
         <input type="hidden" name="plan_id" value={planId} />
-        <select
-          name="client_id"
-          required
-          defaultValue=""
-          className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900"
-        >
-          <option value="" disabled>
-            Danışan seç…
-          </option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.full_name ?? c.id}
+        <div className="flex flex-wrap gap-2">
+          <select
+            name="client_id"
+            required
+            defaultValue=""
+            className="min-w-[10rem] flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900"
+          >
+            <option value="" disabled>
+              Danışan seç…
             </option>
-          ))}
-        </select>
-        <Button type="submit" disabled={pending} className="shrink-0">
-          <UserCheck className="mr-1.5 h-4 w-4" />
-          {pending ? "Atanıyor…" : "Ata"}
-        </Button>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.full_name ?? c.id}
+              </option>
+            ))}
+          </select>
+          <select
+            name="duration_weeks"
+            defaultValue="4"
+            aria-label="Program süresi"
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900"
+          >
+            {ASSIGN_WEEK_OPTIONS.map((w) => (
+              <option key={w} value={w}>
+                {w} hafta
+              </option>
+            ))}
+          </select>
+          <Button type="submit" disabled={pending} className="shrink-0">
+            <UserCheck className="mr-1.5 h-4 w-4" />
+            {pending ? "Atanıyor…" : "Ata"}
+          </Button>
+        </div>
       </form>
       <p className="text-xs text-emerald-700/70 dark:text-emerald-300/60">
         Kopyası oluşturulur ve danışanın aktif programı olur; şablon aynen kalır.
+        Program içeriği süreden kısaysa baştan tekrar eder.
       </p>
     </div>
   );

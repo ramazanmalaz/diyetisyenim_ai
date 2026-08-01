@@ -13,6 +13,10 @@ import {
 } from "@/lib/ai/respond";
 import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { assignPlanCopy } from "@/lib/diet/assign";
+import {
+  MAX_ASSIGN_WEEKS,
+  MIN_ASSIGN_WEEKS,
+} from "@/lib/validations/plan";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ALLOWED_PLAN_FILE_TYPES,
@@ -267,7 +271,14 @@ export async function assignTemplateToClient(
   const staff = await requireStaff();
   const planId = z.string().uuid().safeParse(formData.get("plan_id"));
   const clientId = z.string().uuid().safeParse(formData.get("client_id"));
+  const weeks = z.coerce
+    .number()
+    .int()
+    .min(MIN_ASSIGN_WEEKS)
+    .max(MAX_ASSIGN_WEEKS)
+    .safeParse(formData.get("duration_weeks"));
   if (!planId.success || !clientId.success) return { error: "Geçersiz giriş" };
+  if (!weeks.success) return { error: "Süre 1-8 hafta arasında olmalı." };
 
   const admin = createAdminClient();
   const isAdminRole = staff.role === "admin";
@@ -291,6 +302,7 @@ export async function assignTemplateToClient(
     sourcePlanId: planId.data,
     clientId: clientId.data,
     createdBy: staff.id,
+    durationWeeks: weeks.data,
   });
   if ("error" in result) return result;
 

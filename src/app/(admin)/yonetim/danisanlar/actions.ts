@@ -7,6 +7,10 @@ import { z } from "zod";
 import { requireStaff } from "@/lib/auth";
 import { resolveDirectConvId } from "@/lib/chat/conversations";
 import { assignPlanCopy } from "@/lib/diet/assign";
+import {
+  MAX_ASSIGN_WEEKS,
+  MIN_ASSIGN_WEEKS,
+} from "@/lib/validations/plan";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ActionResult = { error: string } | { ok: true };
@@ -56,8 +60,15 @@ export async function assignPlan(
   const dietitian = await requireStaff();
   const clientId = z.string().uuid().safeParse(formData.get("client_id"));
   const planId = z.string().uuid().safeParse(formData.get("plan_id"));
+  const weeks = z.coerce
+    .number()
+    .int()
+    .min(MIN_ASSIGN_WEEKS)
+    .max(MAX_ASSIGN_WEEKS)
+    .safeParse(formData.get("duration_weeks"));
   if (!clientId.success || !planId.success)
     return { error: "Geçersiz giriş" };
+  if (!weeks.success) return { error: "Süre 1-8 hafta arasında olmalı." };
 
   const admin = createAdminClient();
   const { data: profile } = await admin
@@ -84,6 +95,7 @@ export async function assignPlan(
     sourcePlanId: planId.data,
     clientId: clientId.data,
     createdBy: dietitian.id,
+    durationWeeks: weeks.data,
   });
   if ("error" in result) return result;
 

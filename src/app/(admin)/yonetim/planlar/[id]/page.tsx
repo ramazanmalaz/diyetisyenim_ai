@@ -4,8 +4,7 @@ import { notFound } from "next/navigation";
 
 import { deletePlan } from "@/app/(admin)/yonetim/planlar/actions";
 import { AssignTemplateForm } from "@/components/admin/assign-template-form";
-import { MealForm } from "@/components/admin/meal-form";
-import { PlanMealEditor } from "@/components/admin/plan-meal-editor";
+import { PlanEditor } from "@/components/admin/plan-editor";
 import { PlanStatusControl } from "@/components/admin/plan-status-control";
 import { requireStaff } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -65,7 +64,7 @@ export default async function PlanDetailPage({
         : Promise.resolve({ data: null }),
       admin
         .from("meals")
-        .select("id, day_of_week, meal_type, content, calories")
+        .select("id, week_index, day_of_week, meal_type, content, calories")
         .eq("plan_id", plan.id),
       plan.is_template
         ? assignableClientsQuery()
@@ -123,9 +122,7 @@ export default async function PlanDetailPage({
         </form>
       </div>
 
-      <MealForm planId={plan.id} />
-
-      <PlanMealEditor meals={meals ?? []} />
+      <PlanEditor planId={plan.id} meals={meals ?? []} />
     </div>
   );
 }
