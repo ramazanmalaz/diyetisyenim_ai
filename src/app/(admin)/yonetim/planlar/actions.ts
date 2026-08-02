@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
+import { foodMealFields } from "@/lib/foods";
 import { createClient } from "@/lib/supabase/server";
 import {
   createPlanSchema,
@@ -89,6 +90,114 @@ export async function addMeal(values: unknown): Promise<ActionResult> {
 
 const MEAL_COPY_COLUMNS =
   "day_of_week, meal_type, content, calories, food_id, quantity, sort_order, protein_g, carb_g, fat_g, recipe, tip";
+
+/** Besin kataloğundan tek kayıt çeker (kalori/metin hesabı için). */
+async function fetchFoodRow(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  foodId: string,
+) {
+  const { data } = await supabase
+    .from("foods")
+    .select("id, name, unit_label, kcal_per_unit")
+    .eq("id", foodId)
+    .single();
+  return data;
+}
+
+/**
+ * Besin kataloğundan öğün ekler — içerik metni ve kalori foodMealFields ile
+ * hesaplanır (danışan tarafıyla birebir aynı format).
+ *
+ * RLS (can_access_plan) sahipliği zorladığı için kullanıcı oturumu kullanılır;
+ * yetkisiz plana yazma denemesi satır döndürmez.
+ */
+export async function addFoodMealToPlan(
+  values: unknown,
+): Promise<ActionResult> {
+  await requireStaff();
+  const parsed = z
+    .object({
+      planId: z.string().uuid(),
+      weekIndex: z.coerce.number().int().min(0).max(MAX_PLAN_WEEKS - 1),
+      dayOfWeek: z.coerce.number().int().min(0).max(6),
+      mealType: z.enum([
+        "breakfast",
+        "snack_morning",
+        "lunch",
+        "snack_afternoon",
+        "dinner",
+      ]),
+      foodId: z.string().uuid(),
+      quantity: z.coerce.number().positive().max(50),
+    })
+    .safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz veri." };
+
+  const supabase = await createClient();
+  const food = await fetchFoodRow(supabase, parsed.data.foodId);
+  if (!food) return { error: "Besin bulunamadı." };
+
+  const { calories, content } = foodMealFields(food, parsed.data.quantity);
+  const { data, error } = await supabase
+    .from("meals")
+    .insert({
+      plan_id: parsed.data.planId,
+      week_index: parsed.data.weekIndex,
+      day_of_week: parsed.data.dayOfWeek,
+      meal_type: parsed.data.mealType,
+      content,
+      calories,
+      food_id: parsed.data.foodId,
+      quantity: parsed.data.quantity,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) return { error: "Öğün eklenemedi." };
+
+  revalidatePath(`/yonetim/planlar/${parsed.data.planId}`);
+  return { success: true };
+}
+
+/**
+ * Var olan bir öğünü besin kataloğundan seçilen ürünle değiştirir.
+ * Menü değişikliğinde kaloriyi elle yazmak yerine üründen hesaplatmak için.
+ */
+export async function replaceMealWithFood(
+  values: unknown,
+): Promise<ActionResult> {
+  await requireStaff();
+  const parsed = z
+    .object({
+      mealId: z.string().uuid(),
+      foodId: z.string().uuid(),
+      quantity: z.coerce.number().positive().max(50),
+    })
+    .safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz veri." };
+
+  const supabase = await createClient();
+  const food = await fetchFoodRow(supabase, parsed.data.foodId);
+  if (!food) return { error: "Besin bulunamadı." };
+
+  const { calories, content } = foodMealFields(food, parsed.data.quantity);
+  const { data, error } = await supabase
+    .from("meals")
+    .update({
+      content,
+      calories,
+      food_id: parsed.data.foodId,
+      quantity: parsed.data.quantity,
+    })
+    .eq("id", parsed.data.mealId)
+    .select("plan_id")
+    .single();
+
+  if (error || !data) return { error: "Öğün güncellenemedi." };
+
+  revalidatePath(`/yonetim/planlar/${data.plan_id}`);
+  return { success: true };
+}
 
 /**
  * Bir haftanın tüm öğünlerini yeni bir haftaya kopyalar.

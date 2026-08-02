@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Apple,
   CalendarRange,
   Check,
   CopyPlus,
@@ -12,15 +13,19 @@ import {
 import { useMemo, useState, useTransition } from "react";
 
 import {
+  addFoodMealToPlan,
   addMeal,
   deleteMealById,
   deleteWeek,
   duplicateWeek,
+  replaceMealWithFood,
   spreadWeekDays,
   updateMeal,
 } from "@/app/(admin)/yonetim/planlar/actions";
+import { FoodPicker } from "@/components/plan/food-picker";
 import { Button } from "@/components/ui/button";
 import { DAYS, MEAL_TYPES, mealTypeLabel, mealTypeOrder } from "@/lib/diet";
+import type { Food } from "@/lib/foods";
 import { cn } from "@/lib/utils";
 import { MAX_PLAN_WEEKS } from "@/lib/validations/plan";
 import type { MealType } from "@/types/database";
@@ -44,9 +49,11 @@ export type EditorMeal = {
 export function PlanEditor({
   planId,
   meals,
+  foods,
 }: {
   planId: string;
   meals: EditorMeal[];
+  foods: Food[];
 }) {
   const weekCount = useMemo(
     () =>
@@ -137,9 +144,9 @@ export function PlanEditor({
         filledDays={[...new Set(weekMeals.map((m) => m.day_of_week))]}
       />
 
-      <AddMealForm planId={planId} weekIndex={activeWeek} />
+      <AddMealForm planId={planId} weekIndex={activeWeek} foods={foods} />
 
-      <WeekMeals meals={weekMeals} />
+      <WeekMeals meals={weekMeals} foods={foods} />
     </div>
   );
 }
@@ -243,14 +250,17 @@ function SpreadDaysPanel({
 function AddMealForm({
   planId,
   weekIndex,
+  foods,
 }: {
   planId: string;
   weekIndex: number;
+  foods: Food[];
 }) {
   const [dayOfWeek, setDayOfWeek] = useState(0);
   const [mealType, setMealType] = useState(MEAL_TYPES[0].value);
   const [content, setContent] = useState("");
   const [calories, setCalories] = useState("");
+  const [fromFood, setFromFood] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -277,11 +287,28 @@ function AddMealForm({
     });
   }
 
+  function onAddFood(food: Food, quantity: number) {
+    setError(null);
+    startTransition(async () => {
+      const result = await addFoodMealToPlan({
+        planId,
+        weekIndex,
+        dayOfWeek,
+        mealType,
+        foodId: food.id,
+        quantity,
+      });
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      setFromFood(false);
+    });
+  }
+
   return (
     <div className="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-      <p className="text-sm font-medium">
-        {weekIndex + 1}. haftaya öğün ekle
-      </p>
+      <p className="text-sm font-medium">{weekIndex + 1}. haftaya öğün ekle</p>
       <div className="flex flex-wrap gap-2">
         <select
           value={dayOfWeek}
@@ -309,35 +336,135 @@ function AddMealForm({
             </option>
           ))}
         </select>
+        {!fromFood && (
+          <input
+            type="number"
+            min={0}
+            max={5000}
+            value={calories}
+            onChange={(e) => setCalories(e.target.value)}
+            placeholder="kcal"
+            aria-label="Kalori (opsiyonel)"
+            className={`${fieldClass} w-24`}
+          />
+        )}
+      </div>
+
+      {fromFood ? (
+        <FoodQuantityPicker
+          foods={foods}
+          pending={pending}
+          onConfirm={onAddFood}
+          onCancel={() => setFromFood(false)}
+        />
+      ) : (
+        <>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            rows={2}
+            placeholder="Örn. 2 yumurta, 1 dilim tam buğday ekmeği, salatalık…"
+            className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm dark:border-gray-700 dark:bg-gray-950"
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={onAdd} disabled={pending || !content.trim()}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              {pending ? "Ekleniyor…" : "Ekle"}
+            </Button>
+            <button
+              type="button"
+              onClick={() => setFromFood(true)}
+              className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+            >
+              <Apple className="h-4 w-4" /> Besin kataloğundan seç
+            </button>
+          </div>
+        </>
+      )}
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * Besin seçimi + miktar. Danışan tarafındaki FoodPicker'ı (yerel katalog +
+ * USDA araması) yeniden kullanır; kalori/metin sunucuda foodMealFields ile
+ * hesaplandığı için iki taraf birebir aynı formatı üretir.
+ */
+function FoodQuantityPicker({
+  foods,
+  pending,
+  onConfirm,
+  onCancel,
+}: {
+  foods: Food[];
+  pending: boolean;
+  onConfirm: (food: Food, quantity: number) => void;
+  onCancel: () => void;
+}) {
+  const [picked, setPicked] = useState<Food | null>(null);
+  const [qty, setQty] = useState("1");
+
+  if (!picked) {
+    return <FoodPicker foods={foods} onPick={setPicked} onCancel={onCancel} />;
+  }
+
+  const q = Number(qty);
+  const valid = Number.isFinite(q) && q > 0 && q <= 50;
+
+  return (
+    <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-900 dark:bg-emerald-950/20">
+      <p className="text-sm font-medium">{picked.name}</p>
+      <p className="text-xs text-gray-500">
+        {picked.kcal_per_unit} kcal / {picked.unit_label}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
         <input
           type="number"
-          min={0}
-          max={5000}
-          value={calories}
-          onChange={(e) => setCalories(e.target.value)}
-          placeholder="kcal"
-          aria-label="Kalori (opsiyonel)"
-          className={`${fieldClass} w-24`}
+          min={0.1}
+          max={50}
+          step={0.1}
+          value={qty}
+          onChange={(e) => setQty(e.target.value)}
+          aria-label="Miktar"
+          className="h-10 w-24 rounded-lg border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-950"
         />
+        <span className="text-sm text-gray-500">× {picked.unit_label}</span>
+        {valid && (
+          <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+            = {Math.round(picked.kcal_per_unit * q)} kcal
+          </span>
+        )}
       </div>
-      <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        rows={2}
-        placeholder="Örn. 2 yumurta, 1 dilim tam buğday ekmeği, salatalık…"
-        className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm dark:border-gray-700 dark:bg-gray-950"
-      />
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <Button onClick={onAdd} disabled={pending || !content.trim()}>
-        <Plus className="mr-1.5 h-4 w-4" />
-        {pending ? "Ekleniyor…" : "Ekle"}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          onClick={() => onConfirm(picked, q)}
+          disabled={pending || !valid}
+        >
+          {pending ? "Ekleniyor…" : "Onayla"}
+        </Button>
+        <button
+          type="button"
+          onClick={() => setPicked(null)}
+          className="text-sm text-gray-500 hover:underline"
+        >
+          Başka besin seç
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-sm text-gray-400 hover:underline"
+        >
+          Vazgeç
+        </button>
+      </div>
     </div>
   );
 }
 
 // ─── Seçili haftanın günleri ─────────────────────────────────────────────────
-function WeekMeals({ meals }: { meals: EditorMeal[] }) {
+function WeekMeals({ meals, foods }: { meals: EditorMeal[]; foods: Food[] }) {
   if (meals.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-500 dark:border-gray-800">
@@ -407,7 +534,7 @@ function WeekMeals({ meals }: { meals: EditorMeal[] }) {
                   </div>
                   <ul className="divide-y divide-gray-100 dark:divide-gray-800">
                     {items.map((m) => (
-                      <MealRow key={m.id} meal={m} />
+                      <MealRow key={m.id} meal={m} foods={foods} />
                     ))}
                   </ul>
                 </div>
@@ -420,14 +547,32 @@ function WeekMeals({ meals }: { meals: EditorMeal[] }) {
   );
 }
 
-function MealRow({ meal }: { meal: EditorMeal }) {
+function MealRow({ meal, foods }: { meal: EditorMeal; foods: Food[] }) {
   const [editing, setEditing] = useState(false);
+  const [swapping, setSwapping] = useState(false);
   const [content, setContent] = useState(meal.content);
   const [calories, setCalories] = useState(
     meal.calories != null ? String(meal.calories) : "",
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  function swapFood(food: Food, quantity: number) {
+    setError(null);
+    startTransition(async () => {
+      const result = await replaceMealWithFood({
+        mealId: meal.id,
+        foodId: food.id,
+        quantity,
+      });
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      setSwapping(false);
+      setEditing(false);
+    });
+  }
 
   function save() {
     setError(null);
@@ -462,40 +607,59 @@ function MealRow({ meal }: { meal: EditorMeal }) {
   if (editing) {
     return (
       <li className="space-y-2 px-4 py-3">
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          rows={2}
-          className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm dark:border-gray-700 dark:bg-gray-950"
-        />
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min={0}
-            max={5000}
-            value={calories}
-            onChange={(e) => setCalories(e.target.value)}
-            placeholder="kcal"
-            aria-label="Kalori"
-            className="h-9 w-24 rounded-lg border border-gray-300 bg-white px-2.5 text-sm dark:border-gray-700 dark:bg-gray-950"
+        {swapping ? (
+          <FoodQuantityPicker
+            foods={foods}
+            pending={pending}
+            onConfirm={swapFood}
+            onCancel={() => setSwapping(false)}
           />
-          <button
-            type="button"
-            onClick={save}
-            disabled={pending || !content.trim()}
-            className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-          >
-            <Check className="h-3.5 w-3.5" /> {pending ? "…" : "Kaydet"}
-          </button>
-          <button
-            type="button"
-            onClick={cancel}
-            disabled={pending}
-            className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <X className="h-3.5 w-3.5" /> Vazgeç
-          </button>
-        </div>
+        ) : (
+          <>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={2}
+              className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm dark:border-gray-700 dark:bg-gray-950"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={5000}
+                value={calories}
+                onChange={(e) => setCalories(e.target.value)}
+                placeholder="kcal"
+                aria-label="Kalori"
+                className="h-9 w-24 rounded-lg border border-gray-300 bg-white px-2.5 text-sm dark:border-gray-700 dark:bg-gray-950"
+              />
+              <button
+                type="button"
+                onClick={save}
+                disabled={pending || !content.trim()}
+                className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              >
+                <Check className="h-3.5 w-3.5" /> {pending ? "…" : "Kaydet"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSwapping(true)}
+                disabled={pending}
+                className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+              >
+                <Apple className="h-3.5 w-3.5" /> Besinden değiştir
+              </button>
+              <button
+                type="button"
+                onClick={cancel}
+                disabled={pending}
+                className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <X className="h-3.5 w-3.5" /> Vazgeç
+              </button>
+            </div>
+          </>
+        )}
         {error && <p className="text-xs text-red-600">{error}</p>}
       </li>
     );

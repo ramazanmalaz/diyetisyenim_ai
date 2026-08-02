@@ -53,7 +53,7 @@ export default async function PlanDetailPage({
     return q;
   }
 
-  const [{ data: client }, { data: meals }, { data: myClients }] =
+  const [{ data: client }, { data: meals }, { data: myClients }, { data: foods }] =
     await Promise.all([
       plan.client_id
         ? admin
@@ -69,6 +69,10 @@ export default async function PlanDetailPage({
       plan.is_template
         ? assignableClientsQuery()
         : Promise.resolve({ data: null }),
+      admin
+        .from("foods")
+        .select("id, name, unit_label, kcal_per_unit")
+        .order("name"),
     ]);
 
   return (
@@ -122,7 +126,7 @@ export default async function PlanDetailPage({
         </form>
       </div>
 
-      <PlanEditor planId={plan.id} meals={meals ?? []} />
+      <PlanEditor planId={plan.id} meals={meals ?? []} foods={foods ?? []} />
     </div>
   );
 }
