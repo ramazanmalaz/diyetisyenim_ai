@@ -23,12 +23,13 @@ export function FoodPicker({
   const [busy, setBusy] = useState<"search" | "import" | "">("");
   const [error, setError] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
+  const LIMIT = 100;
+  const { filtered, matchCount } = useMemo(() => {
     const term = q.trim().toLocaleLowerCase("tr");
     const list = term
       ? foods.filter((f) => f.name.toLocaleLowerCase("tr").includes(term))
       : foods;
-    return list.slice(0, 100);
+    return { filtered: list.slice(0, LIMIT), matchCount: list.length };
   }, [q, foods]);
 
   async function handleUsdaSearch() {
@@ -93,6 +94,13 @@ export function FoodPicker({
           ))
         )}
       </div>
+
+      {/* Katalog 600+ kayıt; liste ilk 100'ü gösteriyor — kesildiğini belli et. */}
+      <p className="px-1 text-[11px] text-gray-400">
+        {matchCount > LIMIT
+          ? `${matchCount} sonuçtan ilk ${LIMIT}'ü — daraltmak için yazmaya devam et`
+          : `${matchCount} besin`}
+      </p>
 
       {/* USDA (uluslararası besin veritabanı) araması */}
       <button
