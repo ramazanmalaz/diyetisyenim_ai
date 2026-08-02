@@ -146,6 +146,99 @@ export async function duplicateWeek(values: unknown): Promise<ActionResult> {
 }
 
 /**
+ * Dolu günlerdeki menüleri seçilen günlere sırayla tekrarlayarak yayar.
+ *
+ * Neden gerekli: fotoğraf/PDF okuması çoğu zaman 1-2 günlük bir şablon
+ * döndürüyor (ör. "normal gün" + "pazar günü"). Diyetisyen haftanın kalanını
+ * elle doldurmak zorunda kalmasın diye tek tıkla çoğaltılıyor.
+ *
+ * Kaynak = bu haftada öğünü olan ve HEDEF olarak seçilmemiş günler.
+ * Hedef günlerdeki mevcut öğünler silinip kaynak günlerden sırayla kopyalanır.
+ */
+export async function spreadWeekDays(values: unknown): Promise<ActionResult> {
+  await requireStaff();
+  const parsed = z
+    .object({
+      planId: z.string().uuid(),
+      weekIndex: z.coerce.number().int().min(0).max(MAX_PLAN_WEEKS - 1),
+      targetDays: z.array(z.coerce.number().int().min(0).max(6)).min(1),
+    })
+    .safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz seçim." };
+
+  const { planId, weekIndex, targetDays } = parsed.data;
+  const targets = [...new Set(targetDays)].sort((a, b) => a - b);
+
+  const supabase = await createClient();
+  const { data: weekMeals, error: readError } = await supabase
+    .from("meals")
+    .select(`id, ${MEAL_COPY_COLUMNS}`)
+    .eq("plan_id", planId)
+    .eq("week_index", weekIndex);
+
+  if (readError) return { error: "Plan okunamadı." };
+
+  const byDay = new Map<number, typeof weekMeals>();
+  for (const m of weekMeals ?? []) {
+    const arr = byDay.get(m.day_of_week) ?? [];
+    arr.push(m);
+    byDay.set(m.day_of_week, arr);
+  }
+
+  // Kaynak: öğünü olan ama hedef seçilmemiş günler.
+  const sourceDays = [...byDay.keys()]
+    .filter((d) => !targets.includes(d))
+    .sort((a, b) => a - b);
+
+  if (sourceDays.length === 0)
+    return {
+      error:
+        "Kaynak gün kalmadı — menüsü olan en az bir günü seçimin dışında bırak.",
+    };
+
+  // Hedef günlerdeki mevcut öğünleri temizle.
+  const idsToDelete = targets.flatMap((d) =>
+    (byDay.get(d) ?? []).map((m) => m.id),
+  );
+  if (idsToDelete.length > 0) {
+    const { error } = await supabase
+      .from("meals")
+      .delete()
+      .in("id", idsToDelete);
+    if (error) return { error: "Hedef günler temizlenemedi." };
+  }
+
+  // Kaynakları sırayla hedeflere kopyala (id ve kaynak günü taşımadan).
+  const rows = targets.flatMap((day, i) => {
+    const src = byDay.get(sourceDays[i % sourceDays.length]) ?? [];
+    return src.map((m) => ({
+      plan_id: planId,
+      week_index: weekIndex,
+      day_of_week: day,
+      meal_type: m.meal_type,
+      content: m.content,
+      calories: m.calories,
+      food_id: m.food_id,
+      quantity: m.quantity,
+      sort_order: m.sort_order,
+      protein_g: m.protein_g,
+      carb_g: m.carb_g,
+      fat_g: m.fat_g,
+      recipe: m.recipe,
+      tip: m.tip,
+    }));
+  });
+
+  if (rows.length === 0) return { error: "Kopyalanacak öğün yok." };
+
+  const { error } = await supabase.from("meals").insert(rows);
+  if (error) return { error: "Günlere yayılamadı." };
+
+  revalidatePath(`/yonetim/planlar/${planId}`);
+  return { success: true };
+}
+
+/**
  * Bir haftayı siler ve sonraki haftaları bir aşağı kaydırır — aksi halde
  * hafta numaralarında boşluk kalır ve danışan tarafındaki döngü
  * (weeksSinceStart % weekCount) boş haftaya denk gelir.

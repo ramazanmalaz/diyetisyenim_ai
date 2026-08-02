@@ -1,6 +1,14 @@
 "use client";
 
-import { Check, CopyPlus, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  CalendarRange,
+  Check,
+  CopyPlus,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 
 import {
@@ -8,6 +16,7 @@ import {
   deleteMealById,
   deleteWeek,
   duplicateWeek,
+  spreadWeekDays,
   updateMeal,
 } from "@/app/(admin)/yonetim/planlar/actions";
 import { Button } from "@/components/ui/button";
@@ -122,9 +131,110 @@ export function PlanEditor({
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
+      <SpreadDaysPanel
+        planId={planId}
+        weekIndex={activeWeek}
+        filledDays={[...new Set(weekMeals.map((m) => m.day_of_week))]}
+      />
+
       <AddMealForm planId={planId} weekIndex={activeWeek} />
 
       <WeekMeals meals={weekMeals} />
+    </div>
+  );
+}
+
+// ─── Günlere yayma ───────────────────────────────────────────────────────────
+/**
+ * Fotoğraf/PDF okuması genelde 1-2 günlük şablon döndürüyor. Bu panel dolu
+ * günlerdeki menüleri seçilen günlere sırayla kopyalayarak haftayı doldurur.
+ */
+function SpreadDaysPanel({
+  planId,
+  weekIndex,
+  filledDays,
+}: {
+  planId: string;
+  weekIndex: number;
+  filledDays: number[];
+}) {
+  const emptyDays = DAYS.map((_, i) => i).filter((i) => !filledDays.includes(i));
+  const [targets, setTargets] = useState<number[]>(emptyDays);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  // Yayılacak gün yoksa (hafta zaten dolu ve kullanıcı seçim yapmadıysa) gizle.
+  if (filledDays.length === 0) return null;
+
+  const sources = filledDays.filter((d) => !targets.includes(d));
+
+  function toggle(day: number) {
+    setTargets((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
+    );
+  }
+
+  function run() {
+    setError(null);
+    startTransition(async () => {
+      const res = await spreadWeekDays({ planId, weekIndex, targetDays: targets });
+      if ("error" in res) setError(res.error);
+    });
+  }
+
+  return (
+    <div className="space-y-2.5 rounded-2xl border border-sky-200 bg-sky-50/50 p-4 dark:border-sky-900/50 dark:bg-sky-950/20">
+      <p className="text-sm font-semibold text-sky-900 dark:text-sky-100">
+        Menüyü günlere yay
+      </p>
+      <p className="text-xs text-sky-800/70 dark:text-sky-200/60">
+        Seçili günler, seçili olmayan dolu günlerdeki menülerle sırayla
+        doldurulur. Seçili günlerdeki mevcut öğünler silinir.
+      </p>
+
+      <div className="flex flex-wrap gap-1.5">
+        {DAYS.map((d, i) => {
+          const selected = targets.includes(i);
+          const isSource = sources.includes(i);
+          return (
+            <button
+              key={d}
+              type="button"
+              onClick={() => toggle(i)}
+              aria-pressed={selected}
+              className={cn(
+                "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors duration-150",
+                selected
+                  ? "bg-sky-600 text-white"
+                  : isSource
+                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+                    : "bg-white text-gray-500 ring-1 ring-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:ring-gray-700",
+              )}
+            >
+              {d}
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="text-[11px] text-gray-500">
+        <span className="font-medium text-emerald-700 dark:text-emerald-400">
+          Yeşil
+        </span>{" "}
+        = kaynak gün ({sources.length}) ·{" "}
+        <span className="font-medium text-sky-700 dark:text-sky-400">Mavi</span>{" "}
+        = doldurulacak ({targets.length})
+      </p>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      <Button
+        onClick={run}
+        disabled={pending || targets.length === 0 || sources.length === 0}
+      >
+        <CalendarRange className="mr-1.5 h-4 w-4" />
+        {pending ? "Yayılıyor…" : "Seçili günleri doldur"}
+      </Button>
     </div>
   );
 }
@@ -246,17 +356,29 @@ function WeekMeals({ meals }: { meals: EditorMeal[] }) {
   return (
     <div className="space-y-4">
       {DAYS.map((day, i) => {
-        const list = (byDay.get(i) ?? []).sort(
-          (a, b) => mealTypeOrder(a.meal_type) - mealTypeOrder(b.meal_type),
-        );
+        const list = byDay.get(i) ?? [];
         if (list.length === 0) return null;
         const dayTotal = list.reduce((sum, m) => sum + (m.calories ?? 0), 0);
+
+        // Öğün türüne göre grupla — bir öğünde birden çok kalem olabiliyor
+        // (fotoğraf okumasında kahvaltı 7 satır gelebiliyor); türü her satırda
+        // tekrarlamak yerine tek başlık altında topla.
+        const byType = new Map<MealType, EditorMeal[]>();
+        for (const m of list) {
+          const arr = byType.get(m.meal_type) ?? [];
+          arr.push(m);
+          byType.set(m.meal_type, arr);
+        }
+        const types = [...byType.keys()].sort(
+          (a, b) => mealTypeOrder(a) - mealTypeOrder(b),
+        );
+
         return (
           <div
             key={day}
-            className="rounded-xl border border-gray-200 dark:border-gray-800"
+            className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800"
           >
-            <h3 className="flex items-center justify-between border-b border-gray-200 px-4 py-2 font-semibold dark:border-gray-800">
+            <h3 className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2 font-semibold dark:border-gray-800 dark:bg-gray-900/60">
               <span>{day}</span>
               {dayTotal > 0 && (
                 <span className="text-xs font-normal text-gray-500">
@@ -264,11 +386,33 @@ function WeekMeals({ meals }: { meals: EditorMeal[] }) {
                 </span>
               )}
             </h3>
-            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
-              {list.map((m) => (
-                <MealRow key={m.id} meal={m} />
-              ))}
-            </ul>
+
+            {types.map((type) => {
+              const items = byType.get(type) ?? [];
+              const typeTotal = items.reduce(
+                (sum, m) => sum + (m.calories ?? 0),
+                0,
+              );
+              return (
+                <div key={type}>
+                  <div className="flex items-center justify-between border-b border-gray-100 px-4 py-1.5 dark:border-gray-800/70">
+                    <span className="text-xs font-bold tracking-[0.08em] text-emerald-700 uppercase dark:text-emerald-400">
+                      {mealTypeLabel(type)}
+                    </span>
+                    {typeTotal > 0 && (
+                      <span className="text-[11px] text-gray-400">
+                        {typeTotal} kcal
+                      </span>
+                    )}
+                  </div>
+                  <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {items.map((m) => (
+                      <MealRow key={m.id} meal={m} />
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
         );
       })}
@@ -318,9 +462,6 @@ function MealRow({ meal }: { meal: EditorMeal }) {
   if (editing) {
     return (
       <li className="space-y-2 px-4 py-3">
-        <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-          {mealTypeLabel(meal.meal_type)}
-        </p>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -361,11 +502,8 @@ function MealRow({ meal }: { meal: EditorMeal }) {
   }
 
   return (
-    <li className="flex items-start justify-between gap-3 px-4 py-2.5">
+    <li className="flex items-start justify-between gap-3 px-4 py-2">
       <div className="min-w-0 text-sm">
-        <span className="font-medium text-emerald-700 dark:text-emerald-400">
-          {mealTypeLabel(meal.meal_type)}:
-        </span>{" "}
         <span className="whitespace-pre-wrap">{meal.content}</span>
         {error && <p className="text-xs text-red-600">{error}</p>}
       </div>
