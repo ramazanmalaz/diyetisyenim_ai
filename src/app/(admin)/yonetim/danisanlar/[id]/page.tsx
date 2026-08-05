@@ -1,4 +1,12 @@
-import { Crown, ImageIcon, LineChart, MessageCircle, Users } from "lucide-react";
+import {
+  Crown,
+  Droplets,
+  ImageIcon,
+  LineChart,
+  MessageCircle,
+  UtensilsCrossed,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -23,6 +31,14 @@ function isPremiumActive(until: string | null): boolean {
   return !!until && new Date(until) > new Date();
 }
 
+const DAY_LABELS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+const DAY_MS = 86_400_000;
+
+/** UTC gün anahtarı (YYYY-MM-DD) — uygulama genelinde aynı biçim kullanılıyor. */
+function dayKey(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
 export default async function DanisanDetailPage({
   params,
 }: {
@@ -32,16 +48,29 @@ export default async function DanisanDetailPage({
   const { id } = await params;
   const admin = createAdminClient();
 
+  // Son 7 gün (bugün dahil) — uyum özeti bu pencerede hesaplanır.
+  const todayMs = Date.parse(
+    new Date().toISOString().slice(0, 10) + "T00:00:00Z",
+  );
+  const weekDays = Array.from({ length: 7 }, (_, i) =>
+    dayKey(todayMs - (6 - i) * DAY_MS),
+  );
+  const weekStartKey = weekDays[0];
+
   const [
     { data: profile },
     { data: activePlan },
     { data: allPlans },
     { data: recentProgress },
     { data: photoEntries },
+    { data: mealLogs },
+    { data: waterRows },
   ] = await Promise.all([
     admin
       .from("profiles")
-      .select("id, full_name, premium_until, dietitian_id, created_at")
+      .select(
+        "id, full_name, premium_until, dietitian_id, created_at, water_goal_ml",
+      )
       .eq("id", id)
       .single(),
     admin
@@ -74,6 +103,16 @@ export default async function DanisanDetailPage({
       .not("photo_path", "is", null)
       .order("entry_date", { ascending: false })
       .limit(12),
+    admin
+      .from("meal_logs")
+      .select("meal_id, log_date, status")
+      .eq("client_id", id)
+      .gte("log_date", weekStartKey),
+    admin
+      .from("water_intake")
+      .select("day, total_ml")
+      .eq("client_id", id)
+      .gte("day", weekStartKey),
   ]);
 
   // İlerleme fotoğrafları için imzalı URL'ler
@@ -105,6 +144,108 @@ export default async function DanisanDetailPage({
     .filter((g): g is { id: string; name: string } => g != null);
 
   const premium = isPremiumActive(profile.premium_until);
+
+  // --- Son 7 gün: diyete uyum + su özeti ---
+  // Plan öğünleri (hafta/gün) beklenen öğün sayısını verir; meal_logs gerçekleşeni.
+  const { data: planMeals } = activePlan
+    ? await admin
+        .from("meals")
+        .select("id, week_index, day_of_week, calories")
+        .eq("plan_id", activePlan.id)
+    : { data: null };
+
+  const weekCount = Math.max(
+    1,
+    (planMeals ?? []).reduce((mx, m) => Math.max(mx, (m.week_index ?? 0) + 1), 1),
+  );
+
+  // (hafta, gün) → o gün planlanan öğün sayısı ve toplam kalori
+  const plannedByDay = new Map<string, { count: number; kcal: number }>();
+  for (const m of planMeals ?? []) {
+    const k = `${m.week_index ?? 0}-${m.day_of_week}`;
+    const cur = plannedByDay.get(k) ?? { count: 0, kcal: 0 };
+    cur.count += 1;
+    cur.kcal += m.calories ?? 0;
+    plannedByDay.set(k, cur);
+  }
+
+  const mealKcal = new Map<string, number>(
+    (planMeals ?? []).map((m) => [m.id, m.calories ?? 0]),
+  );
+
+  const eatenByDay = new Map<string, { count: number; kcal: number }>();
+  for (const l of mealLogs ?? []) {
+    if (l.status !== "eaten") continue;
+    const cur = eatenByDay.get(l.log_date) ?? { count: 0, kcal: 0 };
+    cur.count += 1;
+    cur.kcal += mealKcal.get(l.meal_id) ?? 0;
+    eatenByDay.set(l.log_date, cur);
+  }
+
+  const waterByDay = new Map<string, number>(
+    (waterRows ?? []).map((w) => [w.day, w.total_ml ?? 0]),
+  );
+  const waterGoal = profile.water_goal_ml ?? 2500;
+
+  // Plan başlangıcından önceki / bitişinden sonraki günlerde beklenen öğün yok.
+  const planStartKey = activePlan?.valid_from
+    ? dayKey(Date.parse(activePlan.valid_from))
+    : null;
+  const planEndKey = activePlan?.valid_to
+    ? dayKey(Date.parse(activePlan.valid_to))
+    : null;
+
+  const weekStats = weekDays.map((d) => {
+    const inPlan =
+      !!activePlan &&
+      (!planStartKey || d >= planStartKey) &&
+      (!planEndKey || d <= planEndKey);
+    let planned = { count: 0, kcal: 0 };
+    if (inPlan) {
+      const startMs = planStartKey
+        ? Date.parse(planStartKey + "T00:00:00Z")
+        : Date.parse(d + "T00:00:00Z");
+      const weeksIn = Math.max(
+        0,
+        Math.floor((Date.parse(d + "T00:00:00Z") - startMs) / (7 * DAY_MS)),
+      );
+      const dow = (new Date(d + "T00:00:00Z").getUTCDay() + 6) % 7;
+      planned =
+        plannedByDay.get(`${weeksIn % weekCount}-${dow}`) ?? { count: 0, kcal: 0 };
+    }
+    const eaten = eatenByDay.get(d) ?? { count: 0, kcal: 0 };
+    const water = waterByDay.get(d) ?? 0;
+    return {
+      date: d,
+      label: DAY_LABELS[(new Date(d + "T00:00:00Z").getUTCDay() + 6) % 7],
+      planned: planned.count,
+      eaten: eaten.count,
+      eatenKcal: eaten.kcal,
+      water,
+    };
+  });
+
+  const totalPlanned = weekStats.reduce((s, d) => s + d.planned, 0);
+  const totalEaten = weekStats.reduce(
+    (s, d) => s + (d.planned > 0 ? Math.min(d.eaten, d.planned) : 0),
+    0,
+  );
+  const adherencePct =
+    totalPlanned > 0 ? Math.round((totalEaten / totalPlanned) * 100) : null;
+  const loggedDays = weekStats.filter((d) => d.eaten > 0).length;
+  const avgKcal =
+    loggedDays > 0
+      ? Math.round(
+          weekStats.reduce((s, d) => s + d.eatenKcal, 0) / loggedDays,
+        )
+      : null;
+  const waterDays = weekStats.filter((d) => d.water > 0).length;
+  const avgWaterMl =
+    waterDays > 0
+      ? Math.round(weekStats.reduce((s, d) => s + d.water, 0) / 7)
+      : 0;
+  const waterGoalDays = weekStats.filter((d) => d.water >= waterGoal).length;
+  const hasWeekData = totalPlanned > 0 || loggedDays > 0 || waterDays > 0;
 
   const weights = (recentProgress ?? [])
     .filter((p) => p.weight_kg != null)
@@ -213,6 +354,145 @@ export default async function DanisanDetailPage({
           </p>
           <p className="mt-0.5 text-xs text-gray-500">Ölçüm kaydı</p>
         </div>
+      </div>
+
+      {/* Son 7 gün: diyete uyum + su */}
+      <div className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="flex items-center gap-2 font-semibold">
+            <UtensilsCrossed className="h-4 w-4 text-emerald-600" /> Uyum Özeti
+          </h2>
+          <span className="text-[11px] font-medium tracking-[0.14em] text-gray-400 uppercase">
+            Son 7 gün
+          </span>
+        </div>
+
+        {hasWeekData ? (
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-900">
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <p
+                  className={`text-xl font-bold tabular-nums ${
+                    adherencePct == null
+                      ? ""
+                      : adherencePct >= 80
+                        ? "text-emerald-600"
+                        : adherencePct >= 50
+                          ? "text-amber-500"
+                          : "text-rose-500"
+                  }`}
+                >
+                  {adherencePct != null ? `%${adherencePct}` : "—"}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Diyete uyum
+                  {totalPlanned > 0 && (
+                    <span className="block text-[11px] text-gray-400">
+                      {totalEaten}/{totalPlanned} öğün
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-xl font-bold tabular-nums">
+                  {avgKcal != null ? avgKcal : "—"}
+                  {avgKcal != null && (
+                    <span className="text-sm font-normal text-gray-500">
+                      {" "}
+                      kcal
+                    </span>
+                  )}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Günlük ortalama
+                  {activePlan?.daily_calorie_target != null && (
+                    <span className="block text-[11px] text-gray-400">
+                      hedef {activePlan.daily_calorie_target} kcal
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="flex items-baseline gap-1 text-xl font-bold tabular-nums text-sky-600">
+                  <Droplets className="h-4 w-4 shrink-0 self-center" />
+                  {avgWaterMl > 0
+                    ? (avgWaterMl / 1000).toFixed(1).replace(".", ",")
+                    : "—"}
+                  {avgWaterMl > 0 && (
+                    <span className="text-sm font-normal text-gray-500">L</span>
+                  )}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Günlük su
+                  <span className="block text-[11px] text-gray-400">
+                    {waterGoalDays}/7 gün hedefte
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {/* Gün gün: üst çubuk öğün uyumu, alt çubuk su */}
+            <div className="mt-4 grid grid-cols-7 gap-1.5">
+              {weekStats.map((d) => {
+                const mealPct =
+                  d.planned > 0
+                    ? Math.min(100, Math.round((d.eaten / d.planned) * 100))
+                    : 0;
+                const waterPct = Math.min(
+                  100,
+                  Math.round((d.water / waterGoal) * 100),
+                );
+                return (
+                  <div
+                    key={d.date}
+                    className="flex flex-col items-center gap-1"
+                    title={`${fmtDate(d.date + "T00:00:00")} — ${
+                      d.planned > 0
+                        ? `${d.eaten}/${d.planned} öğün`
+                        : "plan yok"
+                    } · ${d.water} ml su`}
+                  >
+                    <div className="flex h-12 items-end justify-center gap-1">
+                      <div className="flex h-full w-2 items-end rounded-full bg-gray-100 dark:bg-gray-800">
+                        <div
+                          className={`w-full rounded-full ${
+                            mealPct >= 80
+                              ? "bg-emerald-500"
+                              : mealPct > 0
+                                ? "bg-amber-400"
+                                : "bg-transparent"
+                          }`}
+                          style={{ height: `${mealPct}%` }}
+                        />
+                      </div>
+                      <div className="flex h-full w-2 items-end rounded-full bg-gray-100 dark:bg-gray-800">
+                        <div
+                          className="w-full rounded-full bg-sky-400"
+                          style={{ height: `${waterPct}%` }}
+                        />
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-gray-500">{d.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 flex items-center justify-center gap-4 text-[11px] text-gray-400">
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" /> Öğün
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-sky-400" /> Su (hedef{" "}
+                {(waterGoal / 1000).toFixed(1).replace(".", ",")} L)
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">
+            Son 7 günde öğün veya su kaydı yok.
+          </p>
+        )}
       </div>
 
       {/* Aktif plan */}

@@ -1,4 +1,4 @@
-import { MessageCircle, UserMinus, Users } from "lucide-react";
+import { AlertTriangle, MessageCircle, UserMinus, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -66,6 +66,17 @@ export default async function GrupDetayPage({
           </p>
         </div>
       </div>
+
+      {/* Boş grup uyarısı — mesaj kimseye ulaşmaz. */}
+      {members.length === 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            Bu grupta hiç danışan yok. Şimdi mesaj atarsan{" "}
+            <strong>kimse görmez</strong> — önce aşağıdan danışan ekle.
+          </p>
+        </div>
+      )}
 
       {/* Gruba yaz */}
       <form action={openGroupChat}>

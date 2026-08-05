@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
 import {
   analyzePlatePhoto,
@@ -11,6 +12,7 @@ import {
 import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
 import { getAssistantConversationId } from "@/lib/chat/assistant";
+import { notifyNewMessage } from "@/lib/chat/notify";
 import { DAYS, mealTypeLabel, mealTypeOrder } from "@/lib/diet";
 import { consumeAiCredit } from "@/lib/entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -79,6 +81,11 @@ export async function sendMessage(values: unknown): Promise<ActionResult> {
   if (conversation?.ai_enabled) {
     const quota = await respondWithAi(parsed.data.conversationId, user.id);
     if (quota) return { success: true, quota };
+  } else {
+    // İnsan sohbeti (birebir/grup) → diğer üyelere push. Yanıtı bekletmesin.
+    after(() =>
+      notifyNewMessage(parsed.data.conversationId, user.id, parsed.data.content),
+    );
   }
 
   return { success: true };
@@ -110,6 +117,25 @@ export async function sendPhotoMessage(
   }
 
   const admin = createAdminClient();
+
+  // Service-role ile yazıyoruz → RLS devrede değil, üyeliği elle doğrula.
+  const [{ data: membership }, { data: conversation }] = await Promise.all([
+    admin
+      .from("conversation_members")
+      .select("user_id")
+      .eq("conversation_id", conversationId)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    admin
+      .from("conversations")
+      .select("ai_enabled")
+      .eq("id", conversationId)
+      .maybeSingle(),
+  ]);
+  if (!membership || !conversation) {
+    return { error: "Bu sohbete erişimin yok." };
+  }
+
   const ext = photo.name.split(".").pop() ?? "jpg";
   const path = `${user.id}/chat/${Date.now()}.${ext}`;
 
@@ -120,15 +146,22 @@ export async function sendPhotoMessage(
     return { error: "Fotoğraf yüklenemedi." };
   }
 
+  const caption = "📷 Tabağımın fotoğrafını paylaştım";
   const { error: insertError } = await admin.from("messages").insert({
     conversation_id: conversationId,
     sender_id: user.id,
     type: "user",
-    content: "📷 Tabağımın fotoğrafını paylaştım",
+    content: caption,
     image_path: path,
   });
   if (insertError) {
     return { error: "Mesaj eklenemedi." };
+  }
+
+  // Vision analizi yalnızca AI sohbetinde; insan sohbetinde fotoğraf paylaşılır.
+  if (!conversation.ai_enabled) {
+    after(() => notifyNewMessage(conversationId, user.id, caption));
+    return { success: true };
   }
 
   const quota = await respondWithAi(conversationId, user.id);

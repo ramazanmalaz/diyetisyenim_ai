@@ -29,14 +29,34 @@ export type ChatMessageRow = {
 
 const SELECT = "id, sender_id, type, content, image_path, created_at";
 
+// Grup sohbetinde her gönderene sabit bir renk — WhatsApp'taki gibi isimler
+// birbirinden ayrışsın.
+const SENDER_COLORS = [
+  "text-rose-600 dark:text-rose-400",
+  "text-violet-600 dark:text-violet-400",
+  "text-amber-600 dark:text-amber-400",
+  "text-sky-600 dark:text-sky-400",
+  "text-teal-600 dark:text-teal-400",
+  "text-fuchsia-600 dark:text-fuchsia-400",
+];
+
+function senderColor(userId: string): string {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) hash = (hash + userId.charCodeAt(i)) | 0;
+  return SENDER_COLORS[Math.abs(hash) % SENDER_COLORS.length];
+}
+
 export function MessageThread({
   conversationId,
   currentUserId,
   initialMessages,
+  senderNames,
 }: {
   conversationId: string;
   currentUserId: string;
   initialMessages: ChatMessageRow[];
+  /** Grup sohbetinde gönderen adlarını göstermek için (id → ad). */
+  senderNames?: Record<string, string>;
 }) {
   const [messages, setMessages] = useState<ChatMessageRow[]>(initialMessages);
   const [input, setInput] = useState("");
@@ -196,7 +216,7 @@ export function MessageThread({
           </p>
         )}
 
-        {messages.map((m) => {
+        {messages.map((m, i) => {
           if (m.type === "system") {
             return (
               <p
@@ -227,6 +247,17 @@ export function MessageThread({
 
           const mine = m.type === "user" && m.sender_id === currentUserId;
           const url = m.image_path ? imageUrls[m.image_path] : undefined;
+
+          // Grup sohbeti: gelen mesajlarda gönderen adı. Aynı kişinin arka
+          // arkaya mesajlarında yalnızca ilkinde göster (WhatsApp davranışı).
+          const prev = messages[i - 1];
+          const showSender =
+            !mine &&
+            m.type === "user" &&
+            !!senderNames &&
+            !!m.sender_id &&
+            prev?.sender_id !== m.sender_id;
+
           return (
             <div
               key={m.id}
@@ -248,6 +279,16 @@ export function MessageThread({
                 {m.type === "ai" && (
                   <span className="mb-0.5 block text-xs font-medium text-emerald-700 dark:text-emerald-400">
                     Asistan
+                  </span>
+                )}
+                {showSender && m.sender_id && (
+                  <span
+                    className={cn(
+                      "mb-0.5 block text-xs font-semibold",
+                      senderColor(m.sender_id),
+                    )}
+                  >
+                    {senderNames?.[m.sender_id] ?? "Danışan"}
                   </span>
                 )}
                 {url && (

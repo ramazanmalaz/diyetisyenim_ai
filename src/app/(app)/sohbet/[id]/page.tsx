@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { MessageThread } from "@/components/chat/message-thread";
 import { requireProfile } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ConversationPage({
@@ -27,7 +28,7 @@ export default async function ConversationPage({
   const ai = conversation.ai_enabled;
   const title =
     conversation.title ?? (conversation.type === "group" ? "Grup" : "Sohbet");
-  const subtitle = ai
+  let subtitle = ai
     ? "Yapay zekâ asistan"
     : conversation.type === "group"
       ? "Grup sohbeti"
@@ -38,6 +39,31 @@ export default async function ConversationPage({
     .select("id, sender_id, type, content, image_path, created_at")
     .eq("conversation_id", id)
     .order("created_at", { ascending: true });
+
+  // Grup sohbetinde balonlarda gönderen adı görünsün. Üye listesi service-role
+  // ile okunur: conversation_members RLS'i danışana yalnızca KENDİ satırını
+  // gösterir. Üyelik yukarıdaki RLS'li conversations sorgusuyla doğrulandı.
+  let senderNames: Record<string, string> | undefined;
+  if (conversation.type === "group") {
+    const { data: memberRows } = await createAdminClient()
+      .from("conversation_members")
+      .select("user_id, profiles (full_name)")
+      .eq("conversation_id", id);
+
+    senderNames = Object.fromEntries(
+      (memberRows ?? []).map((r) => [
+        r.user_id,
+        (r.profiles as unknown as { full_name: string | null } | null)
+          ?.full_name ?? "Danışan",
+      ]),
+    );
+
+    // WhatsApp gibi: başlığın altında katılımcılar.
+    const others = Object.entries(senderNames)
+      .filter(([uid]) => uid !== profile.id)
+      .map(([, name]) => name);
+    if (others.length > 0) subtitle = ["Sen", ...others].join(", ");
+  }
 
   return (
     <div className="flex flex-1 flex-col">
@@ -65,7 +91,7 @@ export default async function ConversationPage({
         </span>
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-semibold leading-tight">{title}</h1>
-          <p className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+          <p className="flex items-center gap-1 truncate text-xs text-emerald-600 dark:text-emerald-400">
             {ai && (
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
             )}
@@ -78,6 +104,7 @@ export default async function ConversationPage({
         conversationId={conversation.id}
         currentUserId={profile.id}
         initialMessages={messages ?? []}
+        senderNames={senderNames}
       />
     </div>
   );
