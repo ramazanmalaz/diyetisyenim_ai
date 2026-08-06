@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Crown, X } from "lucide-react";
+import { Check, Clock, Crown, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { SignupUpsell } from "@/components/onboarding/signup-upsell";
 import { PREMIUM_WALL_EVENT, type PremiumWallKind } from "@/lib/premium-wall";
 import { createClient } from "@/lib/supabase/client";
+import { useShowPayments } from "@/lib/use-native-platform";
 
 const BENEFITS = [
   "Sınırsız AI diyetisyen sohbeti",
@@ -16,8 +17,55 @@ const BENEFITS = [
   "Yeni özelliklere öncelikli erişim",
 ];
 
+/**
+ * Kota bilgisi — satın alma çağrısı YOK. Native kabukta bu gösterilir; uygulama
+ * içinde ödemeye dair hiçbir referans bırakmaz (App Store Guideline 2.1(b)).
+ */
+function QuotaNotice({
+  kind,
+  onClose,
+}: {
+  kind: PremiumWallKind;
+  onClose: () => void;
+}) {
+  const what = kind === "vision" ? "fotoğraf analizi" : "AI sohbet";
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="reveal w-full max-w-sm overflow-hidden rounded-3xl bg-white p-6 text-center shadow-[var(--shadow-float)] dark:bg-gray-900"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+          <Clock className="h-6 w-6" strokeWidth={2} />
+        </span>
+        <h2 className="mt-3 text-lg font-bold tracking-tight">
+          Bugünlük {what} hakkın doldu
+        </h2>
+        <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+          Hakkın her gün gece yarısı yenilenir. Planın, kalori takibin, su ve
+          öğün hatırlatıcıların çalışmaya devam ediyor.
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-5 w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-transform duration-200 ease-[var(--ease-out)] active:scale-[0.98]"
+        >
+          Tamam
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function PremiumWall({ monthlyPrice }: { monthlyPrice?: string }) {
   const router = useRouter();
+  const showPayments = useShowPayments();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<PremiumWallKind>("chat");
   const [anon, setAnon] = useState(false);
@@ -46,6 +94,12 @@ export function PremiumWall({ monthlyPrice }: { monthlyPrice?: string }) {
   }, [open]);
 
   if (!open) return null;
+
+  // Native (iOS) kabuk: uygulama içi satın alma yok → ödemeye yönlendirme,
+  // yalnızca "bugünlük kotan doldu" bilgisi.
+  if (!showPayments) {
+    return <QuotaNotice kind={kind} onClose={() => setOpen(false)} />;
+  }
 
   // Anonim kullanıcı: premium gerektiren işlem → önce ücretsiz hesap oluştur.
   if (anon) {

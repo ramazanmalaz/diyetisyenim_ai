@@ -5,6 +5,7 @@ import { logout } from "@/app/(auth)/actions";
 import { AudioArmer } from "@/components/app/audio-armer";
 import { BottomNav } from "@/components/app/bottom-nav";
 import { PremiumWall } from "@/components/app/premium-wall";
+import { WebOnly } from "@/components/payments/web-only";
 import { MealReminder } from "@/components/app/meal-reminder";
 import { PushSetup } from "@/components/app/push-setup";
 import { WaterReminder } from "@/components/app/water-reminder";
@@ -43,13 +44,15 @@ export default async function AppLayout({
             <Salad className="h-4 w-4" strokeWidth={1.5} /> UzmanDiyet
           </Link>
           <div className="flex items-center gap-2 text-sm">
-            <Link
-              href="/abonelik"
-              aria-label="Premium"
-              className="flex h-9 items-center gap-1.5 rounded-full bg-amber-100 px-3 text-xs font-semibold text-amber-700 transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-amber-200 active:scale-[0.96] dark:bg-amber-950/40 dark:text-amber-300"
-            >
-              <Crown className="h-4 w-4" strokeWidth={1.75} /> Premium
-            </Link>
+            <WebOnly>
+              <Link
+                href="/abonelik"
+                aria-label="Premium"
+                className="flex h-9 items-center gap-1.5 rounded-full bg-amber-100 px-3 text-xs font-semibold text-amber-700 transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-amber-200 active:scale-[0.96] dark:bg-amber-950/40 dark:text-amber-300"
+              >
+                <Crown className="h-4 w-4" strokeWidth={1.75} /> Premium
+              </Link>
+            </WebOnly>
             <span className="flex items-center gap-2">
               <span className="hidden text-gray-600 sm:inline dark:text-gray-300">
                 {name}

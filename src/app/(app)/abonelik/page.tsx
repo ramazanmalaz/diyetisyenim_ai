@@ -2,12 +2,62 @@ import { Check, Crown, Minus, ShieldCheck, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 
 import { SmartCheckout } from "@/components/payments/smart-checkout";
-import { getEntitlement } from "@/lib/entitlements";
+import { WebOnly } from "@/components/payments/web-only";
+import { getEntitlement, type Entitlement } from "@/lib/entitlements";
 import { requireProfile } from "@/lib/auth";
 import { LEGAL_LINKS } from "@/lib/legal";
 import { getPricing, type Plan } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
 import type { PaymentStatus } from "@/types/database";
+
+/**
+ * Native (iOS) kabukta abonelik sayfası yerine gösterilir: fiyat, satın alma
+ * veya premium çağrısı içermez — yalnızca günlük kullanım durumu.
+ */
+function NativeUsageNotice({ ent }: { ent: Entitlement }) {
+  return (
+    <div className="mx-auto w-full max-w-2xl space-y-5 px-4 py-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Kullanımın</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Tüm özellikler ücretsiz. AI sohbet ve fotoğraf analizinin günlük bir
+          hakkı var; her gün gece yarısı yenilenir.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-[var(--shadow-soft)] dark:border-gray-800 dark:bg-gray-900">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-2xl font-bold tabular-nums">
+              {Math.max(0, ent.chatLimit - ent.chatUsed)}
+              <span className="text-sm font-normal text-gray-500">
+                {" "}
+                / {ent.chatLimit}
+              </span>
+            </p>
+            <p className="mt-0.5 text-xs text-gray-500">Kalan AI sohbet</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold tabular-nums">
+              {Math.max(0, ent.visionLimit - ent.visionUsed)}
+              <span className="text-sm font-normal text-gray-500">
+                {" "}
+                / {ent.visionLimit}
+              </span>
+            </p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              Kalan fotoğraf analizi
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-400">
+        Plan takibi, kalori hesabı, su ve öğün hatırlatıcıları sınırsızdır.
+      </p>
+    </div>
+  );
+}
 
 const STATUS_LABEL: Record<PaymentStatus, string> = {
   pending: "Bekliyor",
@@ -18,9 +68,9 @@ const STATUS_LABEL: Record<PaymentStatus, string> = {
 
 // Ücretsiz vs Premium karşılaştırması. free=null → ücretsizde yok (X).
 const COMPARE: { label: string; free: string | null; premium: string }[] = [
-  { label: "AI diyetisyen sohbeti", free: "Günde 5 mesaj", premium: "Sınırsız" },
-  { label: "Fotoğraf & tabak analizi", free: "Günde 1", premium: "Sınırsız" },
-  { label: "Hazır planı fotoğraftan okuma", free: "Günde 1", premium: "Sınırsız" },
+  { label: "AI diyetisyen sohbeti", free: "Günde 20 mesaj", premium: "Sınırsız" },
+  { label: "Fotoğraf & tabak analizi", free: "Günde 5", premium: "Sınırsız" },
+  { label: "Hazır planı fotoğraftan okuma", free: "Günde 5", premium: "Sınırsız" },
   { label: "Kişiye özel plan & kalori takibi", free: "Var", premium: "Var" },
   { label: "Su, öğün, pomodoro hatırlatıcıları", free: "Var", premium: "Var" },
   { label: "Makro & tarif detayı", free: "Var", premium: "Var" },
@@ -126,6 +176,7 @@ export default async function AbonelikPage({
     .order("created_at", { ascending: false });
 
   return (
+    <WebOnly fallback={<NativeUsageNotice ent={ent} />}>
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
       {ent.isPremium && ent.premiumUntil ? (
         /* --- Premium aktif --- */
@@ -315,5 +366,6 @@ export default async function AbonelikPage({
         ))}
       </nav>
     </div>
+    </WebOnly>
   );
 }

@@ -1,8 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Ücretsiz kullanıcı günlük limitleri (premium = sınırsız).
-export const FREE_CHAT_LIMIT = 5;
-export const FREE_VISION_LIMIT = 1;
+// iOS'ta uygulama içi satın alma kapalı olduğu için limitler cömert tutuldu:
+// kota dolunca kullanıcı ödemeye yönlendirilmiyor, ertesi günü bekliyor.
+export const FREE_CHAT_LIMIT = 20;
+export const FREE_VISION_LIMIT = 5;
 // iyzico tek ödeme karşılığı premium erişim süresi.
 export const PREMIUM_DAYS = 30;
 

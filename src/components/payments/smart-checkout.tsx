@@ -32,14 +32,10 @@ export function SmartCheckout({ price, plan, label }: Props) {
     });
   }, []);
 
-  if (isNative) {
-    return (
-      <p className="rounded-xl bg-gray-50 px-4 py-3 text-center text-xs text-gray-500 dark:bg-gray-800/50 dark:text-gray-400">
-        Premium&apos;a yalnızca uzmandiyet.com web sitesi üzerinden abone
-        olunabilir.
-      </p>
-    );
-  }
+  // Native kabukta hiçbir şey render etme. Dış siteye yönlendiren bir metin
+  // bile App Store'da anti-steering ihlali sayılır (Guideline 3.1.1).
+  // Not: /abonelik sayfası zaten <WebOnly> ile sarılı; bu ikinci savunma hattı.
+  if (isNative) return null;
 
   return (
     <CheckoutButton
