@@ -11,6 +11,10 @@ const config: CapacitorConfig = {
     androidScheme: "https",
   },
   ios: {
+    // Sunucu isteği native kabuktan mı geliyor ayırt edebilsin diye
+    // (bkz. src/lib/native-request.ts). Guideline 3.1.1: uygulamada ücretli
+    // içerik ve IAP dışı ödeme yönlendirmesi olamaz.
+    appendUserAgent: "UzmanDiyetiOS",
     contentInset: "always",
     backgroundColor: "#ffffff",
     preferredContentMode: "mobile",

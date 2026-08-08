@@ -1,9 +1,14 @@
+import { notFound } from "next/navigation";
+
 import { LegalDoc } from "@/components/legal/legal-doc";
 import { COMPANY } from "@/lib/legal";
+import { isNativeRequest } from "@/lib/native-request";
 
 export const metadata = { title: "İptal, İade ve Cayma Hakkı — UzmanDiyet" };
 
-export default function IptalIadePage() {
+export default async function IptalIadePage() {
+  // iOS kabuğunda satış yok (Guideline 3.1.1).
+  if (await isNativeRequest()) notFound();
   return (
     <LegalDoc title="İptal, İade ve Cayma Hakkı">
       <p>

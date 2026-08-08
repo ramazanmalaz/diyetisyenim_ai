@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   // Freemium: ücretsiz kullanıcının günlük mesaj hakkı (premium sınırsız).
   const credit = await consumeAiCredit(user.id, "chat");
   if (!credit.ok) {
-    return new Response(upgradeMessage("chat"), {
+    return new Response(await upgradeMessage("chat"), {
       status: 402,
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });

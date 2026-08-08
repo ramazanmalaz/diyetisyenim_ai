@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SmartCheckout } from "@/components/payments/smart-checkout";
 import { WebOnly } from "@/components/payments/web-only";
 import { getEntitlement, type Entitlement } from "@/lib/entitlements";
+import { isNativeRequest } from "@/lib/native-request";
 import { requireProfile } from "@/lib/auth";
 import { LEGAL_LINKS } from "@/lib/legal";
 import { getPricing, type Plan } from "@/lib/settings";
@@ -165,6 +166,11 @@ export default async function AbonelikPage({
   const { odeme } = await searchParams;
   const supabase = await createClient();
   const ent = await getEntitlement(profile.id);
+
+  // iOS kabuğu: fiyat/satın alma arayüzü hiç ÜRETİLMEZ. <WebOnly> yalnızca
+  // görsel gizlemedir — fiyatlar yine de RSC payload'ına girerdi (Guideline 3.1.1).
+  if (await isNativeRequest()) return <NativeUsageNotice ent={ent} />;
+
   const pricing = await getPricing();
 
   const saving =

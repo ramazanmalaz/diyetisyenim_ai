@@ -1,3 +1,4 @@
+import { isNativeRequest } from "@/lib/native-request";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Ücretsiz kullanıcı günlük limitleri (premium = sınırsız).
@@ -27,9 +28,17 @@ function premiumActive(premiumUntil: string | null | undefined): boolean {
   return !!premiumUntil && new Date(premiumUntil).getTime() > Date.now();
 }
 
-/** Kullanıcının premium durumu + bugünkü AI kullanımını döndürür. */
+/**
+ * Kullanıcının premium durumu + bugünkü AI kullanımını döndürür.
+ *
+ * iOS kabuğunda premium HER ZAMAN kapalıdır: web'de (iyzico) satın alınmış bir
+ * abonelik uygulama içinde açılırsa Guideline 3.1.1 ihlali olur — "uygulama
+ * dışında satın alınan ücretli içeriğe erişim, aynı içerik IAP ile satılmıyorsa
+ * uygun değildir". iOS'ta ücretli katman yok; herkes ücretsiz limitlerle çalışır.
+ */
 export async function getEntitlement(userId: string): Promise<Entitlement> {
   const admin = createAdminClient();
+  const native = await isNativeRequest();
   const [{ data: profile }, { data: usage }] = await Promise.all([
     admin.from("profiles").select("premium_until").eq("id", userId).maybeSingle(),
     admin
@@ -41,8 +50,8 @@ export async function getEntitlement(userId: string): Promise<Entitlement> {
   ]);
 
   return {
-    isPremium: premiumActive(profile?.premium_until),
-    premiumUntil: profile?.premium_until ?? null,
+    isPremium: !native && premiumActive(profile?.premium_until),
+    premiumUntil: native ? null : (profile?.premium_until ?? null),
     chatUsed: usage?.chat_count ?? 0,
     chatLimit: FREE_CHAT_LIMIT,
     visionUsed: usage?.vision_count ?? 0,
@@ -70,7 +79,9 @@ export async function consumeAiCredit(
     .select("premium_until")
     .eq("id", userId)
     .maybeSingle();
-  const isPremium = premiumActive(profile?.premium_until);
+  // iOS kabuğu: premium yok sayılır, ücretsiz limitler uygulanır (Guideline 3.1.1).
+  const isPremium =
+    !(await isNativeRequest()) && premiumActive(profile?.premium_until);
 
   const day = today();
   const { data: usage } = await admin
@@ -105,11 +116,22 @@ export async function consumeAiCredit(
   return { ok: true, isPremium };
 }
 
-/** Limit dolduğunda kullanıcıya gösterilecek yönlendirme metni (Markdown). */
-export function upgradeMessage(kind: AiKind): string {
+/**
+ * Limit dolduğunda kullanıcıya gösterilecek metin (Markdown).
+ *
+ * iOS kabuğunda ödemeye dair TEK KELİME geçemez: Guideline 3.1.1 "kullanıcı IAP
+ * dışı ödeme yöntemine yönlendiriliyor" maddesi tam olarak bu metinden çıktı
+ * (08.08.2026 reddi). Native'de yalnızca kotanın yenileneceği bilgisi verilir.
+ */
+export async function upgradeMessage(kind: AiKind): Promise<string> {
   const what =
     kind === "vision"
       ? "Günlük ücretsiz fotoğraf analizi hakkın doldu"
       : "Günlük ücretsiz mesaj hakkın doldu";
+
+  if (await isNativeRequest()) {
+    return `${what}. Hakkın gece yarısı yenilenecek — yarın kaldığın yerden devam edebilirsin. 🌱`;
+  }
+
   return `${what}. Sınırsız sohbet ve fotoğraf analizi için **[Premium'a geç](/abonelik)** — ya da yarın tekrar dene. 🌱`;
 }

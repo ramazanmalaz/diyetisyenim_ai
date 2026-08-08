@@ -10,6 +10,7 @@ import { MealReminder } from "@/components/app/meal-reminder";
 import { PushSetup } from "@/components/app/push-setup";
 import { WaterReminder } from "@/components/app/water-reminder";
 import { requireProfile } from "@/lib/auth";
+import { isNativeRequest } from "@/lib/native-request";
 import { getPricing } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
 
@@ -31,6 +32,8 @@ export default async function AppLayout({
   ]);
   const name = profile.full_name ?? "Danışan";
   const initial = name.trim().charAt(0).toUpperCase() || "D";
+  // iOS kabuğunda premium rozeti ve fiyat hiç render edilmez (Guideline 3.1.1).
+  const native = await isNativeRequest();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -44,6 +47,7 @@ export default async function AppLayout({
             <Salad className="h-4 w-4" strokeWidth={1.5} /> UzmanDiyet
           </Link>
           <div className="flex items-center gap-2 text-sm">
+            {!native && (
             <WebOnly>
               <Link
                 href="/abonelik"
@@ -53,6 +57,7 @@ export default async function AppLayout({
                 <Crown className="h-4 w-4" strokeWidth={1.75} /> Premium
               </Link>
             </WebOnly>
+            )}
             <span className="flex items-center gap-2">
               <span className="hidden text-gray-600 sm:inline dark:text-gray-300">
                 {name}
@@ -102,7 +107,7 @@ export default async function AppLayout({
       />
       <PushSetup />
       <AudioArmer />
-      <PremiumWall monthlyPrice={pricing.monthly.price} />
+      <PremiumWall monthlyPrice={native ? undefined : pricing.monthly.price} />
     </div>
   );
 }

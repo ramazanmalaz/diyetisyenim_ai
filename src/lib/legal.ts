@@ -30,11 +30,27 @@ export const COMPANY = {
 /** Yasal metinlerin son güncellenme tarihi (GG.AA.YYYY) */
 export const LAST_UPDATED = "14.06.2026";
 
-/** Footer + onay kutusunda kullanılan yasal sayfa bağlantıları. */
-export const LEGAL_LINKS: { href: string; label: string }[] = [
+type LegalLink = { href: string; label: string };
+
+/**
+ * Satışa/ödemeye dair yasal sayfalar. iOS kabuğunda GÖSTERİLMEZ — uygulamada
+ * ödeme yoktur, bu bağlantılar reviewer'a "IAP dışı ödeme yönlendirmesi" olarak
+ * görünür (Guideline 3.1.1).
+ */
+export const PAYMENT_LEGAL_LINKS: LegalLink[] = [
   { href: "/mesafeli-satis", label: "Mesafeli Satış Sözleşmesi" },
   { href: "/on-bilgilendirme", label: "Ön Bilgilendirme Formu" },
   { href: "/iptal-iade", label: "İptal, İade ve Cayma Hakkı" },
+];
+
+/** Her platformda gösterilen yasal sayfalar. */
+export const BASE_LEGAL_LINKS: LegalLink[] = [
   { href: "/gizlilik", label: "Gizlilik ve KVKK" },
   { href: "/iletisim", label: "İletişim" },
+];
+
+/** Footer + onay kutusunda kullanılan yasal sayfa bağlantıları (web). */
+export const LEGAL_LINKS: LegalLink[] = [
+  ...PAYMENT_LEGAL_LINKS,
+  ...BASE_LEGAL_LINKS,
 ];

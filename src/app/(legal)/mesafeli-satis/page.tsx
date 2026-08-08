@@ -1,10 +1,16 @@
+import { notFound } from "next/navigation";
+
 import { LegalDoc } from "@/components/legal/legal-doc";
 import { COMPANY } from "@/lib/legal";
+import { isNativeRequest } from "@/lib/native-request";
 import { getPricing } from "@/lib/settings";
 
 export const metadata = { title: "Mesafeli Satış Sözleşmesi — UzmanDiyet" };
 
 export default async function MesafeliSatisPage() {
+  // iOS kabuğunda satış yok: fiyat ve ödeme anlatan bu belge uygulamada
+  // bulunmaz (Guideline 3.1.1).
+  if (await isNativeRequest()) notFound();
   const pricing = await getPricing();
   return (
     <LegalDoc title="Mesafeli Satış Sözleşmesi">
