@@ -32,7 +32,11 @@ export function Footer() {
         <IyzicoBand />
 
         <p className="text-xs text-gray-400">
-          © {COMPANY.brand} · {COMPANY.name} · Tüm hakları saklıdır.
+          {/* Şahıs işletmesinde marka ile ticari unvan aynı olabiliyor;
+              aynıysa tek kez yazılır. */}
+          © {COMPANY.brand}
+          {COMPANY.name !== COMPANY.brand ? ` · ${COMPANY.name}` : ""} · Tüm
+          hakları saklıdır.
           <PaymentNote />
         </p>
       </div>
