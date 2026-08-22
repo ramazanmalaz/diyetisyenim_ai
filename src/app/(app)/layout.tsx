@@ -1,4 +1,5 @@
-import { Crown, LogOut, Salad, Settings } from "lucide-react";
+import { Crown, LogOut, Settings } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import Link from "next/link";
 
 import { logout } from "@/app/(auth)/actions";
@@ -44,19 +45,20 @@ export default async function AppLayout({
             href="/panel"
             className="flex items-center gap-2 text-sm font-bold tracking-tight text-emerald-700 transition-opacity duration-200 ease-[var(--ease-out)] hover:opacity-80 dark:text-emerald-300"
           >
-            <Salad className="h-4 w-4" strokeWidth={1.5} /> UzmanDiyet
+            <BrandMark className="h-4 w-4 text-emerald-700 dark:text-emerald-300" />{" "}
+            UzmanDiyet
           </Link>
           <div className="flex items-center gap-2 text-sm">
             {!native && (
-            <WebOnly>
-              <Link
-                href="/abonelik"
-                aria-label="Premium"
-                className="flex h-9 items-center gap-1.5 rounded-full bg-amber-100 px-3 text-xs font-semibold text-amber-700 transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-amber-200 active:scale-[0.96] dark:bg-amber-950/40 dark:text-amber-300"
-              >
-                <Crown className="h-4 w-4" strokeWidth={1.75} /> Premium
-              </Link>
-            </WebOnly>
+              <WebOnly>
+                <Link
+                  href="/abonelik"
+                  aria-label="Premium"
+                  className="flex h-9 items-center gap-1.5 rounded-full bg-amber-100 px-3 text-xs font-semibold text-amber-700 transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-amber-200 active:scale-[0.96] dark:bg-amber-950/40 dark:text-amber-300"
+                >
+                  <Crown className="h-4 w-4" strokeWidth={1.75} /> Premium
+                </Link>
+              </WebOnly>
             )}
             <span className="flex items-center gap-2">
               <span className="hidden text-gray-600 sm:inline dark:text-gray-300">
@@ -91,7 +93,9 @@ export default async function AppLayout({
 
       <main className="flex flex-1 flex-col pb-28">{children}</main>
 
-      <BottomNav isAdmin={profile.role === "admin" || profile.role === "dietitian"} />
+      <BottomNav
+        isAdmin={profile.role === "admin" || profile.role === "dietitian"}
+      />
       <WaterReminder
         enabled={waterCfg?.water_reminder_enabled ?? true}
         startHour={waterCfg?.water_start_hour ?? 10}

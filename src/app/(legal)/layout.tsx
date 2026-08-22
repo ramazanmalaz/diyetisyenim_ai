@@ -1,4 +1,4 @@
-import { Salad } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import Link from "next/link";
 
 import { Footer } from "@/components/footer";
@@ -16,7 +16,8 @@ export default function LegalLayout({
             href="/"
             className="flex items-center gap-2 text-sm font-bold tracking-tight text-emerald-700 dark:text-emerald-300"
           >
-            <Salad className="h-4 w-4" strokeWidth={1.5} /> UzmanDiyet
+            <BrandMark className="h-4 w-4 text-emerald-700 dark:text-emerald-300" />{" "}
+            UzmanDiyet
           </Link>
           <Link
             href="/panel"

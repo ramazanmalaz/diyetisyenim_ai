@@ -14,9 +14,9 @@ import { BASE_LEGAL_LINKS, COMPANY } from "@/lib/legal";
  */
 export function Footer() {
   return (
-    <footer className="border-t border-black/5 bg-white/60 px-4 py-8 dark:border-white/10 dark:bg-gray-950/40">
-      <div className="mx-auto max-w-3xl space-y-4">
-        <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+    <footer className="border-t border-black/5 bg-white/60 px-4 py-4 sm:py-8 dark:border-white/10 dark:bg-gray-950/40">
+      <div className="mx-auto max-w-3xl space-y-2 sm:space-y-4">
+        <nav className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] sm:gap-x-5 sm:gap-y-2 sm:text-sm">
           <PaymentLegalLinks />
           {BASE_LEGAL_LINKS.map((l) => (
             <Link

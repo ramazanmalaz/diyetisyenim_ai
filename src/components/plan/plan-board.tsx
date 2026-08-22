@@ -9,6 +9,10 @@ import {
   setMealStatus,
 } from "@/app/(app)/plan/actions";
 import { CalorieFigure } from "@/components/plan/calorie-figure";
+
+/** Ümüş Teyze geçici olarak gösterimden kaldırıldı (kod duruyor).
+ *  Yeniden göstermek için `true` yap. */
+const UMUS_TEYZE_GORUNUR = false;
 import { CalorieHero } from "@/components/plan/calorie-hero";
 import { DailySummary } from "@/components/plan/daily-summary";
 import { WaterTracker } from "@/components/plan/water-tracker";
@@ -295,15 +299,17 @@ export function PlanBoard({
       <MedicalDisclaimer />
 
       {/* Yüzen, sürüklenebilir Ümüş Teyze (sabit konumlu — akışta yer kaplamaz) */}
-      <CalorieFigure
-        consumed={consumedDay}
-        target={dailyTarget}
-        meals={meals}
-        selectedDay={selectedDay}
-        selectedWeek={selectedWeek}
-        statusByMeal={statusByMeal}
-        userName={userName}
-      />
+      {UMUS_TEYZE_GORUNUR && (
+        <CalorieFigure
+          consumed={consumedDay}
+          target={dailyTarget}
+          meals={meals}
+          selectedDay={selectedDay}
+          selectedWeek={selectedWeek}
+          statusByMeal={statusByMeal}
+          userName={userName}
+        />
+      )}
     </div>
   );
 }

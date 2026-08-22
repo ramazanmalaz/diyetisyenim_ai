@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6faf8; /* hafif yeşilimsi beyaz */
-  --foreground: #11201a;
+  --background: #fafafa; /* nötr açık zemin */
+  --foreground: #18181b;
 }
 
 @theme inline {
@@ -14,27 +14,29 @@
 }
 
 @theme {
-  /* NUTRIFLOW çizgisi — canlı elma-yeşili marka rampası (emerald override) */
-  --color-emerald-50: #f4faea;
-  --color-emerald-100: #e6f4cd;
-  --color-emerald-200: #d0ea9f;
-  --color-emerald-300: #b4dd6a;
-  --color-emerald-400: #97cd41;
-  --color-emerald-500: #7fbb2c;
-  --color-emerald-600: #6aa621;
-  --color-emerald-700: #51811d;
-  --color-emerald-800: #41661c;
-  --color-emerald-900: #38551c;
-  --color-emerald-950: #1c2e0b;
+  /* Marka yeşili — yalnızca aksan (buton, aktif sekme, vurgu) için.
+     Zemin ve kartlar nötr; açık tonlar bilinçli olarak grileştirildi ki
+     geniş alanlara yayıldığında ortam yeşile boyanmasın. */
+  --color-emerald-50: #f6f7f5;
+  --color-emerald-100: #eaeee6;
+  --color-emerald-200: #d5ddcd;
+  --color-emerald-300: #b3c4a6;
+  --color-emerald-400: #8aa578;
+  --color-emerald-500: #6b8b57;
+  --color-emerald-600: #557344;
+  --color-emerald-700: #445c37;
+  --color-emerald-800: #38492f;
+  --color-emerald-900: #2f3c29;
+  --color-emerald-950: #171d13;
 
   /* Parlak lime aksan (rozetler, vurgular) */
-  --color-lime-accent: #a3e635;
+  --color-lime-accent: #8aa578;
 
-  /* Yumuşak, yeşil-tonlu gölgeler (wellness) */
+  /* Nötr, yumuşak gölgeler */
   --shadow-soft:
-    0 1px 2px rgb(7 40 29 / 0.04), 0 14px 34px -16px rgb(7 40 29 / 0.16);
+    0 1px 2px rgb(9 9 11 / 0.04), 0 14px 34px -16px rgb(9 9 11 / 0.14);
   --shadow-float:
-    0 2px 8px rgb(7 40 29 / 0.05), 0 30px 64px -24px rgb(7 40 29 / 0.22);
+    0 2px 8px rgb(9 9 11 / 0.05), 0 30px 64px -24px rgb(9 9 11 / 0.18);
 
   /* Güçlü özel easing eğrileri — yerleşik CSS easing'leri fazla zayıf.
      (Emil Kowalski / animations.dev) */
@@ -45,8 +47,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0f0c;
-    --foreground: #e7efe9;
+    --background: #0b0b0d;
+    --foreground: #e8e8ea;
   }
 }
 
@@ -61,21 +63,9 @@ body {
   -webkit-font-smoothing: antialiased;
   background-color: var(--background);
   overflow-x: hidden;
-  /* Yumuşak yeşil gradyan mesh.
-     background-attachment:fixed iOS WKWebView'da desteklenmez — scroll kullanılıyor. */
-  background-image:
-    radial-gradient(
-      55% 45% at 12% -5%,
-      rgb(151 205 65 / 0.18),
-      transparent 60%
-    ),
-    radial-gradient(
-      50% 45% at 105% 8%,
-      rgb(163 230 53 / 0.14),
-      transparent 60%
-    ),
-    radial-gradient(60% 50% at 50% 108%, rgb(106 166 33 / 0.1), transparent 60%);
-  background-attachment: scroll;
+  /* Zemin nötr: yeşil gradyan mesh kaldırıldı, yeşil yalnızca aksan olarak
+     (buton, aktif sekme, vurgu) kullanılıyor. */
+  background-image: none;
 }
 
 /* İnce grain dokusu */

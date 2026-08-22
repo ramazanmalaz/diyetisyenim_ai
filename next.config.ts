@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Sol alttaki geliştirme rozeti pazarlama ekran görüntülerine karışıyordu.
+  devIndicators: false,
   experimental: {
     // Tabak fotoğrafı (≤5 MB) Server Action gövdesiyle gönderildiği için
     // varsayılan 1 MB limitini yükseltiyoruz.
