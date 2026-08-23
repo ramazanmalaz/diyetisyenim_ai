@@ -1,12 +1,23 @@
 "use client";
 
-import { Bell, BellOff, GlassWater, Plus, RotateCcw, Undo2 } from "lucide-react";
+import {
+  Bell,
+  BellOff,
+  GlassWater,
+  Plus,
+  RotateCcw,
+  Undo2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { setWaterReminder } from "@/app/(app)/push/actions";
 import { updateWater } from "@/app/(app)/plan/actions";
 import { Input } from "@/components/ui/input";
-import { enablePush } from "@/lib/push-client";
+import {
+  enablePush,
+  hasPushSubscription,
+  isPushSupported,
+} from "@/lib/push-client";
 import {
   broadcastWater,
   REMINDER_TOGGLE_EVENT,
@@ -34,6 +45,26 @@ export function WaterTracker({
   const [custom, setCustom] = useState("");
   const [busy, setBusy] = useState(false);
   const [lastAdd, setLastAdd] = useState(0); // son eklenen miktar (geri al için)
+  /* Tercih açık olsa bile cihazda abonelik yoksa bildirim GİTMEZ. Native
+     WKWebView'da Web Push hiç yok. Söz verilmeden önce gerçek durum ölçülür. */
+  const [pushDurum, setPushDurum] = useState<
+    "kontrol" | "abone" | "izinsiz" | "desteklenmiyor"
+  >("kontrol");
+
+  useEffect(() => {
+    let iptal = false;
+    void (async () => {
+      if (!isPushSupported()) {
+        if (!iptal) setPushDurum("desteklenmiyor");
+        return;
+      }
+      const var_ = await hasPushSubscription();
+      if (!iptal) setPushDurum(var_ ? "abone" : "izinsiz");
+    })();
+    return () => {
+      iptal = true;
+    };
+  }, []);
 
   // Tam yüklemede DB otoritedir: aynayı eşitle + başka yerde değişirse dinle.
   useEffect(() => {
@@ -94,11 +125,19 @@ export function WaterTracker({
     }
   }
 
+  /* Sadece tercih açık VE cihazda abonelik varken bildirim gerçekten gider. */
+  const bildirimGidiyor = reminderOn && pushDurum === "abone";
+
   async function toggleReminder() {
     const next = !reminderOn;
     setReminderOn(next);
     setReminderEnabledLs(next); // localStorage ayna + event (in-app hatırlatıcı)
-    if (next) await enablePush();
+    if (next) {
+      const oldu = await enablePush();
+      setPushDurum(
+        oldu ? "abone" : isPushSupported() ? "izinsiz" : "desteklenmiyor",
+      );
+    }
     void setWaterReminder(next); // DB (tek kaynak)
   }
 
@@ -129,17 +168,23 @@ export function WaterTracker({
           aria-label="Su içme hatırlatıcısını aç/kapat"
           className={
             "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 transition-colors duration-200 ease-[var(--ease-out)] " +
-            (reminderOn
-              ? "bg-sky-100 text-sky-700 ring-sky-200 hover:bg-sky-200/70 dark:bg-sky-950/50 dark:text-sky-300 dark:ring-sky-900"
-              : "bg-gray-100 text-gray-500 ring-gray-200 hover:bg-gray-200/70 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700")
+            (!reminderOn
+              ? "bg-gray-100 text-gray-500 ring-gray-200 hover:bg-gray-200/70 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700"
+              : bildirimGidiyor || pushDurum === "kontrol"
+                ? "bg-sky-100 text-sky-700 ring-sky-200 hover:bg-sky-200/70 dark:bg-sky-950/50 dark:text-sky-300 dark:ring-sky-900"
+                : "bg-amber-100 text-amber-700 ring-amber-200 hover:bg-amber-200/70 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900")
           }
         >
-          {reminderOn ? (
+          {reminderOn && (bildirimGidiyor || pushDurum === "kontrol") ? (
             <Bell className="h-3.5 w-3.5" strokeWidth={2} />
           ) : (
             <BellOff className="h-3.5 w-3.5" strokeWidth={2} />
           )}
-          {reminderOn ? "Hatırlat: Açık" : "Hatırlat: Kapalı"}
+          {!reminderOn
+            ? "Hatırlat: Kapalı"
+            : bildirimGidiyor || pushDurum === "kontrol"
+              ? "Hatırlat: Açık"
+              : "Hatırlat: Bu cihazda kapalı"}
         </button>
       </div>
 
@@ -174,7 +219,7 @@ export function WaterTracker({
 
           {/* Bardak silueti */}
           <div
-            className="absolute inset-0 overflow-hidden bg-white/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6)] ring-2 ring-inset ring-sky-200/80 transition-transform duration-200 ease-[var(--ease-out)] group-active:scale-[0.97] dark:bg-white/5 dark:ring-sky-900/60"
+            className="absolute inset-0 overflow-hidden bg-white/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6)] ring-2 ring-sky-200/80 transition-transform duration-200 ease-[var(--ease-out)] ring-inset group-active:scale-[0.97] dark:bg-white/5 dark:ring-sky-900/60"
             style={{ clipPath: "url(#wt-glass-clip)" }}
           >
             {/* Sıvı dolumu */}
@@ -236,7 +281,7 @@ export function WaterTracker({
         </button>
 
         <p className="mt-3 flex items-baseline gap-1.5">
-          <span className="text-3xl font-bold tabular-nums tracking-tight text-sky-900 dark:text-sky-50">
+          <span className="text-3xl font-bold tracking-tight text-sky-900 tabular-nums dark:text-sky-50">
             {liters}
             <span className="ml-0.5 text-lg font-semibold text-sky-500">L</span>
           </span>
@@ -320,11 +365,32 @@ export function WaterTracker({
         )}
       </div>
 
-      {reminderOn && (
+      {reminderOn && bildirimGidiyor && (
         <p className="mt-3 flex items-center gap-1.5 text-[11px] text-sky-700/70 dark:text-sky-300/60">
           <Bell className="h-3 w-3" strokeWidth={2} />
-          Gün içinde (08:00–22:00) düzenli olarak hatırlatırız — uygulama kapalı olsa
-          bile.
+          Belirlediğin saat aralığında düzenli olarak hatırlatırız — uygulama
+          kapalı olsa bile.
+        </p>
+      )}
+
+      {reminderOn && pushDurum === "izinsiz" && (
+        <p className="mt-3 flex items-start gap-1.5 text-[11px] text-amber-700/80 dark:text-amber-300/70">
+          <BellOff className="mt-px h-3 w-3 shrink-0" strokeWidth={2} />
+          <span>
+            Bu cihazda bildirim izni verilmediği için hatırlatma gönderemiyoruz.
+            Rozete dokunup izin verirsen çalışmaya başlar.
+          </span>
+        </p>
+      )}
+
+      {reminderOn && pushDurum === "desteklenmiyor" && (
+        <p className="mt-3 flex items-start gap-1.5 text-[11px] text-amber-700/80 dark:text-amber-300/70">
+          <BellOff className="mt-px h-3 w-3 shrink-0" strokeWidth={2} />
+          <span>
+            Bu sürümde uygulama içi bildirim gönderilemiyor. Hatırlatmaları
+            almak için uzmandiyet.com&apos;u Safari&apos;de açıp &quot;Ana
+            Ekrana Ekle&quot; ile kaydet.
+          </span>
         </p>
       )}
     </section>

@@ -1,14 +1,32 @@
 import { Bot, Camera, Flame, LineChart } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { Footer } from "@/components/footer";
 import { StartButton } from "@/components/landing/start-button";
+import { createClient } from "@/lib/supabase/server";
 
 const BOWL =
   "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=720&q=80";
 
-export default function Home() {
+export default async function Home() {
+  /* Oturum açıksa tanıtım sayfası gösterilmez — uygulama yeniden açıldığında
+     "Giriş yap" ekranı çıkıyormuş gibi hissettiriyordu. Rol neyse oraya. */
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    redirect(data?.role === "client" || !data ? "/panel" : "/yonetim");
+  }
+
   return (
     /* Açılış ekranı tek ekrana sığar: kolon yüksekliği 100dvh, main kalan
        alanı kaplar, footer altta kalır — sayfa kaydırılmaz. */

@@ -13,6 +13,23 @@ export function isPushSupported(): boolean {
   );
 }
 
+/**
+ * Bu cihazda gerçekten geçerli bir push aboneliği var mı?
+ * Tercihin açık olması yetmez — abonelik yoksa sunucu gönderecek bir hedef
+ * bulamaz. Native WKWebView'da `PushManager` bulunmadığı için burası daima
+ * `false` döner.
+ */
+export async function hasPushSubscription(): Promise<boolean> {
+  if (!isPushSupported()) return false;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) return false;
+    return (await reg.pushManager.getSubscription()) !== null;
+  } catch {
+    return false;
+  }
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
