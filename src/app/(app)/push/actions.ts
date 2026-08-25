@@ -37,6 +37,37 @@ export async function savePushSubscription(
   return { ok: true };
 }
 
+const apnsSchema = z.object({
+  // APNs cihaz token'ı: 64 karakter hex (bazı sürümlerde daha uzun olabiliyor).
+  token: z.string().regex(/^[0-9a-fA-F]{32,200}$/, "Geçersiz token"),
+  environment: z.enum(["production", "sandbox"]),
+});
+
+/**
+ * iOS cihaz token'ını kaydeder (varsa tazeler).
+ * `environment` cihazın hangi APNs ortamına kaydolduğunu söyler — Xcode'dan
+ * kurulan derleme sandbox'a, TestFlight/App Store derlemesi production'a gider.
+ */
+export async function saveApnsToken(values: unknown): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+  const parsed = apnsSchema.safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz token." };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("apns_tokens").upsert(
+    {
+      token: parsed.data.token,
+      client_id: user.id,
+      environment: parsed.data.environment,
+      last_seen_at: new Date().toISOString(),
+    },
+    { onConflict: "token" },
+  );
+  if (error) return { error: "Token kaydedilemedi." };
+  return { ok: true };
+}
+
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Tüm bildirim tercihlerini kaydeder (merkezi /ayarlar sayfası; cron okur). */
@@ -89,7 +120,9 @@ export async function saveNotificationPrefs(
 }
 
 /** Su hatırlatıcısı tercihini sunucuda kaydeder (cron bunu okur). */
-export async function setWaterReminder(enabled: unknown): Promise<ActionResult> {
+export async function setWaterReminder(
+  enabled: unknown,
+): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { error: "Oturum bulunamadı." };
   const on = enabled === true || enabled === "true" || enabled === 1;

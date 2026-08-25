@@ -1,12 +1,19 @@
 "use client";
 
 import { savePushSubscription } from "@/app/(app)/push/actions";
+import {
+  enableNativePush,
+  isNative,
+  nativePushIzinliMi,
+} from "@/lib/native-push";
 
 const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
 export function isPushSupported(): boolean {
+  if (typeof window === "undefined") return false;
+  // Native kabukta Web Push API'leri yok ama bildirim APNs ile gidiyor.
+  if (isNative()) return true;
   return (
-    typeof window !== "undefined" &&
     "serviceWorker" in navigator &&
     "PushManager" in window &&
     "Notification" in window
@@ -20,6 +27,7 @@ export function isPushSupported(): boolean {
  * `false` döner.
  */
 export async function hasPushSubscription(): Promise<boolean> {
+  if (isNative()) return nativePushIzinliMi();
   if (!isPushSupported()) return false;
   try {
     const reg = await navigator.serviceWorker.getRegistration();
@@ -50,6 +58,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
 /** SW kaydet → bildirim izni iste → push'a abone ol → sunucuya kaydet. */
 export async function enablePush(): Promise<boolean> {
+  if (isNative()) return enableNativePush();
   if (!isPushSupported() || !VAPID) return false;
   const reg = await registerServiceWorker();
   if (!reg) return false;

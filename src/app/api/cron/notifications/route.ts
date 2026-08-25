@@ -106,12 +106,14 @@ export async function GET(request: NextRequest) {
         body = "Tek dokunuşla yenile, kaldığın yerden devam et.";
       }
       if (title) {
-        sent += await sendPushToUser(p.id, {
-          title,
-          body,
-          tag: "premium",
-          url: "/abonelik",
-        });
+        // Yalnızca web: iOS uygulamasında ödeme arayüzü yok, "yenile"
+        // bildirimine dokunan kullanıcı hiçbir yere varamaz. Native'e
+        // göndermek Guideline 3.1.1 (anti-steering) sınırında durur.
+        sent += await sendPushToUser(
+          p.id,
+          { title, body, tag: "premium", url: "/abonelik" },
+          { yalnizcaWeb: true },
+        );
       }
     }
   }

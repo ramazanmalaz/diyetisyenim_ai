@@ -124,6 +124,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      apns_tokens: {
+        Row: {
+          token: string;
+          client_id: string;
+          environment: string;
+          created_at: string;
+          last_seen_at: string;
+        };
+        Insert: {
+          token: string;
+          client_id: string;
+          environment?: string;
+          created_at?: string;
+          last_seen_at?: string;
+        };
+        Update: {
+          token?: string;
+          client_id?: string;
+          environment?: string;
+          created_at?: string;
+          last_seen_at?: string;
+        };
+        Relationships: [];
+      };
       app_settings: {
         Row: {
           key: string;
