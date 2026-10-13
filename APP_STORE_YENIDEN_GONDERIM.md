@@ -152,6 +152,12 @@ geri alındı — Mac'te doğru yollarla yeniden üretilecek.
    - Capability listesinde **In-App Purchase yoksa hiçbir şey yapma.** Projede
      `.entitlements` dosyası yok, yani zaten kapalı. Varsa üstüne gel, `×` ile kaldır.
 
+   > **İkonu kontrol et:** Sol panelde `App → Assets → AppIcon`'a tıkla. Yeşil
+   > zemin üzerinde krem kase + yaprak görmelisin. Mavi Capacitor işareti
+   > görüyorsan Mac'teki kopya eski demektir — `git pull` yap, Xcode'u kapatıp
+   > aç. **1.1 bu kontrol yapılmadan gönderildiği için mağazada varsayılan
+   > ikonla yayınlandı.**
+
 4. Üst çubukta cihaz seçici (App ▸ ...) → **Any iOS Device (arm64)** seç.
    Simulator seçiliyse Archive menüsü gri kalır.
 
@@ -311,6 +317,7 @@ Ramazan Malaz
 - [ ] `npx cap sync ios` çıktısında **2 plugin** var, RevenueCat yok
 - [ ] Xcode → Build numarası **18** (veya 17'den büyük)
 - [ ] Xcode → Signing & Capabilities'te In-App Purchase yok
+- [ ] Xcode → Assets → AppIcon yeşil kase + yaprak (mavi Capacitor işareti DEĞİL)
 - [ ] Archive alındı ve upload edildi
 - [ ] Build App Store Connect'te "Processing"ten çıktı
 
