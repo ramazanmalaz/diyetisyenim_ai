@@ -24,14 +24,17 @@ alter table public.apns_tokens enable row level security;
 
 -- push_subscriptions ile aynı desen: kullanıcı yalnızca kendi cihazlarını
 -- görebilir/silebilir. Yazma çoğunlukla service-role ile yapılıyor.
+drop policy if exists "apns_select_self" on public.apns_tokens;
 create policy "apns_select_self"
   on public.apns_tokens for select
   using (client_id = auth.uid());
 
+drop policy if exists "apns_insert_self" on public.apns_tokens;
 create policy "apns_insert_self"
   on public.apns_tokens for insert
   with check (client_id = auth.uid());
 
+drop policy if exists "apns_delete_self" on public.apns_tokens;
 create policy "apns_delete_self"
   on public.apns_tokens for delete
   using (client_id = auth.uid());
