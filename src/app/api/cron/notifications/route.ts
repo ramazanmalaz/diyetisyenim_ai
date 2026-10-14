@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { runGroupSchedules } from "@/lib/group-assistant/runner";
 import { sendPushToUser } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -171,5 +172,13 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, sent, minuteOfDay, dateStr });
+  // --- Grup diyet asistanı: sabah/su/akşam yoklamaları, tartı töreni ---
+  let groupPosts = 0;
+  try {
+    groupPosts = await runGroupSchedules();
+  } catch (err) {
+    console.error("[cron] grup asistanı", err instanceof Error ? err.message : err);
+  }
+
+  return NextResponse.json({ ok: true, sent, groupPosts, minuteOfDay, dateStr });
 }

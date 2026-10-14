@@ -1,8 +1,9 @@
-import { ArrowLeft, Bot, Users } from "lucide-react";
+import { ArrowLeft, Bot, ChevronDown, Pin, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MessageThread } from "@/components/chat/message-thread";
+import { Markdown } from "@/components/ui/markdown";
 import { requireProfile } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -44,11 +45,29 @@ export default async function ConversationPage({
   // ile okunur: conversation_members RLS'i danışana yalnızca KENDİ satırını
   // gösterir. Üyelik yukarıdaki RLS'li conversations sorgusuyla doğrulandı.
   let senderNames: Record<string, string> | undefined;
+  let pinnedProgram: { title: string; content: string } | null = null;
   if (conversation.type === "group") {
-    const { data: memberRows } = await createAdminClient()
+    const admin = createAdminClient();
+    const { data: memberRows } = await admin
       .from("conversation_members")
       .select("user_id, profiles (full_name)")
       .eq("conversation_id", id);
+
+    // Grubun yayındaki haftalık listesi WhatsApp'taki sabitlenmiş mesaj gibi üstte.
+    const { data: group } = await admin
+      .from("client_groups")
+      .select("id")
+      .eq("conversation_id", id)
+      .maybeSingle();
+    if (group) {
+      const { data: program } = await admin
+        .from("group_programs")
+        .select("title, content")
+        .eq("group_id", group.id)
+        .eq("status", "active")
+        .maybeSingle();
+      pinnedProgram = program ?? null;
+    }
 
     senderNames = Object.fromEntries(
       (memberRows ?? []).map((r) => [
@@ -99,6 +118,21 @@ export default async function ConversationPage({
           </p>
         </div>
       </div>
+
+      {pinnedProgram && (
+        <details className="group border-b border-gray-200 bg-emerald-50/60 dark:border-gray-800 dark:bg-emerald-950/20">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm focus-visible:outline-2 focus-visible:outline-emerald-600">
+            <Pin className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+            <span className="min-w-0 flex-1 truncate">
+              <span className="font-medium">Bu haftanın listesi:</span> {pinnedProgram.title}
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-gray-400 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="max-h-[50vh] overflow-y-auto px-4 pb-4 text-sm">
+            <Markdown>{pinnedProgram.content}</Markdown>
+          </div>
+        </details>
+      )}
 
       <MessageThread
         conversationId={conversation.id}

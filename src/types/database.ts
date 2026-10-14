@@ -475,6 +475,9 @@ export type Database = {
           note: string | null;
           conversation_id: string | null;
           created_at: string;
+          assistant_enabled: boolean;
+          weigh_in_dow: number;
+          program_started_on: string | null;
         };
         Insert: {
           id?: string;
@@ -483,6 +486,9 @@ export type Database = {
           note?: string | null;
           conversation_id?: string | null;
           created_at?: string;
+          assistant_enabled?: boolean;
+          weigh_in_dow?: number;
+          program_started_on?: string | null;
         };
         Update: {
           id?: string;
@@ -491,6 +497,9 @@ export type Database = {
           note?: string | null;
           conversation_id?: string | null;
           created_at?: string;
+          assistant_enabled?: boolean;
+          weigh_in_dow?: number;
+          program_started_on?: string | null;
         };
         Relationships: [];
       };
@@ -509,6 +518,129 @@ export type Database = {
           group_id?: string;
           client_id?: string;
           added_at?: string;
+        };
+        Relationships: [];
+      };
+      group_programs: {
+        Row: {
+          id: string;
+          group_id: string;
+          title: string;
+          content: string;
+          file_path: string | null;
+          status: "draft" | "active" | "archived";
+          published_at: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          title: string;
+          content: string;
+          file_path?: string | null;
+          status?: "draft" | "active" | "archived";
+          published_at?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          group_id?: string;
+          title?: string;
+          content?: string;
+          file_path?: string | null;
+          status?: "draft" | "active" | "archived";
+          published_at?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      group_member_days: {
+        Row: {
+          group_id: string;
+          client_id: string;
+          day: string;
+          water_ml: number | null;
+          meals_shared: number;
+          weight_kg: number | null;
+          flags: string[];
+          last_activity_at: string;
+        };
+        Insert: {
+          group_id: string;
+          client_id: string;
+          day: string;
+          water_ml?: number | null;
+          meals_shared?: number;
+          weight_kg?: number | null;
+          flags?: string[];
+          last_activity_at?: string;
+        };
+        Update: {
+          group_id?: string;
+          client_id?: string;
+          day?: string;
+          water_ml?: number | null;
+          meals_shared?: number;
+          weight_kg?: number | null;
+          flags?: string[];
+          last_activity_at?: string;
+        };
+        Relationships: [];
+      };
+      group_assistant_runs: {
+        Row: {
+          group_id: string;
+          kind: string;
+          run_date: string;
+          created_at: string;
+        };
+        Insert: {
+          group_id: string;
+          kind: string;
+          run_date: string;
+          created_at?: string;
+        };
+        Update: {
+          group_id?: string;
+          kind?: string;
+          run_date?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      group_alerts: {
+        Row: {
+          id: string;
+          group_id: string;
+          client_id: string | null;
+          message_id: string | null;
+          severity: "high" | "medium";
+          reason: string;
+          resolved_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          client_id?: string | null;
+          message_id?: string | null;
+          severity: "high" | "medium";
+          reason: string;
+          resolved_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          group_id?: string;
+          client_id?: string | null;
+          message_id?: string | null;
+          severity?: "high" | "medium";
+          reason?: string;
+          resolved_at?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };

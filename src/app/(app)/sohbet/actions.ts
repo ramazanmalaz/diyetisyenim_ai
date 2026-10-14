@@ -13,6 +13,7 @@ import { getActiveDietitianRules } from "@/lib/ai/rules";
 import { getUser } from "@/lib/auth";
 import { getAssistantConversationId } from "@/lib/chat/assistant";
 import { notifyNewMessage } from "@/lib/chat/notify";
+import { handleGroupMessage } from "@/lib/group-assistant/respond";
 import { DAYS, mealTypeLabel, mealTypeOrder } from "@/lib/diet";
 import { consumeAiCredit } from "@/lib/entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -61,20 +62,24 @@ export async function sendMessage(values: unknown): Promise<ActionResult> {
   const supabase = await createClient();
 
   // Kullanıcı mesajını ekle (RLS: üyelik + sender_id = self + type user).
-  const { error: insertError } = await supabase.from("messages").insert({
-    conversation_id: parsed.data.conversationId,
-    sender_id: user.id,
-    type: "user",
-    content: parsed.data.content,
-  });
-  if (insertError) {
+  const { data: inserted, error: insertError } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: parsed.data.conversationId,
+      sender_id: user.id,
+      type: "user",
+      content: parsed.data.content,
+    })
+    .select("id")
+    .single();
+  if (insertError || !inserted) {
     return { error: "Mesaj gönderilemedi." };
   }
 
   // Konuşmada AI etkinse otomatik yanıt üret.
   const { data: conversation } = await supabase
     .from("conversations")
-    .select("ai_enabled")
+    .select("ai_enabled, type")
     .eq("id", parsed.data.conversationId)
     .single();
 
@@ -86,6 +91,10 @@ export async function sendMessage(values: unknown): Promise<ActionResult> {
     after(() =>
       notifyNewMessage(parsed.data.conversationId, user.id, parsed.data.content),
     );
+    // Asistanı açık danışan grubuysa asistan mesajı değerlendirir.
+    if (conversation?.type === "group") {
+      after(() => handleGroupMessage(parsed.data.conversationId, inserted.id));
+    }
   }
 
   return { success: true };
@@ -103,6 +112,7 @@ export async function sendPhotoMessage(
 
   const conversationId = formData.get("conversationId");
   const photo = formData.get("photo");
+  const rawCaption = formData.get("caption");
   if (typeof conversationId !== "string") {
     return { error: "Konuşma bulunamadı." };
   }
@@ -128,7 +138,7 @@ export async function sendPhotoMessage(
       .maybeSingle(),
     admin
       .from("conversations")
-      .select("ai_enabled")
+      .select("ai_enabled, type")
       .eq("id", conversationId)
       .maybeSingle(),
   ]);
@@ -146,21 +156,32 @@ export async function sendPhotoMessage(
     return { error: "Fotoğraf yüklenemedi." };
   }
 
-  const caption = "📷 Tabağımın fotoğrafını paylaştım";
-  const { error: insertError } = await admin.from("messages").insert({
-    conversation_id: conversationId,
-    sender_id: user.id,
-    type: "user",
-    content: caption,
-    image_path: path,
-  });
-  if (insertError) {
+  // Fotoğrafla birlikte yazılan soru ("bu kahveyi içebilir miyim?") korunur.
+  const caption =
+    typeof rawCaption === "string" && rawCaption.trim()
+      ? rawCaption.trim().slice(0, 1000)
+      : "📷 Tabağımın fotoğrafını paylaştım";
+  const { data: inserted, error: insertError } = await admin
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      sender_id: user.id,
+      type: "user",
+      content: caption,
+      image_path: path,
+    })
+    .select("id")
+    .single();
+  if (insertError || !inserted) {
     return { error: "Mesaj eklenemedi." };
   }
 
   // Vision analizi yalnızca AI sohbetinde; insan sohbetinde fotoğraf paylaşılır.
   if (!conversation.ai_enabled) {
     after(() => notifyNewMessage(conversationId, user.id, caption));
+    if (conversation.type === "group") {
+      after(() => handleGroupMessage(conversationId, inserted.id));
+    }
     return { success: true };
   }
 

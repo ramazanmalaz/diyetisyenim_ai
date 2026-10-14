@@ -180,12 +180,15 @@ export function MessageThread({
     e.target.value = "";
     if (!file || sending) return;
     setSending(true);
+    // Yazılmış metin fotoğrafın açıklaması olur ("bunu yiyebilir miyim?").
+    const caption = input.trim();
+    setInput("");
 
     const optimistic: ChatMessageRow = {
       id: `temp-${Date.now()}`,
       sender_id: currentUserId,
       type: "user",
-      content: "Tabağımın fotoğrafını paylaştım",
+      content: caption || "Tabağımın fotoğrafını paylaştım",
       image_path: null,
       created_at: new Date().toISOString(),
     };
@@ -194,6 +197,7 @@ export function MessageThread({
     const fd = new FormData();
     fd.set("conversationId", conversationId);
     fd.set("photo", file);
+    if (caption) fd.set("caption", caption);
     const result = await sendPhotoMessage(fd);
     await refetch();
     setSending(false);
@@ -277,8 +281,13 @@ export function MessageThread({
                 )}
               >
                 {m.type === "ai" && (
-                  <span className="mb-0.5 block text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                    Asistan
+                  <span className="mb-0.5 flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                    {senderNames ? "Diyet Asistanı" : "Asistan"}
+                    {senderNames && (
+                      <span className="rounded bg-emerald-600/10 px-1 py-px text-[10px] font-semibold tracking-wide">
+                        AI
+                      </span>
+                    )}
                   </span>
                 )}
                 {showSender && m.sender_id && (
