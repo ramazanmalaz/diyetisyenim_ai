@@ -85,6 +85,12 @@ export async function enablePush(): Promise<boolean> {
 
 /** İzin zaten verilmişse aboneliği sessizce tazele/kaydet. */
 export async function ensurePushSubscribed(): Promise<void> {
+  // Native'de `Notification` global'i yok. İzin varsa her açılışta token'ı
+  // yeniden yaz: APNs token'ı değişebilir ve ilk kayıt kaçmış olabilir.
+  if (isNative()) {
+    if (await nativePushIzinliMi()) await enableNativePush();
+    return;
+  }
   if (!isPushSupported() || !VAPID) return;
   if (Notification.permission !== "granted") return;
   await enablePush();

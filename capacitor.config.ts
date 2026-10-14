@@ -30,6 +30,10 @@ const config: CapacitorConfig = {
       splashFullScreen: true,
       splashImmersive: true,
     },
+    // Uygulama ön plandayken de banner + ses (varsayılanda iOS göstermez).
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"],
+    },
     StatusBar: {
       style: "Default",
       backgroundColor: "#ffffff",

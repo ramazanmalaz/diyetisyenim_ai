@@ -36,18 +36,20 @@ export async function enableNativePush(): Promise<boolean> {
 
     // Token asenkron geliyor: register() çağrısından sonra "registration"
     // olayını beklemek gerekiyor.
+    let bitir: (t: string | null) => void = () => {};
+    const kayit = await PushNotifications.addListener("registration", (t) => bitir(t.value));
+    const hata = await PushNotifications.addListener("registrationError", () => bitir(null));
     const token = await new Promise<string | null>((resolve) => {
       const zamanAsimi = setTimeout(() => resolve(null), 15000);
-      void PushNotifications.addListener("registration", (t) => {
+      bitir = (t) => {
         clearTimeout(zamanAsimi);
-        resolve(t.value);
-      });
-      void PushNotifications.addListener("registrationError", () => {
-        clearTimeout(zamanAsimi);
-        resolve(null);
-      });
+        resolve(t);
+      };
       void PushNotifications.register();
     });
+    // Her açılışta çağrıldığı için dinleyiciler birikmesin.
+    void kayit.remove();
+    void hata.remove();
     if (!token) return false;
 
     // Derlemenin hangi APNs ortamına kaydolduğunu WebView bilemez (Xcode

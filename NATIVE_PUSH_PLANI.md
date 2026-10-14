@@ -228,8 +228,9 @@ aç"* dalı yalnızca gerçekten desteklemeyen tarayıcılarda görünür hale g
    > 1.0 gönderimi Guideline 2.1(b)'den tam olarak bu yüzden reddedilmişti.
 2. `Info.plist` → `UIBackgroundModes` içinde `remote-notification` **zaten var**,
    dokunma.
-3. `AppDelegate.swift` — eklenti token kaydını kendi hallediyor, elle kod
-   gerekmiyor. `cap sync` sonrası köprü otomatik kuruluyor.
+3. `AppDelegate.swift` — `didRegisterForRemoteNotificationsWithDeviceToken` ve
+   `didFailToRegister…` NotificationCenter’a iletilmeli (eklenti README’si). Bunlar
+   olmadan izin verilir ama token hiç gelmez — 1.2 ilk derlemesinde bu yaşandı.
 4. Build numarasını artır, arşivle.
 
 ---
