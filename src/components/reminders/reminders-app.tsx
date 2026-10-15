@@ -156,10 +156,12 @@ export function RemindersApp({
   initialLists,
   initialReminders,
   todayKey,
+  initialListId = null,
 }: {
   initialLists: ReminderList[];
   initialReminders: Reminder[];
   todayKey: string;
+  initialListId?: string | null;
 }) {
   const [lists, setLists] = useState(initialLists);
   const [items, setItems] = useState(initialReminders);
@@ -170,7 +172,7 @@ export function RemindersApp({
 
   const [view, setView] = useState<
     { kind: "smart"; key: SmartKey } | { kind: "list"; id: string } | null
-  >(null);
+  >(initialListId ? { kind: "list", id: initialListId } : null);
   const [newReminder, setNewReminder] = useState(false);
   const [newList, setNewList] = useState(false);
   const [search, setSearch] = useState("");

@@ -4,8 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Hatırlatıcı — UzmanDiyet" };
 
-export default async function HatirlaticiPage() {
+export default async function HatirlaticiPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ liste?: string }>;
+}) {
   await requireProfile();
+  // Plandan aktarılan alışveriş listesi doğrudan açılsın.
+  const { liste } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: lists }, { data: reminders }] = await Promise.all([
@@ -28,6 +34,9 @@ export default async function HatirlaticiPage() {
       initialLists={lists ?? []}
       initialReminders={reminders ?? []}
       todayKey={todayKey}
+      initialListId={
+        liste && (lists ?? []).some((l) => l.id === liste) ? liste : null
+      }
     />
   );
 }

@@ -15,6 +15,7 @@ import { CalorieFigure } from "@/components/plan/calorie-figure";
 const UMUS_TEYZE_GORUNUR = false;
 import { CalorieHero } from "@/components/plan/calorie-hero";
 import { DailySummary } from "@/components/plan/daily-summary";
+import { ShoppingExport } from "@/components/plan/shopping-export";
 import { WaterTracker } from "@/components/plan/water-tracker";
 import { EditableMeals, type Meal } from "@/components/plan/editable-meals";
 import { MedicalDisclaimer } from "@/components/medical-disclaimer";
@@ -233,6 +234,8 @@ export function PlanBoard({
         statusByMeal={statusByMeal}
         onCycleStatus={cycleStatus}
       />
+
+      <ShoppingExport />
 
       {/* Yardımcı takip kartları */}
       <WaterTracker
