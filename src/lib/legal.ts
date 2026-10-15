@@ -47,6 +47,7 @@ export const PAYMENT_LEGAL_LINKS: LegalLink[] = [
 export const BASE_LEGAL_LINKS: LegalLink[] = [
   { href: "/gizlilik", label: "Gizlilik ve KVKK" },
   { href: "/iletisim", label: "İletişim" },
+  { href: "/hesap-silme", label: "Hesap Silme" },
 ];
 
 /** Footer + onay kutusunda kullanılan yasal sayfa bağlantıları (web). */
