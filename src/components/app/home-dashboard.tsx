@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  ChefHat,
   Dumbbell,
   Flame,
   Salad,
@@ -50,6 +51,14 @@ const ALL_FEATURES: {
     icon: Salad,
     grad: "from-amber-400 to-orange-500",
     glow: "shadow-[0_10px_24px_-10px_rgba(245,158,11,0.7)]",
+  },
+  {
+    href: "/dolap",
+    label: "Dolabım",
+    desc: "Elindekilerle tarif",
+    icon: ChefHat,
+    grad: "from-orange-400 to-rose-500",
+    glow: "shadow-[0_10px_24px_-10px_rgba(249,115,22,0.7)]",
   },
   {
     href: "/spor",
