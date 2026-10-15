@@ -20,6 +20,7 @@ import { WaterTracker } from "@/components/plan/water-tracker";
 import { EditableMeals, type Meal } from "@/components/plan/editable-meals";
 import { MedicalDisclaimer } from "@/components/medical-disclaimer";
 import { DAYS } from "@/lib/diet";
+import { scheduleHealthWriteback } from "@/lib/native-health";
 import type { Food } from "@/lib/foods";
 import { computeStreak, last7Days, slotDate } from "@/lib/plan/streak";
 
@@ -163,7 +164,10 @@ export function PlanBoard({
         else delete n[key];
         return n;
       });
+      return;
     }
+    // Yenen kalori Apple Sağlık'a da yansısın (bağlıysa).
+    scheduleHealthWriteback();
   }
 
   const heroTitle =

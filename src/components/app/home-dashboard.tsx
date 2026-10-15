@@ -3,6 +3,7 @@ import {
   ChefHat,
   Dumbbell,
   Flame,
+  HeartPulse,
   Salad,
   Sparkles,
   Stethoscope,
@@ -75,6 +76,14 @@ const ALL_FEATURES: {
     icon: TrendingUp,
     grad: "from-sky-400 to-cyan-600",
     glow: "shadow-[0_10px_24px_-10px_rgba(14,165,233,0.7)]",
+  },
+  {
+    href: "/gelisim",
+    label: "Gelişimim",
+    desc: "Diyet + spor + sağlık",
+    icon: HeartPulse,
+    grad: "from-rose-400 to-pink-600",
+    glow: "shadow-[0_10px_24px_-10px_rgba(225,29,72,0.7)]",
   },
   {
     href: "/pomodoro",

@@ -7,6 +7,7 @@ import { addProgress } from "@/app/(app)/ilerleme/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { scheduleHealthWriteback } from "@/lib/native-health";
 import { cn } from "@/lib/utils";
 
 export function ProgressForm({ defaultDate }: { defaultDate: string }) {
@@ -36,6 +37,8 @@ export function ProgressForm({ defaultDate }: { defaultDate: string }) {
     form.reset();
     setWeight("");
     setMoreOpen(false);
+    // Kilo Apple Sağlık'a da yazılsın (bağlıysa).
+    scheduleHealthWriteback();
   }
 
   return (

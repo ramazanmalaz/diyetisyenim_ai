@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import HealthKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -56,4 +57,116 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
 
+}
+
+// MARK: - Apple Sağlık
+//
+// Ayrı dosya yerine burada: yeni Swift dosyası project.pbxproj kaydı ister ve
+// o dosya Mac'teki yerel imzalama ayarlarıyla çakışır.
+
+
+/// Uygulamanın kendi native eklentilerini köprüye kaydeder
+/// (npm paketi olmayan eklentiler Capacitor tarafından otomatik bulunmaz).
+class MainViewController: CAPBridgeViewController {
+    override open func capacitorDidLoad() {
+        bridge?.registerPluginInstance(UzmanHealthPlugin())
+    }
+}
+
+
+/// Apple Sağlık'a günlük değer yazar: o gün için daha önce BU uygulamanın
+/// yazdığı örnekleri siler, yenisini kaydeder. Böylece bir öğün "yenmedi"ye
+/// çevrildiğinde ya da kilo düzeltildiğinde Sağlık'ta mükerrer kayıt kalmaz.
+///
+/// Okuma ve izin isteme @capgo/capacitor-health ile yapılır; bu eklenti yalnızca
+/// o eklentide olmayan "değiştir" işlemini ekler. İzin uygulama düzeyinde
+/// olduğu için ayrıca izin istemez.
+@objc(UzmanHealthPlugin)
+public class UzmanHealthPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "UzmanHealthPlugin"
+    public let jsName = "UzmanHealth"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "replaceDailyValue", returnType: CAPPluginReturnPromise)
+    ]
+
+    private let store = HKHealthStore()
+
+    @objc func replaceDailyValue(_ call: CAPPluginCall) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            call.reject("Apple Sağlık bu cihazda kullanılamıyor.")
+            return
+        }
+        guard let kind = call.getString("kind"),
+              let dateKey = call.getString("date"),
+              let value = call.getDouble("value"),
+              value >= 0 else {
+            call.reject("Eksik parametre.")
+            return
+        }
+
+        let typeId: HKQuantityTypeIdentifier
+        let unit: HKUnit
+        switch kind {
+        case "dietaryEnergy":
+            typeId = .dietaryEnergyConsumed
+            unit = .kilocalorie()
+        case "bodyMass":
+            typeId = .bodyMass
+            unit = .gramUnit(with: .kilo)
+        default:
+            call.reject("Bilinmeyen tür: \(kind)")
+            return
+        }
+        guard let type = HKQuantityType.quantityType(forIdentifier: typeId) else {
+            call.reject("Tür kullanılamıyor.")
+            return
+        }
+
+        // Gün sınırları İstanbul saatine göre (uygulamadaki günlerle aynı).
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Istanbul") ?? .current
+        let parser = DateFormatter()
+        parser.calendar = calendar
+        parser.timeZone = calendar.timeZone
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.dateFormat = "yyyy-MM-dd"
+        guard let dayStart = parser.date(from: dateKey),
+              let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else {
+            call.reject("Geçersiz tarih.")
+            return
+        }
+
+        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            HKQuery.predicateForSamples(withStart: dayStart, end: dayEnd, options: []),
+            HKQuery.predicateForObjects(from: HKSource.default()),
+        ])
+
+        store.deleteObjects(of: type, predicate: predicate) { [weak self] _, _, deleteError in
+            // Silinecek örnek yoksa da hata gelebilir; yazmaya devam ediyoruz.
+            if let deleteError = deleteError as? HKError, deleteError.code == .errorAuthorizationDenied {
+                call.reject("Apple Sağlık yazma izni verilmemiş.")
+                return
+            }
+            guard value > 0 else {
+                call.resolve()
+                return
+            }
+            // Kilo sabah tartısı gibi 08:00'e, kalori günün ortasına yazılır.
+            let hour = kind == "bodyMass" ? 8 : 12
+            let at = calendar.date(byAdding: .hour, value: hour, to: dayStart) ?? dayStart
+            let sample = HKQuantitySample(
+                type: type,
+                quantity: HKQuantity(unit: unit, doubleValue: value),
+                start: at,
+                end: at
+            )
+            self?.store.save(sample) { _, saveError in
+                if let saveError = saveError {
+                    call.reject("Apple Sağlık'a yazılamadı: \(saveError.localizedDescription)")
+                } else {
+                    call.resolve()
+                }
+            }
+        }
+    }
 }

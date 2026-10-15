@@ -42,6 +42,8 @@ export type Database = {
           avatar_url: string | null;
           dietitian_id: string | null;
           premium_until: string | null;
+          health_connected_at: string | null;
+          health_synced_at: string | null;
           water_reminder_enabled: boolean;
           meal_reminders_enabled: boolean;
           breakfast_time: string;
@@ -63,6 +65,8 @@ export type Database = {
           avatar_url?: string | null;
           dietitian_id?: string | null;
           premium_until?: string | null;
+          health_connected_at?: string | null;
+          health_synced_at?: string | null;
           water_reminder_enabled?: boolean;
           meal_reminders_enabled?: boolean;
           breakfast_time?: string;
@@ -84,6 +88,8 @@ export type Database = {
           avatar_url?: string | null;
           dietitian_id?: string | null;
           premium_until?: string | null;
+          health_connected_at?: string | null;
+          health_synced_at?: string | null;
           water_reminder_enabled?: boolean;
           meal_reminders_enabled?: boolean;
           breakfast_time?: string;
@@ -590,6 +596,75 @@ export type Database = {
           flags?: string[];
           last_activity_at?: string;
           last_meal_at?: string | null;
+        };
+        Relationships: [];
+      };
+      health_daily: {
+        Row: {
+          client_id: string;
+          day: string;
+          steps: number | null;
+          active_kcal: number | null;
+          sleep_minutes: number | null;
+          resting_hr: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          client_id: string;
+          day: string;
+          steps?: number | null;
+          active_kcal?: number | null;
+          sleep_minutes?: number | null;
+          resting_hr?: number | null;
+          updated_at?: string;
+        };
+        Update: {
+          client_id?: string;
+          day?: string;
+          steps?: number | null;
+          active_kcal?: number | null;
+          sleep_minutes?: number | null;
+          resting_hr?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      health_workouts: {
+        Row: {
+          id: string;
+          client_id: string;
+          platform_id: string;
+          workout_type: string;
+          started_at: string;
+          duration_min: number;
+          kcal: number | null;
+          distance_m: number | null;
+          source: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          platform_id: string;
+          workout_type: string;
+          started_at: string;
+          duration_min: number;
+          kcal?: number | null;
+          distance_m?: number | null;
+          source?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          platform_id?: string;
+          workout_type?: string;
+          started_at?: string;
+          duration_min?: number;
+          kcal?: number | null;
+          distance_m?: number | null;
+          source?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };

@@ -1,4 +1,5 @@
-import { Droplets, Ruler, Scale, Trash2 } from "lucide-react";
+import { ArrowRight, Droplets, HeartPulse, Ruler, Scale, Trash2 } from "lucide-react";
+import Link from "next/link";
 
 import { deleteProgress } from "@/app/(app)/ilerleme/actions";
 import { GoalProgress } from "@/components/progress/goal-progress";
@@ -96,6 +97,20 @@ export default async function IlerlemePage() {
           finishDate={finishDate}
         />
       )}
+
+      <Link
+        href="/gelisim"
+        className="group flex items-center gap-3 rounded-2xl border border-rose-200/70 bg-rose-50/60 px-4 py-3 text-sm transition-[background-color] duration-200 ease-[var(--ease-out)] hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-rose-500 dark:border-rose-900/40 dark:bg-rose-950/20"
+      >
+        <HeartPulse className="h-5 w-5 shrink-0 text-rose-600" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">Gelişimim</span>
+          <span className="block text-xs text-gray-500 dark:text-gray-400">
+            Kilonu diyet, spor, adım ve uykunla birlikte gör
+          </span>
+        </span>
+        <ArrowRight className="h-4 w-4 text-rose-600 transition-transform duration-200 ease-[var(--ease-out)] group-hover:translate-x-0.5" />
+      </Link>
 
       <WeightChart points={chartPoints} />
 

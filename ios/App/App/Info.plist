@@ -55,6 +55,12 @@
 		<string>uzmandiyet.com</string>
 	</array>
 
+	<!-- Apple Sağlık: adım, aktif kalori, antrenman, kilo, uyku, dinlenik nabız okunur; kilo ve yenen kalori yazılır -->
+	<key>NSHealthShareUsageDescription</key>
+	<string>Adımların, aktif kalorin, antrenmanların, kilon, uykun ve dinlenik nabzın; diyetinle birlikte gelişimini gösterebilmemiz ve haftalık özetini hazırlayabilmemiz için okunur.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>UzmanDiyet'e girdiğin kilo ve yediğin öğünlerin kalorisi Apple Sağlık'a da kaydedilir.</string>
+
 	<!-- Kamera izni (yemek fotoğrafı) -->
 	<key>NSCameraUsageDescription</key>
 	<string>Yemek fotoğraflarınızı analiz etmek için kameraya erişim gerekiyor.</string>
