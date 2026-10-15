@@ -24,10 +24,10 @@ export function GroupAssistantSettings({
   weighInDow: number;
   programStartedOn: string | null;
 }) {
-  const [state, action, pending] = useActionState<AssistantActionResult | null, FormData>(
-    updateAssistantSettings,
-    null,
-  );
+  const [state, action, pending] = useActionState<
+    AssistantActionResult | null,
+    FormData
+  >(updateAssistantSettings, null);
 
   return (
     <form action={action} className="space-y-4">
@@ -42,11 +42,14 @@ export function GroupAssistantSettings({
         />
         <span className="min-w-0">
           <span className="flex items-center gap-1.5 font-medium">
-            <Bot className="h-4 w-4 text-emerald-600" /> Asistan bu grubu yönetsin
+            <Bot className="h-4 w-4 text-emerald-600" /> Asistan bu grubu
+            yönetsin
           </span>
           <span className="mt-0.5 block text-sm text-gray-500">
-            Soruları cevaplar, tabakları yorumlar, su ve tartıyı kaydeder, her gün sabah/su/akşam
-            yoklaması yapar, riskli mesajları sana bildirir. İlk açılışta gruba kendini tanıtır.
+            Soruları cevaplar, tabakları yorumlar, su ve tartıyı kaydeder, her
+            gün sabah/su/akşam çağrısı yapar, paylaşmayanları adıyla tek tek
+            sorar, riskli mesajları sana bildirir. İlk açılışta gruba kendini
+            tanıtır.
           </span>
         </span>
       </label>
@@ -74,7 +77,9 @@ export function GroupAssistantSettings({
             defaultValue={programStartedOn ?? ""}
             className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-950"
           />
-          <span className="block text-xs text-gray-500">Tartı sıralaması bu tarihten itibaren toplam kaybı gösterir.</span>
+          <span className="block text-xs text-gray-500">
+            Tartı sıralaması bu tarihten itibaren toplam kaybı gösterir.
+          </span>
         </label>
       </div>
 
@@ -82,8 +87,12 @@ export function GroupAssistantSettings({
         <Button type="submit" disabled={pending}>
           {pending ? "Kaydediliyor…" : "Ayarları kaydet"}
         </Button>
-        {state && "error" in state && <p className="text-sm text-red-600">{state.error}</p>}
-        {state && "ok" in state && <p className="text-sm text-emerald-700">{state.message}</p>}
+        {state && "error" in state && (
+          <p className="text-sm text-red-600">{state.error}</p>
+        )}
+        {state && "ok" in state && (
+          <p className="text-sm text-emerald-700">{state.message}</p>
+        )}
       </div>
     </form>
   );

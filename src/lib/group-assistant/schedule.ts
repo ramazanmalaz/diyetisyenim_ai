@@ -1,10 +1,10 @@
 /**
  * Grup asistanının zamanlanmış mesajları — saf fonksiyonlar (DB/AI yok).
  *
- * Gerçek gruptaki ritim: sabah selamı, öğleden sonra su yoklaması, akşamüstü
- * haber vermeyenlere hatırlatma, akşam tabak çağrısı; Cumartesi hafta sonu
- * uyarısı, Pazartesi haftaya başlangıç, tartıdan önceki akşam hatırlatma,
- * tartı günü sıralama. Pazar sessiz.
+ * Gerçek gruptaki ritim: sabah selamı, öğleden sonra su çağrısı, akşam tabak
+ * çağrısı; her çağrıdan sonra cevap vermeyenler adıyla tek tek sorulur.
+ * Cumartesi hafta sonu uyarısı, Pazartesi haftaya başlangıç, tartıdan önceki
+ * akşam hatırlatma, tartı günü sıralama. Pazar ve 20:00 sonrası sessiz.
  *
  * Şablonlar LLM'siz: ucuz, tutarlı ve gerçek diyetisyen de her gün aynı
  * kalıpları kullanıyordu. Varyant tarihe göre seçilir ki gün içinde sabit kalsın.
@@ -37,19 +37,33 @@ export const DAY_NAMES = [
   "Cumartesi",
 ] as const;
 
+/** Kişi kişi takip: çağrıdan bir süre sonra cevap vermeyenleri adıyla sorar. */
+export type FollowupKind =
+  | "weigh_followup"
+  | "meal_followup"
+  | "water_followup"
+  | "dinner_followup";
+
 export type ScheduledKind =
   | "morning"
   | "weekend_warning"
   | "week_start"
   | "weigh_call"
   | "water_call"
-  | "nudge"
   | "dinner_call"
   | "weigh_reminder"
-  | "weigh_results";
+  | "weigh_results"
+  | FollowupKind;
+
+export function isFollowup(kind: ScheduledKind): kind is FollowupKind {
+  return kind.endsWith("_followup");
+}
 
 /** Bu dakikada bu grup için hangi zamanlanmış mesajlar atılmalı? */
-export function dueKinds(now: IstanbulNow, weighInDow: number): ScheduledKind[] {
+export function dueKinds(
+  now: IstanbulNow,
+  weighInDow: number,
+): ScheduledKind[] {
   const kinds: ScheduledKind[] = [];
   const isWeighDay = now.dow === weighInDow;
   const isEveOfWeigh = now.dow === (weighInDow + 6) % 7;
@@ -58,6 +72,9 @@ export function dueKinds(now: IstanbulNow, weighInDow: number): ScheduledKind[] 
   // Tartı hatırlatması Pazar'a denk gelse de atılır — kaçırılırsa tören bozulur.
   if (isEveOfWeigh && now.hhmm === "19:30") kinds.push("weigh_reminder");
   if (isWeighDay && now.hhmm === "12:00") kinds.push("weigh_results");
+
+  // Tartıyı yazmayanlar sonuçlardan önce adıyla sorulur.
+  if (isWeighDay && now.hhmm === "10:30") kinds.push("weigh_followup");
 
   if (sunday) {
     // Tartı Pazar'a ayarlandıysa çağrısı yine yapılmalı.
@@ -71,15 +88,22 @@ export function dueKinds(now: IstanbulNow, weighInDow: number): ScheduledKind[] 
     else if (now.dow === 1) kinds.push("week_start");
     else kinds.push("morning");
   }
+  // 12:30: aralıklı oruçta kahvaltı en geç 12:00 — ilk öğün de geçmiş olur.
+  if (now.hhmm === "12:30") kinds.push("meal_followup");
   if (now.hhmm === "14:00") kinds.push("water_call");
-  if (now.hhmm === "17:00" && !isWeighDay) kinds.push("nudge");
-  if (now.hhmm === "19:00") kinds.push("dinner_call");
+  if (now.hhmm === "16:30") kinds.push("water_followup");
+  // Grupta 20:00'den sonra yazışılmıyor; akşam takibi ondan önce biter.
+  if (now.hhmm === "18:30") kinds.push("dinner_call");
+  if (now.hhmm === "19:45") kinds.push("dinner_followup");
 
   return kinds;
 }
 
+/** Akşam tabağı yoklamasında "akşam" sayılan paylaşımların başladığı saat. */
+export const DINNER_FROM = "17:30";
+
 const TEMPLATES: Record<
-  Exclude<ScheduledKind, "nudge" | "weigh_results">,
+  Exclude<ScheduledKind, "weigh_results" | FollowupKind>,
   string[]
 > = {
   morning: [
@@ -122,25 +146,91 @@ function pick<T>(list: T[], seed: string): T {
 
 /** Sabit şablonlu zamanlanmış mesaj. Aynı gün aynı varyant döner. */
 export function templateFor(
-  kind: Exclude<ScheduledKind, "nudge" | "weigh_results">,
+  kind: Exclude<ScheduledKind, "weigh_results" | FollowupKind>,
   date: string,
 ): string {
   return pick(TEMPLATES[kind], `${kind}:${date}`);
 }
 
-/** Akşamüstü yoklaması: bugün hiç haber vermeyenleri nazikçe çağırır. */
-export function nudgeMessage(silentNames: string[], date: string): string | null {
-  if (silentNames.length === 0) return null;
-  const tags = silentNames.map((n) => `@${n}`).join(" ");
-  const tail = pick(
-    [
-      "bugün sizden haber alamadım 🌸 Öğünlerinizi ve suyunuzu görebilir miyim?",
-      "sizi özledim 😍 Bugün tabaklar nasıl gidiyor, bir fotoğraf atar mısınız?",
-      "her şey yolunda mı? 💐 Zorlandığınız bir şey varsa yazın, birlikte çözelim.",
-    ],
-    `nudge:${date}`,
-  );
-  return `${tags} ${tail}`;
+// Her kişiye ayrı satır; ifade kişiye göre değişir ki liste kopyala-yapıştır
+// gibi durmasın. `{ad}` → @Ad.
+const FOLLOWUPS: Record<FollowupKind, string[]> = {
+  weigh_followup: [
+    "{ad} bugünkü tartını bekliyorum 💐 Başlangıç ve bugünkü kilonu tek mesajda yazar mısın?",
+    "{ad} tartıldın mı? 😍 Öğlen sonuçları açıklamadan seninkini de görmek istiyorum.",
+    "{ad} senin tartın eksik 🌸 Aç karnına tartılıp yazabilirsen sıralamaya ekleyeyim.",
+  ],
+  meal_followup: [
+    "{ad} bugün tabağını henüz göremedim 🌸 Kahvaltıda neler vardı?",
+    "{ad} günaydın 😍 İlk öğününü paylaşır mısın, nasıl gidiyor?",
+    "{ad} senden haber alamadım 💐 Kahvaltını yaptın mı, bir fotoğraf atar mısın?",
+  ],
+  water_followup: [
+    "{ad} su raporunu bekliyorum 💧 Şu ana kadar kaç litre oldu?",
+    "{ad} sular nasıl gidiyor? 💧 Kaç bardak içtin, yazar mısın?",
+    "{ad} senin suyunu göremedim 🌸 Hedef 2,5–3 litre, ne kadar içtin?",
+  ],
+  dinner_followup: [
+    "{ad} akşam tabağını göremedim 😍 Ne yedin, bir fotoğraf atar mısın?",
+    "{ad} akşam yemeğin nasıldı? 🌸 Tabağını paylaşırsan birlikte bakalım.",
+    "{ad} seni unutmadım 💐 Akşam ne yedin, yazar mısın?",
+  ],
+};
+
+/**
+ * Kişi kişi takip mesajı: eksik olan her danışan kendi satırında adıyla
+ * sorulur. Herkes paylaştıysa mesaj yok.
+ */
+export function followupMessage(
+  kind: FollowupKind,
+  names: string[],
+  date: string,
+): string | null {
+  if (names.length === 0) return null;
+  const used = new Set<string>();
+  const lines = names.map((name) => {
+    // Aynı mesajda iki kişiye aynı cümle düşmesin.
+    let line = pick(FOLLOWUPS[kind], `${kind}:${date}:${name}`);
+    if (used.has(line)) {
+      line = FOLLOWUPS[kind].find((l) => !used.has(l)) ?? line;
+    }
+    used.add(line);
+    return line.replace("{ad}", `@${name}`);
+  });
+  return lines.join("\n");
+}
+
+/**
+ * Takip için eksik olanları seçer. `day` satırı yoksa kişi o gün hiç yazmamıştır.
+ * Akşam yoklamasında tabak, `DINNER_FROM`dan sonra paylaşılmış olmalı.
+ * Tartı eksikleri `computeWeighResults` ile bulunur (dün akşam yazılanı da sayar).
+ */
+export function missingFor(
+  kind: Exclude<FollowupKind, "weigh_followup">,
+  members: WeighMember[],
+  days: {
+    client_id: string;
+    water_ml: number | null;
+    meals_shared: number;
+    last_meal_at: string | null;
+  }[],
+  dinnerFromIso: string,
+): WeighMember[] {
+  const byId = new Map(days.map((d) => [d.client_id, d]));
+  return members.filter((m) => {
+    const d = byId.get(m.id);
+    switch (kind) {
+      case "meal_followup":
+        return !d || d.meals_shared === 0;
+      case "water_followup":
+        return d?.water_ml == null;
+      case "dinner_followup":
+        return (
+          !d?.last_meal_at ||
+          Date.parse(d.last_meal_at) < Date.parse(dinnerFromIso)
+        );
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -151,7 +241,13 @@ export type WeighMember = { id: string; name: string };
 export type WeighEntry = { client_id: string; date: string; weight_kg: number };
 
 export type WeighResult = {
-  ranked: { id: string; name: string; start: number; current: number; delta: number }[];
+  ranked: {
+    id: string;
+    name: string;
+    start: number;
+    current: number;
+    delta: number;
+  }[];
   missing: WeighMember[];
 };
 
@@ -184,7 +280,13 @@ export function computeWeighResults(
     }
     const start = mine[0].weight_kg;
     const delta = Math.round((recent.weight_kg - start) * 10) / 10;
-    ranked.push({ id: m.id, name: m.name, start, current: recent.weight_kg, delta });
+    ranked.push({
+      id: m.id,
+      name: m.name,
+      start,
+      current: recent.weight_kg,
+      delta,
+    });
   }
 
   ranked.sort((a, b) => a.delta - b.delta);

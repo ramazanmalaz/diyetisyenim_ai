@@ -567,6 +567,7 @@ export type Database = {
           weight_kg: number | null;
           flags: string[];
           last_activity_at: string;
+          last_meal_at: string | null;
         };
         Insert: {
           group_id: string;
@@ -577,6 +578,7 @@ export type Database = {
           weight_kg?: number | null;
           flags?: string[];
           last_activity_at?: string;
+          last_meal_at?: string | null;
         };
         Update: {
           group_id?: string;
@@ -587,6 +589,7 @@ export type Database = {
           weight_kg?: number | null;
           flags?: string[];
           last_activity_at?: string;
+          last_meal_at?: string | null;
         };
         Relationships: [];
       };

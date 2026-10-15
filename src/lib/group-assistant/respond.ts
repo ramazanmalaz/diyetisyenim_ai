@@ -34,7 +34,9 @@ export async function getAssistantGroup(
 ): Promise<AssistantGroup | null> {
   const { data } = await admin
     .from("client_groups")
-    .select("id, name, dietitian_id, conversation_id, weigh_in_dow, program_started_on, assistant_enabled")
+    .select(
+      "id, name, dietitian_id, conversation_id, weigh_in_dow, program_started_on, assistant_enabled",
+    )
     .eq("conversation_id", conversationId)
     .maybeSingle();
   if (!data?.assistant_enabled || !data.conversation_id) return null;
@@ -44,7 +46,11 @@ export async function getAssistantGroup(
 export async function getActiveProgram(
   admin: AdminClient,
   groupId: string,
-): Promise<{ title: string; content: string; published_at: string | null } | null> {
+): Promise<{
+  title: string;
+  content: string;
+  published_at: string | null;
+} | null> {
   const { data } = await admin
     .from("group_programs")
     .select("title, content, published_at")
@@ -68,7 +74,12 @@ export async function postAssistantMessage(
 ): Promise<string | null> {
   const { data, error } = await admin
     .from("messages")
-    .insert({ conversation_id: conversationId, sender_id: null, type: "ai", content })
+    .insert({
+      conversation_id: conversationId,
+      sender_id: null,
+      type: "ai",
+      content,
+    })
     .select("id")
     .single();
   if (error) {
@@ -78,13 +89,46 @@ export async function postAssistantMessage(
   return data.id;
 }
 
+/**
+ * Asistanın grup mesajını danışanlara push olarak iletir. `postAssistantMessage`
+ * yalnızca DB'ye yazar; danışan mesajlarındaki `notifyNewMessage` asistan
+ * mesajları için çalışmaz (gönderen yok). Push hatası mesajı bozmamalı.
+ */
+export async function pushAssistantMessage(
+  admin: AdminClient,
+  group: Pick<AssistantGroup, "name" | "conversation_id">,
+  content: string,
+  recipientIds: string[],
+): Promise<void> {
+  const body = content.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+  await Promise.all(
+    [...new Set(recipientIds)].map((uid) =>
+      sendPushToUser(uid, {
+        title: group.name,
+        body: `Diyet Asistanı: ${body.length > 110 ? `${body.slice(0, 109)}…` : body}`,
+        tag: `chat-${group.conversation_id}`,
+        url: `/sohbet/${group.conversation_id}`,
+      }).catch((err: unknown) => {
+        console.error(
+          "[group-assistant] push gönderilemedi",
+          err instanceof Error ? err.message : err,
+        );
+        return 0;
+      }),
+    ),
+  );
+}
+
 /** Grup sahibine ve tüm adminlere push gönderir. */
 export async function notifyStaff(
   admin: AdminClient,
   group: Pick<AssistantGroup, "dietitian_id" | "conversation_id">,
   payload: { title: string; body: string },
 ): Promise<void> {
-  const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin");
+  const { data: admins } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("role", "admin");
   const ids = new Set([group.dietitian_id, ...(admins ?? []).map((a) => a.id)]);
   await Promise.all(
     [...ids].map((uid) =>
@@ -130,23 +174,28 @@ const TURN_TOOL: AnthropicNS.Tool = {
       intent: { type: "string", enum: [...GROUP_TURN_INTENTS] },
       should_reply: {
         type: "boolean",
-        description: "Gruba cevap yazılmalı mı? (bkz. 'Ne zaman cevap verirsin')",
+        description:
+          "Gruba cevap yazılmalı mı? (bkz. 'Ne zaman cevap verirsin')",
       },
       reply: {
         type: "string",
-        description: "should_reply true ise gruba yazılacak Türkçe cevap, '@Ad' ile başlar. Değilse boş.",
+        description:
+          "should_reply true ise gruba yazılacak Türkçe cevap, '@Ad' ile başlar. Değilse boş.",
       },
       water_liters: {
         type: ["number", "null"],
-        description: "Danışan bugün içtiği TOPLAM suyu yazdıysa litre cinsinden (ör. '1,5 lt' → 1.5). Yoksa null.",
+        description:
+          "Danışan bugün içtiği TOPLAM suyu yazdıysa litre cinsinden (ör. '1,5 lt' → 1.5). Yoksa null.",
       },
       weight_kg: {
         type: ["number", "null"],
-        description: "Danışan BUGÜNKÜ tartısını yazdıysa kg (başlangıç kilosu değil, güncel). Yoksa null.",
+        description:
+          "Danışan BUGÜNKÜ tartısını yazdıysa kg (başlangıç kilosu değil, güncel). Yoksa null.",
       },
       meal_shared: {
         type: "boolean",
-        description: "Mesaj bir öğün/tabak paylaşımı mı (fotoğraf ya da 'tavuk ve salata yedim' gibi)?",
+        description:
+          "Mesaj bir öğün/tabak paylaşımı mı (fotoğraf ya da 'tavuk ve salata yedim' gibi)?",
       },
       flags: {
         type: "array",
@@ -158,7 +207,10 @@ const TURN_TOOL: AnthropicNS.Tool = {
         description: "UYARI İŞARETLERİ'nden biri varsa doldur, yoksa null.",
         properties: {
           severity: { type: "string", enum: ["high", "medium"] },
-          reason: { type: "string", description: "Personel için kısa Türkçe özet" },
+          reason: {
+            type: "string",
+            description: "Personel için kısa Türkçe özet",
+          },
         },
         required: ["severity", "reason"],
       },
@@ -202,14 +254,17 @@ export async function decideTurn(
     model: DEFAULT_MODEL,
     max_tokens: 800,
     // Persona + liste her mesajda aynı → önbellekten okunur.
-    system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+    system: [
+      { type: "text", text: system, cache_control: { type: "ephemeral" } },
+    ],
     tools: [TURN_TOOL],
     tool_choice: { type: "tool", name: "group_turn" },
     messages: [{ role: "user", content }],
   });
 
   const toolUse = response.content.find((b) => b.type === "tool_use");
-  if (!toolUse || toolUse.type !== "tool_use") throw new Error("group_turn çağrılmadı");
+  if (!toolUse || toolUse.type !== "tool_use")
+    throw new Error("group_turn çağrılmadı");
   return turnSchema.parse(toolUse.input);
 }
 
@@ -248,7 +303,13 @@ export async function handleGroupMessage(
 
     const now = istanbulNow(new Date(message.created_at));
     const program = await getActiveProgram(admin, group.id);
-    const context = await buildTurnContext(admin, group, sender.id, now.date, messageId);
+    const context = await buildTurnContext(
+      admin,
+      group,
+      sender.id,
+      now.date,
+      messageId,
+    );
 
     const userText = `${context}
 
@@ -261,7 +322,9 @@ Yalnızca group_turn aracını çağır.`;
 
     const content: AnthropicNS.ContentBlockParam[] = [];
     if (message.image_path) {
-      const { data: blob } = await admin.storage.from(CHAT_BUCKET).download(message.image_path);
+      const { data: blob } = await admin.storage
+        .from(CHAT_BUCKET)
+        .download(message.image_path);
       if (blob) {
         content.push({
           type: "image",
@@ -277,7 +340,14 @@ Yalnızca group_turn aracını çağır.`;
 
     const turn = await decideTurn(buildSystem(group, program), content);
 
-    await recordMemberDay(admin, group.id, sender.id, now.date, turn, Boolean(message.image_path));
+    await recordMemberDay(
+      admin,
+      group.id,
+      sender.id,
+      now.date,
+      turn,
+      Boolean(message.image_path),
+    );
 
     if (turn.should_reply && turn.reply.trim()) {
       await postAssistantMessage(admin, conversationId, turn.reply.trim());
@@ -303,7 +373,10 @@ Yalnızca group_turn aracını çağır.`;
       });
     }
   } catch (err) {
-    console.error("[group-assistant] mesaj işlenemedi", err instanceof Error ? err.message : err);
+    console.error(
+      "[group-assistant] mesaj işlenemedi",
+      err instanceof Error ? err.message : err,
+    );
   }
 }
 
@@ -315,38 +388,45 @@ async function buildTurnContext(
   today: string,
   currentMessageId: string,
 ): Promise<string> {
-  const [{ data: recent }, { data: members }, { data: weights }, { data: todayRow }] =
-    await Promise.all([
-      admin
-        .from("messages")
-        .select("id, sender_id, type, content, image_path")
-        .eq("conversation_id", group.conversation_id)
-        .order("created_at", { ascending: false })
-        .limit(25),
-      admin
-        .from("conversation_members")
-        .select("user_id, profiles (full_name)")
-        .eq("conversation_id", group.conversation_id),
-      admin
-        .from("progress_entries")
-        .select("entry_date, weight_kg")
-        .eq("client_id", senderId)
-        .not("weight_kg", "is", null)
-        .gte("entry_date", group.program_started_on ?? "1900-01-01")
-        .order("entry_date", { ascending: true }),
-      admin
-        .from("group_member_days")
-        .select("water_ml, meals_shared, flags")
-        .eq("group_id", group.id)
-        .eq("client_id", senderId)
-        .eq("day", today)
-        .maybeSingle(),
-    ]);
+  const [
+    { data: recent },
+    { data: members },
+    { data: weights },
+    { data: todayRow },
+  ] = await Promise.all([
+    admin
+      .from("messages")
+      .select("id, sender_id, type, content, image_path")
+      .eq("conversation_id", group.conversation_id)
+      .order("created_at", { ascending: false })
+      .limit(25),
+    admin
+      .from("conversation_members")
+      .select("user_id, profiles (full_name)")
+      .eq("conversation_id", group.conversation_id),
+    admin
+      .from("progress_entries")
+      .select("entry_date, weight_kg")
+      .eq("client_id", senderId)
+      .not("weight_kg", "is", null)
+      .gte("entry_date", group.program_started_on ?? "1900-01-01")
+      .order("entry_date", { ascending: true }),
+    admin
+      .from("group_member_days")
+      .select("water_ml, meals_shared, flags")
+      .eq("group_id", group.id)
+      .eq("client_id", senderId)
+      .eq("day", today)
+      .maybeSingle(),
+  ]);
 
   const names = new Map(
     (members ?? []).map((m) => [
       m.user_id,
-      firstName((m.profiles as unknown as { full_name: string | null } | null)?.full_name),
+      firstName(
+        (m.profiles as unknown as { full_name: string | null } | null)
+          ?.full_name,
+      ),
     ]),
   );
 
@@ -354,7 +434,12 @@ async function buildTurnContext(
     .reverse()
     .filter((m) => m.id !== currentMessageId)
     .map((m) => {
-      const who = m.type === "ai" ? "Asistan" : m.sender_id ? names.get(m.sender_id) ?? "Üye" : "Sistem";
+      const who =
+        m.type === "ai"
+          ? "Asistan"
+          : m.sender_id
+            ? (names.get(m.sender_id) ?? "Üye")
+            : "Sistem";
       const body = m.image_path ? `[fotoğraf] ${m.content}` : m.content;
       return `${who}: ${body.slice(0, 400)}`;
     })
@@ -398,8 +483,10 @@ async function recordMemberDay(
     .eq("day", day)
     .maybeSingle();
 
-  const waterMl = turn.water_liters != null ? Math.round(turn.water_liters * 1000) : null;
-  const mealShared = turn.meal_shared || (hasPhoto && turn.intent === "meal_photo");
+  const waterMl =
+    turn.water_liters != null ? Math.round(turn.water_liters * 1000) : null;
+  const mealShared =
+    turn.meal_shared || (hasPhoto && turn.intent === "meal_photo");
 
   await admin.from("group_member_days").upsert(
     {
@@ -407,11 +494,16 @@ async function recordMemberDay(
       client_id: clientId,
       day,
       // Danışan gün içinde toplamı yazar ("2 litre oldu"); geriye düşürmeyiz.
-      water_ml: waterMl != null ? Math.max(existing?.water_ml ?? 0, waterMl) : existing?.water_ml ?? null,
+      water_ml:
+        waterMl != null
+          ? Math.max(existing?.water_ml ?? 0, waterMl)
+          : (existing?.water_ml ?? null),
       meals_shared: (existing?.meals_shared ?? 0) + (mealShared ? 1 : 0),
       weight_kg: turn.weight_kg ?? existing?.weight_kg ?? null,
       flags: [...new Set([...(existing?.flags ?? []), ...turn.flags])],
       last_activity_at: new Date().toISOString(),
+      // Akşam yoklaması hangi öğünün paylaşıldığını bu zamandan anlar.
+      ...(mealShared ? { last_meal_at: new Date().toISOString() } : {}),
     },
     { onConflict: "group_id,client_id,day" },
   );
@@ -426,7 +518,10 @@ async function recordMemberDay(
     if (!water || water.total_ml < waterMl) {
       await admin
         .from("water_intake")
-        .upsert({ client_id: clientId, day, total_ml: waterMl }, { onConflict: "client_id,day" });
+        .upsert(
+          { client_id: clientId, day, total_ml: waterMl },
+          { onConflict: "client_id,day" },
+        );
     }
   }
 
@@ -439,11 +534,17 @@ async function recordMemberDay(
       .limit(1)
       .maybeSingle();
     if (entry) {
-      await admin.from("progress_entries").update({ weight_kg: turn.weight_kg }).eq("id", entry.id);
-    } else {
       await admin
         .from("progress_entries")
-        .insert({ client_id: clientId, entry_date: day, weight_kg: turn.weight_kg, note: "Grup tartısı" });
+        .update({ weight_kg: turn.weight_kg })
+        .eq("id", entry.id);
+    } else {
+      await admin.from("progress_entries").insert({
+        client_id: clientId,
+        entry_date: day,
+        weight_kg: turn.weight_kg,
+        note: "Grup tartısı",
+      });
     }
   }
 }

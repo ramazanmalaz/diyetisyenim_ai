@@ -5,17 +5,23 @@ import {
   getActiveProgram,
   notifyStaff,
   postAssistantMessage,
+  pushAssistantMessage,
   type AssistantGroup,
 } from "./respond";
 import {
   computeWeighResults,
+  DINNER_FROM,
   dueKinds,
+  followupMessage,
+  isFollowup,
   istanbulNow,
-  nudgeMessage,
+  missingFor,
   templateFor,
   weighResultsMessage,
+  type FollowupKind,
   type IstanbulNow,
   type ScheduledKind,
+  type WeighMember,
 } from "./schedule";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -25,13 +31,17 @@ type AdminClient = ReturnType<typeof createAdminClient>;
  * zamanlanmış mesajları atar. Her (grup, tür, gün) için tek sefer — çift cron
  * tetiklenmesi ya da yeniden deneme aynı mesajı iki kez göndermez.
  */
-export async function runGroupSchedules(at: Date = new Date()): Promise<number> {
+export async function runGroupSchedules(
+  at: Date = new Date(),
+): Promise<number> {
   const now = istanbulNow(at);
   const admin = createAdminClient();
 
   const { data: groups } = await admin
     .from("client_groups")
-    .select("id, name, dietitian_id, conversation_id, weigh_in_dow, program_started_on")
+    .select(
+      "id, name, dietitian_id, conversation_id, weigh_in_dow, program_started_on",
+    )
     .eq("assistant_enabled", true)
     .not("conversation_id", "is", null);
 
@@ -43,7 +53,10 @@ export async function runGroupSchedules(at: Date = new Date()): Promise<number> 
       try {
         if (await runOnce(admin, group, kind, now)) posted++;
       } catch (err) {
-        console.error(`[group-assistant] ${kind} atılamadı`, err instanceof Error ? err.message : err);
+        console.error(
+          `[group-assistant] ${kind} atılamadı`,
+          err instanceof Error ? err.message : err,
+        );
       }
     }
   }
@@ -62,10 +75,20 @@ async function runOnce(
     .insert({ group_id: group.id, kind, run_date: now.date });
   if (lockError) return false;
 
-  const text = await composeMessage(admin, group, kind, now);
-  if (!text) return false;
-  return (await postAssistantMessage(admin, group.conversation_id, text)) !== null;
+  const composed = await composeMessage(admin, group, kind, now);
+  if (!composed) return false;
+  const id = await postAssistantMessage(
+    admin,
+    group.conversation_id,
+    composed.text,
+  );
+  if (!id) return false;
+  // Takipte yalnızca adı geçenler, genel çağrılarda bütün danışanlar.
+  await pushAssistantMessage(admin, group, composed.text, composed.recipients);
+  return true;
 }
+
+type Composed = { text: string; recipients: string[] };
 
 async function clientMembers(admin: AdminClient, groupId: string) {
   const { data } = await admin
@@ -74,8 +97,63 @@ async function clientMembers(admin: AdminClient, groupId: string) {
     .eq("group_id", groupId);
   return (data ?? []).map((m) => ({
     id: m.client_id,
-    name: firstName((m.profiles as unknown as { full_name: string | null } | null)?.full_name),
+    name: firstName(
+      (m.profiles as unknown as { full_name: string | null } | null)?.full_name,
+    ),
   }));
+}
+
+async function weighResults(
+  admin: AdminClient,
+  group: AssistantGroup,
+  members: WeighMember[],
+  now: IstanbulNow,
+) {
+  const { data: entries } = await admin
+    .from("progress_entries")
+    .select("client_id, entry_date, weight_kg")
+    .in(
+      "client_id",
+      members.map((m) => m.id),
+    )
+    .not("weight_kg", "is", null)
+    .gte("entry_date", group.program_started_on ?? "1900-01-01")
+    .lte("entry_date", now.date);
+
+  return computeWeighResults(
+    members,
+    (entries ?? []).map((e) => ({
+      client_id: e.client_id,
+      date: e.entry_date,
+      weight_kg: Number(e.weight_kg),
+    })),
+    now.date,
+  );
+}
+
+/** Takip türüne göre bugün eksik kalan danışanlar. */
+async function missingMembers(
+  admin: AdminClient,
+  group: AssistantGroup,
+  kind: FollowupKind,
+  now: IstanbulNow,
+): Promise<WeighMember[]> {
+  const members = await clientMembers(admin, group.id);
+  if (members.length === 0) return [];
+  if (kind === "weigh_followup") {
+    return (await weighResults(admin, group, members, now)).missing;
+  }
+  const { data: days } = await admin
+    .from("group_member_days")
+    .select("client_id, water_ml, meals_shared, last_meal_at")
+    .eq("group_id", group.id)
+    .eq("day", now.date);
+  return missingFor(
+    kind,
+    members,
+    days ?? [],
+    `${now.date}T${DINNER_FROM}:00+03:00`,
+  );
 }
 
 async function composeMessage(
@@ -83,41 +161,23 @@ async function composeMessage(
   group: AssistantGroup,
   kind: ScheduledKind,
   now: IstanbulNow,
-): Promise<string | null> {
-  if (kind === "nudge") {
-    const members = await clientMembers(admin, group.id);
-    const { data: active } = await admin
-      .from("group_member_days")
-      .select("client_id")
-      .eq("group_id", group.id)
-      .eq("day", now.date);
-    const activeIds = new Set((active ?? []).map((r) => r.client_id));
-    return nudgeMessage(
-      members.filter((m) => !activeIds.has(m.id)).map((m) => m.name),
+): Promise<Composed | null> {
+  if (isFollowup(kind)) {
+    const missing = await missingMembers(admin, group, kind, now);
+    const text = followupMessage(
+      kind,
+      missing.map((m) => m.name),
       now.date,
     );
+    return text ? { text, recipients: missing.map((m) => m.id) } : null;
   }
 
-  if (kind === "weigh_results") {
-    const members = await clientMembers(admin, group.id);
-    if (members.length === 0) return null;
-    const { data: entries } = await admin
-      .from("progress_entries")
-      .select("client_id, entry_date, weight_kg")
-      .in("client_id", members.map((m) => m.id))
-      .not("weight_kg", "is", null)
-      .gte("entry_date", group.program_started_on ?? "1900-01-01")
-      .lte("entry_date", now.date);
+  const members = await clientMembers(admin, group.id);
+  const everyone = members.map((m) => m.id);
 
-    const result = computeWeighResults(
-      members,
-      (entries ?? []).map((e) => ({
-        client_id: e.client_id,
-        date: e.entry_date,
-        weight_kg: Number(e.weight_kg),
-      })),
-      now.date,
-    );
+  if (kind === "weigh_results") {
+    if (members.length === 0) return null;
+    const result = await weighResults(admin, group, members, now);
 
     // Personele haftalık özet + liste hatırlatması.
     const program = await getActiveProgram(admin, group.id);
@@ -128,7 +188,10 @@ async function composeMessage(
       .is("resolved_at", null);
     const avg =
       result.ranked.length > 0
-        ? (result.ranked.reduce((s, r) => s + r.delta, 0) / result.ranked.length).toFixed(1)
+        ? (
+            result.ranked.reduce((s, r) => s + r.delta, 0) /
+            result.ranked.length
+          ).toFixed(1)
         : "–";
     const stale =
       !program?.published_at ||
@@ -138,8 +201,9 @@ async function composeMessage(
       body: `Ortalama ${avg} kg · ${result.missing.length} kişi tartı paylaşmadı · ${openAlerts ?? 0} açık uyarı${stale ? " · Yeni haftanın listesini yüklemeyi unutma" : ""}`,
     });
 
-    return weighResultsMessage(result);
+    const text = weighResultsMessage(result);
+    return text ? { text, recipients: everyone } : null;
   }
 
-  return templateFor(kind, now.date);
+  return { text: templateFor(kind, now.date), recipients: everyone };
 }
