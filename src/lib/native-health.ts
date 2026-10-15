@@ -6,7 +6,7 @@ import {
   getHealthWriteback,
   saveHealthSync,
 } from "@/app/(app)/gelisim/actions";
-import { isNative } from "@/lib/native-push";
+import { isNative, nativePlatform } from "@/lib/native-push";
 import { istanbulDay } from "@/lib/health/summary";
 import type {
   HealthSyncInput,
@@ -68,7 +68,8 @@ async function plugin() {
 
 /** iOS uygulamasında ve cihazda Sağlık varsa true. */
 export async function isHealthAvailable(): Promise<boolean> {
-  if (!isNative()) return false;
+  // Android'de Health Connect henüz kapalı (izin beyanı ayrı sürümde).
+  if (!isNative() || nativePlatform() !== "ios") return false;
   try {
     return (await (await plugin()).isAvailable()).available;
   } catch {
@@ -107,7 +108,7 @@ export function forgetHealthLocally() {
 
 /** Bağlıysa ve son senkrondan beri yeterli süre geçtiyse sessizce senkronlar. */
 export async function maybeSyncHealth(): Promise<void> {
-  if (!isNative() || !isHealthConnectedLocally()) return;
+  if (nativePlatform() !== "ios" || !isHealthConnectedLocally()) return;
   const last = Number(storageGet(LAST_SYNC_KEY) ?? 0);
   if (Date.now() - last < SYNC_EVERY_MS) return;
   await syncHealth(14);
@@ -120,7 +121,7 @@ let writebackTimer: ReturnType<typeof setTimeout> | null = null;
  * (art arda işaretlemeler tek yazmaya insin) son günleri Sağlık'a yazar.
  */
 export function scheduleHealthWriteback() {
-  if (!isNative() || !isHealthConnectedLocally()) return;
+  if (nativePlatform() !== "ios" || !isHealthConnectedLocally()) return;
   if (writebackTimer) clearTimeout(writebackTimer);
   writebackTimer = setTimeout(async () => {
     writebackTimer = null;

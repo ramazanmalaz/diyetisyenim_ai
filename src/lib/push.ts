@@ -1,6 +1,7 @@
 import webpush from "web-push";
 
 import { apnsHazir, sendApns, type ApnsEnvironment } from "@/lib/apns";
+import { fcmHazir, sendFcm } from "@/lib/fcm";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 let configured = false;
@@ -22,11 +23,11 @@ export type PushPayload = {
 };
 
 /**
- * Bir kullanıcının tüm kayıtlı cihazlarına push bildirimi gönderir — hem
- * tarayıcı/PWA (Web Push) hem iOS uygulaması (APNs). Geçersiz abonelik ve
+ * Bir kullanıcının tüm kayıtlı cihazlarına push bildirimi gönderir —
+ * tarayıcı/PWA (Web Push), iOS uygulaması (APNs) ve Android uygulaması (FCM). Geçersiz abonelik ve
  * token'ları temizler. Gönderilen cihaz sayısını döndürür.
  *
- * `yalnizcaWeb`: bildirim iOS uygulamasına gönderilmesin. Ödeme/abonelik
+ * `yalnizcaWeb`: bildirim mobil uygulamalara (iOS/Android) gönderilmesin. Ödeme/abonelik
  * yönlendirmesi içeren bildirimler için zorunlu — uygulamada ödeme arayüzü
  * yok, kullanıcı hiçbir yere varamaz ve bu Guideline 3.1.1 (anti-steering)
  * sınırında durur.
@@ -37,13 +38,16 @@ export async function sendPushToUser(
   secenek: { yalnizcaWeb?: boolean } = {},
 ): Promise<number> {
   const admin = createAdminClient();
-  const [web, native] = await Promise.all([
+  const [web, ios, android] = await Promise.all([
     webPushGonder(admin, userId, payload),
     secenek.yalnizcaWeb
       ? Promise.resolve(0)
       : apnsGonder(admin, userId, payload),
+    secenek.yalnizcaWeb
+      ? Promise.resolve(0)
+      : fcmGonder(admin, userId, payload),
   ]);
-  return web + native;
+  return web + ios + android;
 }
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -138,6 +142,38 @@ async function apnsGonder(
         return;
       }
       console.error("[push] APNs gönderilemedi:", sonuc.hata);
+    }),
+  );
+  return sent;
+}
+
+/** Android uygulaması (FCM). Yapılandırma yoksa sessizce atlanır. */
+async function fcmGonder(
+  admin: Admin,
+  userId: string,
+  payload: PushPayload,
+): Promise<number> {
+  if (!fcmHazir()) return 0;
+
+  const { data: tokens } = await admin
+    .from("fcm_tokens")
+    .select("token")
+    .eq("client_id", userId);
+  if (!tokens || tokens.length === 0) return 0;
+
+  let sent = 0;
+  await Promise.all(
+    tokens.map(async (t) => {
+      const sonuc = await sendFcm(t.token, payload);
+      if (sonuc.ok) {
+        sent += 1;
+        return;
+      }
+      if (sonuc.gecersiz) {
+        await admin.from("fcm_tokens").delete().eq("token", t.token);
+        return;
+      }
+      console.error("[push] FCM gönderilemedi:", sonuc.hata);
     }),
   );
   return sent;

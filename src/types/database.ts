@@ -130,6 +130,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      fcm_tokens: {
+        Row: {
+          token: string;
+          client_id: string;
+          created_at: string;
+          last_seen_at: string;
+        };
+        Insert: {
+          token: string;
+          client_id: string;
+          created_at?: string;
+          last_seen_at?: string;
+        };
+        Update: {
+          token?: string;
+          client_id?: string;
+          created_at?: string;
+          last_seen_at?: string;
+        };
+        Relationships: [];
+      };
       apns_tokens: {
         Row: {
           token: string;

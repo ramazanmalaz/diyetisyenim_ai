@@ -1,15 +1,32 @@
 "use client";
 
-import { saveApnsToken } from "@/app/(app)/push/actions";
+import { saveApnsToken, saveFcmToken } from "@/app/(app)/push/actions";
 
 /**
  * iOS uygulaması (Capacitor) için push kaydı.
  *
- * WKWebView'da Web Push yok; native kabukta bildirimler APNs üzerinden gelir.
- * Bu modül yalnızca native'de çalışır, web tarafı `push-client.ts`'te kalır.
+ * iOS (WKWebView) ve Android WebView'da Web Push yok; native kabukta bildirimler
+ * iOS'ta APNs, Android'de FCM üzerinden gelir. Bu modül yalnızca native'de
+ * çalışır, web tarafı `push-client.ts`'te kalır.
  */
 
-type CapacitorKopru = { isNativePlatform?: () => boolean };
+type CapacitorKopru = {
+  isNativePlatform?: () => boolean;
+  getPlatform?: () => string;
+};
+
+function kopru(): CapacitorKopru | undefined {
+  if (typeof window === "undefined") return undefined;
+  return (window as unknown as { Capacitor?: CapacitorKopru }).Capacitor;
+}
+
+/** "ios" | "android" | "web" */
+export function nativePlatform(): string {
+  return kopru()?.getPlatform?.() ?? "web";
+}
+
+// Sunucu aynı kimliği kullanır (bkz. lib/fcm.ts ANDROID_KANAL).
+const ANDROID_KANAL = "genel";
 
 /**
  * Native kabukta mıyız? Capacitor köprüyü sayfa çalışmadan önce
@@ -17,12 +34,10 @@ type CapacitorKopru = { isNativePlatform?: () => boolean };
  * `isPushSupported()` senkron kalabilsin diye bu şekilde.
  */
 export function isNative(): boolean {
-  if (typeof window === "undefined") return false;
-  const c = (window as unknown as { Capacitor?: CapacitorKopru }).Capacitor;
-  return Boolean(c?.isNativePlatform?.());
+  return Boolean(kopru()?.isNativePlatform?.());
 }
 
-/** İzin iste → APNs'e kaydol → token'ı sunucuya yaz. */
+/** İzin iste → APNs/FCM'e kaydol → token'ı sunucuya yaz. */
 export async function enableNativePush(): Promise<boolean> {
   if (!isNative()) return false;
   try {
@@ -34,11 +49,28 @@ export async function enableNativePush(): Promise<boolean> {
     }
     if (izin.receive !== "granted") return false;
 
+    const android = nativePlatform() === "android";
+    if (android) {
+      // Android 8+ bildirimleri bir kanala düşer; yoksa FCM varsayılan kanalı
+      // "Diğer" adıyla açar. Var olan kanalı yeniden oluşturmak zararsız.
+      await PushNotifications.createChannel({
+        id: ANDROID_KANAL,
+        name: "Bildirimler",
+        description: "Öğün, su ve grup hatırlatmaları",
+        importance: 4,
+        visibility: 1,
+      }).catch(() => {});
+    }
+
     // Token asenkron geliyor: register() çağrısından sonra "registration"
     // olayını beklemek gerekiyor.
     let bitir: (t: string | null) => void = () => {};
-    const kayit = await PushNotifications.addListener("registration", (t) => bitir(t.value));
-    const hata = await PushNotifications.addListener("registrationError", () => bitir(null));
+    const kayit = await PushNotifications.addListener("registration", (t) =>
+      bitir(t.value),
+    );
+    const hata = await PushNotifications.addListener("registrationError", () =>
+      bitir(null),
+    );
     const token = await new Promise<string | null>((resolve) => {
       const zamanAsimi = setTimeout(() => resolve(null), 15000);
       bitir = (t) => {
@@ -51,6 +83,11 @@ export async function enableNativePush(): Promise<boolean> {
     void kayit.remove();
     void hata.remove();
     if (!token) return false;
+
+    if (android) {
+      const sonuc = await saveFcmToken({ token });
+      return "ok" in sonuc;
+    }
 
     // Derlemenin hangi APNs ortamına kaydolduğunu WebView bilemez (Xcode
     // derlemesi sandbox, TestFlight/App Store production). Varsayılan

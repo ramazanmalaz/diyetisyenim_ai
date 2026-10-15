@@ -68,6 +68,31 @@ export async function saveApnsToken(values: unknown): Promise<ActionResult> {
   return { ok: true };
 }
 
+const fcmSchema = z.object({
+  // FCM kayıt token'ı: ~150-200 karakter, harf/rakam ve : _ - işaretleri.
+  token: z.string().regex(/^[A-Za-z0-9:_-]{100,500}$/, "Geçersiz token"),
+});
+
+/** Android cihazın FCM token'ını kaydeder (varsa tazeler). */
+export async function saveFcmToken(values: unknown): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+  const parsed = fcmSchema.safeParse(values);
+  if (!parsed.success) return { error: "Geçersiz token." };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("fcm_tokens").upsert(
+    {
+      token: parsed.data.token,
+      client_id: user.id,
+      last_seen_at: new Date().toISOString(),
+    },
+    { onConflict: "token" },
+  );
+  if (error) return { error: "Token kaydedilemedi." };
+  return { ok: true };
+}
+
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Tüm bildirim tercihlerini kaydeder (merkezi /ayarlar sayfası; cron okur). */

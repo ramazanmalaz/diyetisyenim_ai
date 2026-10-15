@@ -10,7 +10,9 @@ const userAgent = vi.hoisted(() => ({ value: "" }));
 
 vi.mock("next/headers", () => ({
   headers: () =>
-    Promise.resolve({ get: (k: string) => (k === "user-agent" ? userAgent.value : null) }),
+    Promise.resolve({
+      get: (k: string) => (k === "user-agent" ? userAgent.value : null),
+    }),
 }));
 
 const profile = vi.hoisted(() => ({ premium_until: null as string | null }));
@@ -25,13 +27,16 @@ vi.mock("@/lib/supabase/admin", () => {
   return {
     createAdminClient: () => ({
       from: (table: string) =>
-        table === "profiles" ? chain : { ...chain, maybeSingle: () => Promise.resolve({ data: null }) },
+        table === "profiles"
+          ? chain
+          : { ...chain, maybeSingle: () => Promise.resolve({ data: null }) },
     }),
   };
 });
 
 const NATIVE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0) UzmanDiyetiOS";
-const WEB_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15";
+const WEB_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15";
 
 const { getEntitlement, upgradeMessage } = await import("@/lib/entitlements");
 
@@ -50,6 +55,14 @@ describe("iOS kabuğunda premium", () => {
 
   it("native'de kapalıdır — uygulama dışı satın alma uygulamada açılamaz", async () => {
     userAgent.value = NATIVE_UA;
+    const ent = await getEntitlement("u1");
+    expect(ent.isPremium).toBe(false);
+    expect(ent.premiumUntil).toBeNull();
+  });
+
+  it("Android uygulamasında da kapalıdır (Google Play ödeme politikası)", async () => {
+    userAgent.value =
+      "Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 Chrome/141.0 Mobile Safari/537.36 UzmanDiyetAndroid";
     const ent = await getEntitlement("u1");
     expect(ent.isPremium).toBe(false);
     expect(ent.premiumUntil).toBeNull();

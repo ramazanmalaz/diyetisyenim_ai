@@ -21,6 +21,14 @@ const config: CapacitorConfig = {
     scrollEnabled: true,
     limitsNavigationsToAppBoundDomains: true,
   },
+  android: {
+    // iOS'taki imzanın Android karşılığı (bkz. src/lib/native-request.ts).
+    // Google Play ödeme politikası da uygulama içinden harici ödemeye
+    // yönlendirmeyi yasaklıyor; ücretli içerik Android'de de gizlenir.
+    appendUserAgent: "UzmanDiyetAndroid",
+    backgroundColor: "#ffffff",
+    allowMixedContent: false,
+  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 1500,
