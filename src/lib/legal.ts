@@ -28,7 +28,7 @@ export const COMPANY = {
 } as const;
 
 /** Yasal metinlerin son güncellenme tarihi (GG.AA.YYYY) */
-export const LAST_UPDATED = "14.06.2026";
+export const LAST_UPDATED = "16.10.2026";
 
 type LegalLink = { href: string; label: string };
 

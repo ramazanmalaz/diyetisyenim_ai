@@ -29,6 +29,11 @@ export default function GizlilikPage() {
           öğün/ilerleme fotoğrafları, su tüketimi gibi veriler.
         </li>
         <li>
+          <strong>Apple Sağlık verileri (yalnızca bağlarsan):</strong> adım,
+          hareketle yakılan kalori, antrenmanlar, kilo, uyku süresi ve dinlenik
+          nabız (bkz. madde 6).
+        </li>
+        <li>
           <strong>Kullanım verileri:</strong> uygulama içi etkileşimler, AI
           sohbet içerikleri.
         </li>
@@ -76,14 +81,45 @@ export default function GizlilikPage() {
         </li>
       </ul>
 
-      <h2>6. Saklama süresi</h2>
+      <h2>6. Apple Sağlık (HealthKit)</h2>
+      <p>
+        iPhone uygulamasında Apple Sağlık&apos;ı bağlamak isteğe bağlıdır ve
+        hangi verilere erişileceğini iOS izin ekranında sen seçersin.
+      </p>
+      <ul>
+        <li>
+          <strong>Okunanlar:</strong> adım, hareketle yakılan (aktif) kalori,
+          antrenmanlar (Apple Watch dahil), kilo, uyku süresi ve dinlenik nabız.
+          Bunlar yalnızca diyetinle birlikte gelişimini göstermek ve istediğinde
+          değerlendirme hazırlamak için kullanılır.
+        </li>
+        <li>
+          <strong>Yazılanlar:</strong> uygulamaya girdiğin kilo ve
+          &quot;yedim&quot; olarak işaretlediğin öğünlerin kalorisi.
+        </li>
+        <li>
+          Sağlık verileri <strong>reklam, pazarlama veya veri satışı için
+          kullanılmaz</strong>, üçüncü kişilerle paylaşılmaz ve iCloud&apos;da
+          saklanmaz. &quot;Değerlendir&quot; dediğinde yalnızca dönem özeti
+          sayıları (ortalama adım, uyku süresi gibi) yanıt üretmesi için
+          Anthropic&apos;e gönderilir.
+        </li>
+        <li>
+          Gelişimim ekranındaki &quot;Bağlantıyı kes&quot; ile yeni veri alımını
+          durdurabilir ve sunucudaki Sağlık verilerini silebilirsin. İzinleri
+          iPhone Ayarlar → Sağlık → Veri Erişimi ve Aygıtlar → UzmanDiyet
+          bölümünden de kaldırabilirsin.
+        </li>
+      </ul>
+
+      <h2>7. Saklama süresi</h2>
       <p>
         Veriler, hizmetin sunulduğu süre boyunca ve ilgili yasal saklama süreleri
         kadar tutulur; hesabını sildirdiğinde veya talebin üzerine mevzuata uygun
         şekilde silinir/anonim hale getirilir.
       </p>
 
-      <h2>7. Haklarınız (KVKK md. 11)</h2>
+      <h2>8. Haklarınız (KVKK md. 11)</h2>
       <p>
         Kişisel verilerine ilişkin; işlenip işlenmediğini öğrenme, bilgi talep
         etme, düzeltilmesini/silinmesini isteme, aktarıldığı üçüncü kişileri
@@ -92,7 +128,7 @@ export default function GizlilikPage() {
         iletebilirsin.
       </p>
 
-      <h2>8. Çerezler</h2>
+      <h2>9. Çerezler</h2>
       <p>
         Uygulama; oturum açma ve temel işlevler için zorunlu çerezler/yerel
         depolama kullanır. Bunlar hizmetin çalışması için gereklidir.
