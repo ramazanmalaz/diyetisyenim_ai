@@ -59,7 +59,10 @@ const FRIDGE_SCHEMA: AnthropicNS.Tool.InputSchema = {
             description: "1 porsiyonun yaklaşık kalorisi",
           },
           protein_g: { type: "number", description: "1 porsiyon protein (g)" },
-          carb_g: { type: "number", description: "1 porsiyon karbonhidrat (g)" },
+          carb_g: {
+            type: "number",
+            description: "1 porsiyon karbonhidrat (g)",
+          },
           fat_g: { type: "number", description: "1 porsiyon yağ (g)" },
           servings: { type: "integer", description: "Tarif kaç porsiyon" },
           time_min: {
@@ -85,7 +88,8 @@ const FRIDGE_SCHEMA: AnthropicNS.Tool.InputSchema = {
           },
           steps: {
             type: "array",
-            description: "Kısa, numarasız yapılış adımları (her biri tek cümle)",
+            description:
+              "Kısa, numarasız yapılış adımları (her biri tek cümle)",
             items: { type: "string" },
           },
           why_fits: {
@@ -144,7 +148,7 @@ export type FridgeContext = {
 export function buildFridgePrompt(params: {
   ingredientsText: string;
   meal: FridgeMeal;
-  hasPhoto: boolean;
+  photoCount: number;
   context: FridgeContext;
 }): string {
   const { context: c } = params;
@@ -152,12 +156,16 @@ export function buildFridgePrompt(params: {
     FRIDGE_MEAL_OPTIONS.find((o) => o.value === params.meal)?.label ??
     "Fark etmez";
   const lines = [
-    params.hasPhoto
-      ? "Ekteki fotoğraf kullanıcının dolabı/tezgâhı. Gördüğün yiyecekleri malzeme listesine ekle."
-      : null,
+    params.photoCount > 1
+      ? `Ekteki ${params.photoCount} fotoğraf kullanıcının dolabının/mutfağının farklı bölümleri. Hepsinde gördüğün yiyecekleri tek listede birleştir; aynı ürünü iki kez yazma.`
+      : params.photoCount === 1
+        ? "Ekteki fotoğraf kullanıcının dolabı/tezgâhı. Gördüğün yiyecekleri malzeme listesine ekle."
+        : null,
     `Kullanıcının yazdığı malzemeler: ${params.ingredientsText.trim() || "(yazmadı)"}`,
     `Öğün: ${mealLabel}`,
-    c.mealBudget ? `Bu öğün için kalori bütçesi: ~${c.mealBudget} kcal (1 porsiyon)` : null,
+    c.mealBudget
+      ? `Bu öğün için kalori bütçesi: ~${c.mealBudget} kcal (1 porsiyon)`
+      : null,
     c.dailyTarget ? `Günlük kalori hedefi: ${c.dailyTarget} kcal` : null,
     c.dislikes ? `Sevmedikleri / yemedikleri: ${c.dislikes}` : null,
     c.healthNotes ? `Sağlık notu: ${c.healthNotes}` : null,
@@ -168,19 +176,12 @@ export function buildFridgePrompt(params: {
 
 export async function suggestFridgeRecipes(params: {
   prompt: string;
-  image: { base64: string; mediaType: ImageMediaType } | null;
+  images: { base64: string; mediaType: ImageMediaType }[];
 }): Promise<FridgeResult> {
-  const content: AnthropicNS.ContentBlockParam[] = [];
-  if (params.image) {
-    content.push({
-      type: "image",
-      source: {
-        type: "base64",
-        media_type: params.image.mediaType,
-        data: params.image.base64,
-      },
-    });
-  }
+  const content: AnthropicNS.ContentBlockParam[] = params.images.map((img) => ({
+    type: "image",
+    source: { type: "base64", media_type: img.mediaType, data: img.base64 },
+  }));
   content.push({ type: "text", text: params.prompt });
 
   const response = await anthropic.messages.create({

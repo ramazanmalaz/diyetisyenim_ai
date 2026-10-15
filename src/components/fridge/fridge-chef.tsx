@@ -17,19 +17,27 @@ import { useRef, useState } from "react";
 
 import { suggestRecipes } from "@/app/(app)/dolap/actions";
 import type { FridgeRecipe, FridgeResult } from "@/lib/ai/fridge";
-import { FRIDGE_MEAL_OPTIONS, type FridgeMeal } from "@/lib/fridge-options";
+import {
+  FRIDGE_MAX_PHOTOS,
+  FRIDGE_MEAL_OPTIONS,
+  type FridgeMeal,
+} from "@/lib/fridge-options";
 import { downscaleImage } from "@/lib/image-downscale";
 import { triggerPremiumWall } from "@/lib/premium-wall";
 import { cn } from "@/lib/utils";
 
-type Photo = { blob: Blob; url: string };
+type Photo = { id: string; blob: Blob; url: string };
+
+// Fotoğrafların hepsi tek istekte gidiyor; sunucu gövde sınırının altında
+// kalsın diye her biri 1024 px'e küçültülür.
+const PHOTO_EDGE = 1024;
 
 export function FridgeChef() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [meal, setMeal] = useState<FridgeMeal>("any");
-  const [photo, setPhoto] = useState<Photo | null>(null);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<FridgeResult | null>(null);
@@ -59,23 +67,49 @@ export function FridgeChef() {
     setItems((prev) => prev.filter((p) => p !== name));
   }
 
-  async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  async function onPickPhotos(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!file) return;
-    try {
-      const blob = await downscaleImage(file);
-      if (photo) URL.revokeObjectURL(photo.url);
-      setPhoto({ blob, url: URL.createObjectURL(blob) });
+    if (files.length === 0) return;
+    const picked = files.slice(
+      0,
+      Math.max(0, FRIDGE_MAX_PHOTOS - photos.length),
+    );
+    const added: Photo[] = [];
+    let failed = false;
+    for (const file of picked) {
+      try {
+        const blob = await downscaleImage(file, PHOTO_EDGE);
+        added.push({
+          id: crypto.randomUUID(),
+          blob,
+          url: URL.createObjectURL(blob),
+        });
+      } catch {
+        failed = true;
+      }
+    }
+    setPhotos((prev) => [...prev, ...added].slice(0, FRIDGE_MAX_PHOTOS));
+    if (failed) {
+      setError("Bazı fotoğraflar okunamadı, başka bir fotoğraf dene.");
+    } else if (files.length > picked.length) {
+      setError(`En fazla ${FRIDGE_MAX_PHOTOS} fotoğraf ekleyebilirsin.`);
+    } else {
       setError(null);
-    } catch {
-      setError("Fotoğraf okunamadı, başka bir fotoğraf dene.");
     }
   }
 
-  function clearPhoto() {
-    if (photo) URL.revokeObjectURL(photo.url);
-    setPhoto(null);
+  function removePhoto(id: string) {
+    setPhotos((prev) => {
+      const gone = prev.find((p) => p.id === id);
+      if (gone) URL.revokeObjectURL(gone.url);
+      return prev.filter((p) => p.id !== id);
+    });
+  }
+
+  function clearPhotos() {
+    photos.forEach((p) => URL.revokeObjectURL(p.url));
+    setPhotos([]);
   }
 
   async function submit() {
@@ -84,7 +118,7 @@ export function FridgeChef() {
     const all = [...items];
     const pending = draft.trim();
     if (pending) all.push(pending);
-    if (all.length === 0 && !photo) {
+    if (all.length === 0 && photos.length === 0) {
       setError("Birkaç malzeme yaz ya da dolabının fotoğrafını ekle.");
       return;
     }
@@ -94,12 +128,12 @@ export function FridgeChef() {
     const fd = new FormData();
     fd.set("ingredients", all.join(", "));
     fd.set("meal", meal);
-    if (photo) fd.set("photo", photo.blob, "dolap.jpg");
+    photos.forEach((p, i) => fd.append("photo", p.blob, `dolap-${i + 1}.jpg`));
 
     try {
       const res = await suggestRecipes(fd);
       if ("quota" in res) {
-        triggerPremiumWall(photo ? "vision" : "chat");
+        triggerPremiumWall(photos.length > 0 ? "vision" : "chat");
         return;
       }
       if ("error" in res) {
@@ -112,7 +146,7 @@ export function FridgeChef() {
       // (tekrar fotoğraf göndermeye gerek yok).
       if (res.result.ingredients.length > 0) setItems(res.result.ingredients);
       setDraft("");
-      clearPhoto();
+      clearPhotos();
     } catch {
       setError("Şu anda tarif önerilemiyor, lütfen tekrar dene.");
     } finally {
@@ -131,7 +165,7 @@ export function FridgeChef() {
           Elindekilerle diyetine uygun ne pişer?
         </h1>
         <p className="reveal mx-auto mt-2 max-w-sm text-sm text-gray-500 dark:text-gray-400">
-          Malzemeleri yaz ya da dolabının fotoğrafını çek; kalori hedefine
+          Malzemeleri yaz ya da dolabının fotoğraflarını çek; kalori hedefine
           uygun tarifler önereyim.
         </p>
       </div>
@@ -182,7 +216,7 @@ export function FridgeChef() {
             }}
             placeholder="ör. yumurta, domates, lor"
             maxLength={200}
-            className="min-w-0 flex-1 rounded-xl bg-black/[0.03] px-3 py-2.5 text-sm outline-none ring-1 ring-black/5 placeholder:text-gray-400 focus:ring-2 focus:ring-emerald-500 dark:bg-white/5 dark:ring-white/10"
+            className="min-w-0 flex-1 rounded-xl bg-black/[0.03] px-3 py-2.5 text-sm ring-1 ring-black/5 outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-emerald-500 dark:bg-white/5 dark:ring-white/10"
           />
           <button
             type="button"
@@ -212,40 +246,64 @@ export function FridgeChef() {
           </ul>
         )}
 
-        {/* Fotoğraf */}
-        {photo ? (
-          <div className="relative overflow-hidden rounded-2xl">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={photo.url}
-              alt="Dolap fotoğrafı"
-              className="block max-h-64 w-full object-cover"
-            />
-            <button
-              type="button"
-              onClick={clearPhoto}
-              aria-label="Fotoğrafı kaldır"
-              className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur transition-transform duration-200 ease-[var(--ease-out)] hover:bg-black/60 focus-visible:outline-2 focus-visible:outline-white active:scale-[0.92]"
-            >
-              <X className="h-4 w-4" strokeWidth={2} />
-            </button>
-          </div>
-        ) : (
+        {/* Fotoğraflar: dolabın, kilerin, tezgâhın farklı bölümleri */}
+        {photos.length === 0 ? (
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
             className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-emerald-300 px-4 py-3 text-sm font-medium text-emerald-700 transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-500 active:scale-[0.98] dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
           >
             <ImagePlus className="h-4 w-4" strokeWidth={1.75} />
-            Dolabın fotoğrafını ekle
+            Dolabın fotoğraflarını ekle
           </button>
+        ) : (
+          <div>
+            <ul className="grid grid-cols-4 gap-2">
+              {photos.map((p, i) => (
+                <li key={p.id} className="relative aspect-square">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={p.url}
+                    alt={`Dolap fotoğrafı ${i + 1}`}
+                    className="h-full w-full rounded-xl object-cover ring-1 ring-black/5 dark:ring-white/10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(p.id)}
+                    aria-label={`${i + 1}. fotoğrafı kaldır`}
+                    className="absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gray-900/80 text-white ring-2 ring-white transition-transform duration-200 ease-[var(--ease-out)] hover:bg-gray-900 focus-visible:outline-2 focus-visible:outline-emerald-500 active:scale-[0.9] dark:ring-gray-900"
+                  >
+                    <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  </button>
+                </li>
+              ))}
+              {photos.length < FRIDGE_MAX_PHOTOS && (
+                <li className="aspect-square">
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    aria-label="Fotoğraf ekle"
+                    className="flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-xl border border-dashed border-emerald-300 text-emerald-700 transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-500 active:scale-[0.96] dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
+                  >
+                    <Plus className="h-5 w-5" strokeWidth={2} />
+                    <span className="text-[10px] font-medium">Ekle</span>
+                  </button>
+                </li>
+              )}
+            </ul>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {photos.length}/{FRIDGE_MAX_PHOTOS} fotoğraf · dolabın, kilerin,
+              tezgâhın farklı yerlerini çekebilirsin
+            </p>
+          </div>
         )}
         <input
           ref={fileRef}
           type="file"
+          multiple
           accept="image/jpeg,image/png,image/webp,image/heic"
           className="hidden"
-          onChange={onPickPhoto}
+          onChange={onPickPhotos}
         />
       </div>
 

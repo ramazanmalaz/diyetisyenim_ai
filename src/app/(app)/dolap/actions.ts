@@ -10,7 +10,11 @@ import {
 } from "@/lib/ai/fridge";
 import type { ImageMediaType } from "@/lib/ai/respond";
 import { getUser } from "@/lib/auth";
-import { FRIDGE_MEAL_OPTIONS, type FridgeMeal } from "@/lib/fridge-options";
+import {
+  FRIDGE_MAX_PHOTOS,
+  FRIDGE_MEAL_OPTIONS,
+  type FridgeMeal,
+} from "@/lib/fridge-options";
 import { consumeAiCredit } from "@/lib/entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -93,7 +97,7 @@ async function loadContext(
 
 /**
  * Elde olan malzemelerden (yazı ve/veya fotoğraf) diyete uygun tarif önerir.
- * Fotoğraf bellekte işlenir, Storage'a yazılmaz. Fotoğraf varsa vision, yoksa
+ * Fotoğraflar bellekte işlenir, Storage'a yazılmaz. Fotoğraf varsa vision, yoksa
  * chat kredisi tüketir.
  */
 export async function suggestRecipes(
@@ -110,20 +114,26 @@ export async function suggestRecipes(
     return { error: "Malzeme listesi en fazla 1000 karakter olabilir." };
   }
 
-  const photo = formData.get("photo");
-  const hasPhoto = photo instanceof File && photo.size > 0;
-  if (hasPhoto) {
+  const photos = formData
+    .getAll("photo")
+    .filter((p): p is File => p instanceof File && p.size > 0);
+  const hasPhoto = photos.length > 0;
+  if (photos.length > FRIDGE_MAX_PHOTOS) {
+    return { error: `En fazla ${FRIDGE_MAX_PHOTOS} fotoğraf ekleyebilirsin.` };
+  }
+  for (const photo of photos) {
     if (!ALLOWED_PHOTO_TYPES.includes(photo.type)) {
       return { error: "Yalnızca JPEG, PNG veya WEBP yükleyebilirsin." };
     }
-    if (photo.size > MAX_PHOTO_BYTES) {
-      return { error: "Fotoğraf en fazla 5 MB olabilir." };
-    }
+  }
+  if (photos.reduce((s, p) => s + p.size, 0) > MAX_PHOTO_BYTES) {
+    return { error: "Fotoğrafların toplamı en fazla 5 MB olabilir." };
   }
   if (!hasPhoto && parsed.data.ingredients.length < 2) {
     return { error: "Birkaç malzeme yaz ya da dolabının fotoğrafını ekle." };
   }
 
+  // Kaç fotoğraf olursa olsun tek istek = tek kredi.
   const credit = await consumeAiCredit(user.id, hasPhoto ? "vision" : "chat");
   if (!credit.ok) return { quota: true };
 
@@ -133,15 +143,15 @@ export async function suggestRecipes(
       prompt: buildFridgePrompt({
         ingredientsText: parsed.data.ingredients,
         meal: parsed.data.meal,
-        hasPhoto,
+        photoCount: photos.length,
         context,
       }),
-      image: hasPhoto
-        ? {
-            base64: Buffer.from(await photo.arrayBuffer()).toString("base64"),
-            mediaType: photo.type as ImageMediaType,
-          }
-        : null,
+      images: await Promise.all(
+        photos.map(async (p) => ({
+          base64: Buffer.from(await p.arrayBuffer()).toString("base64"),
+          mediaType: p.type as ImageMediaType,
+        })),
+      ),
     });
     return { ok: true, result };
   } catch (err) {

@@ -7,4 +7,7 @@ export const FRIDGE_MEAL_OPTIONS = [
   { value: "snack", label: "Ara öğün" },
 ] as const;
 
+/** Tek istekte gönderilebilecek en fazla fotoğraf (sunucu gövde sınırı ~4,5 MB). */
+export const FRIDGE_MAX_PHOTOS = 4;
+
 export type FridgeMeal = (typeof FRIDGE_MEAL_OPTIONS)[number]["value"];
