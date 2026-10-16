@@ -57,7 +57,14 @@
         <activity-alias
             android:name="app.capgo.plugin.health.ViewPermissionUsageActivity"
             tools:node="remove" />
+        <service
+            android:name="androidx.health.platform.client.impl.sdkservice.HealthDataSdkService"
+            tools:node="remove" />
     </application>
+
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" tools:node="remove" />
+    </queries>
 
     <!-- Permissions -->
 
@@ -88,7 +95,7 @@
     <uses-permission android:name="android.permission.health.READ_SLEEP" tools:node="remove" />
     <uses-permission android:name="android.permission.health.READ_STEPS" tools:node="remove" />
     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" tools:node="remove" />
-    <uses-permission android:name="android.permission.health.READ_VO" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_VO2_MAX" tools:node="remove" />
     <uses-permission android:name="android.permission.health.READ_WEIGHT" tools:node="remove" />
     <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED" tools:node="remove" />
     <uses-permission android:name="android.permission.health.WRITE_BASAL_BODY_TEMPERATURE" tools:node="remove" />
@@ -111,6 +118,6 @@
     <uses-permission android:name="android.permission.health.WRITE_SLEEP" tools:node="remove" />
     <uses-permission android:name="android.permission.health.WRITE_STEPS" tools:node="remove" />
     <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED" tools:node="remove" />
-    <uses-permission android:name="android.permission.health.WRITE_VO" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.WRITE_VO2_MAX" tools:node="remove" />
     <uses-permission android:name="android.permission.health.WRITE_WEIGHT" tools:node="remove" />
 </manifest>
