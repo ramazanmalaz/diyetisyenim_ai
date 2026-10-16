@@ -37,7 +37,9 @@ export function BottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <div className="glass mx-auto flex max-w-md items-stretch justify-around rounded-2xl px-2 py-1.5 shadow-[var(--shadow-float)]">
+      {/* Opak: yarı saydam cam efektinde kaydırılan içerik menü yazılarının
+          arkasından okunuyordu. */}
+      <div className="bg-background mx-auto flex border border-black/5 dark:border-white/10 max-w-md items-stretch justify-around rounded-2xl px-2 py-1.5 shadow-[var(--shadow-float)]">
         {ITEMS.map((it) => {
           const active =
             pathname === it.href || pathname.startsWith(it.href + "/");
