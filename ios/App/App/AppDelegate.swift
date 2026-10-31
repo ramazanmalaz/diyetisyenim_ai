@@ -59,6 +59,48 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 }
 
+// MARK: - Sahne (UIScene)
+//
+// iOS 27 sahne yaşam döngüsünü zorunlu kıldı. Pencereyi Info.plist'teki
+// UISceneStoryboardFile kurar; sahne açıkken URL ve evrensel bağlantılar
+// AppDelegate'e değil buraya gelir, Capacitor'a buradan iletilir.
+
+class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+
+    var window: UIWindow?
+
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        // Soğuk açılışta gelen bağlantılar willConnectTo içinde teslim edilir.
+        if let context = connectionOptions.urlContexts.first {
+            openURL(context)
+        }
+        if let activity = connectionOptions.userActivities.first {
+            continueActivity(activity)
+        }
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        if let context = URLContexts.first {
+            openURL(context)
+        }
+    }
+
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        continueActivity(userActivity)
+    }
+
+    private func openURL(_ context: UIOpenURLContext) {
+        var options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+        options[.sourceApplication] = context.options.sourceApplication
+        options[.annotation] = context.options.annotation
+        _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, open: context.url, options: options)
+    }
+
+    private func continueActivity(_ activity: NSUserActivity) {
+        _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, continue: activity, restorationHandler: { _ in })
+    }
+}
+
 // MARK: - Apple Sağlık
 //
 // Ayrı dosya yerine burada: yeni Swift dosyası project.pbxproj kaydı ister ve
