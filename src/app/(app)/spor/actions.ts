@@ -17,7 +17,13 @@ import {
   type DatasetExercise,
 } from "@/lib/exercises-dataset";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { GOAL_LABEL, LEVEL_LABEL, STYLE_LABEL } from "@/lib/workout";
+import {
+  FACILITY_LABEL,
+  GOAL_LABEL,
+  GYM_PRESETS,
+  LEVEL_LABEL,
+  STYLE_LABEL,
+} from "@/lib/workout";
 import {
   ALLOWED_PHOTO_TYPES,
   MAX_PHOTO_BYTES,
@@ -39,6 +45,8 @@ const genSchema = z.object({
   sessionMin: z.coerce.number().int().min(15).max(180).optional(),
   style: z.string().max(20).optional(),
   injuries: z.string().max(300).optional(),
+  gymPreset: z.string().max(40).optional(),
+  facilities: z.array(z.enum(["pool", "sauna", "salt_room"])).max(3).optional().default([]),
 });
 
 /** Antrenman programı üretir ve kaydeder (sohbet kredisi tüketir). */
@@ -49,6 +57,16 @@ export async function generateWorkout(values: unknown): Promise<WorkoutResult> {
   const parsed = genSchema.safeParse(values);
   if (!parsed.success) return { error: "Geçersiz bilgiler." };
   const v = parsed.data;
+
+  // Paket seçildiyse alet listesi istemciden değil, paketin kendisinden gelir.
+  const preset = v.gymPreset
+    ? GYM_PRESETS.find((g) => g.id === v.gymPreset)
+    : undefined;
+  if (v.gymPreset && !preset) return { error: "Salon paketi bulunamadı." };
+  const equipment = preset ? preset.equipment : v.equipment;
+  const facilities = preset
+    ? v.facilities.filter((f) => preset.facilities.includes(f))
+    : [];
 
   const credit = await consumeAiCredit(user.id, "chat");
   if (!credit.ok) return { quota: true };
@@ -63,7 +81,11 @@ export async function generateWorkout(values: unknown): Promise<WorkoutResult> {
       ? `Tercih edilen antrenman tarzı: ${STYLE_LABEL[v.style] ?? v.style} (programı bu tarza göre kur)`
       : null,
     v.injuries ? `Sakatlık/kısıt: ${v.injuries} (bu bölgeyi zorlayan hareketlerden kaçın)` : null,
-    v.mode === "gym" ? "Spor salonu" : "Kendi vücut ağırlığı (ev)",
+    v.mode === "gym"
+      ? preset
+        ? `${preset.name} spor salonu`
+        : "Spor salonu"
+      : "Kendi vücut ağırlığı (ev)",
   ]
     .filter(Boolean)
     .join(", ");
@@ -75,8 +97,10 @@ export async function generateWorkout(values: unknown): Promise<WorkoutResult> {
       level: v.level,
       goal: v.goal,
       daysPerWeek: v.daysPerWeek,
-      equipment: v.equipment,
+      equipment,
       intakeSummary,
+      gymName: preset?.name,
+      facilities,
     });
   } catch (e) {
     console.error("[spor] program üretilemedi:", e instanceof Error ? e.message : e);
@@ -96,7 +120,7 @@ export async function generateWorkout(values: unknown): Promise<WorkoutResult> {
     level: v.level,
     goal: v.goal,
     days_per_week: v.daysPerWeek,
-    equipment: v.equipment,
+    equipment: [...equipment, ...facilities.map((f) => FACILITY_LABEL[f])],
     program,
     status: "active",
   });

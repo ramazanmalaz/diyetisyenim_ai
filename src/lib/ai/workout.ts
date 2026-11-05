@@ -3,7 +3,11 @@ import { z } from "zod";
 
 import type { ImageMediaType } from "@/lib/ai/respond";
 import { getExerciseVocabulary } from "@/lib/exercise-db";
-import type { WorkoutProgram } from "@/lib/workout";
+import {
+  FACILITY_LABEL,
+  type GymFacility,
+  type WorkoutProgram,
+} from "@/lib/workout";
 
 import { anthropic, DEFAULT_MODEL } from "./client";
 
@@ -77,7 +81,33 @@ export type WorkoutGenInput = {
   daysPerWeek: number;
   equipment: string[]; // gym + ekipman seçildiyse; boşsa AI serbest kurar
   intakeSummary: string;
+  gymName?: string; // hazır salon paketi seçildiyse
+  facilities?: GymFacility[];
 };
+
+/**
+ * Havuz/sauna/tuz odası alet kütüphanesinde olmadığından listeden seçtirilemez;
+ * bu kalemler enName boş bırakılarak ayrıca istenir.
+ */
+function facilityBlock(facilities: GymFacility[]): string {
+  if (facilities.length === 0) return "";
+  const lines: string[] = [
+    `\n\nSALONUN EK OLANAKLARI: ${facilities.map((f) => FACILITY_LABEL[f]).join(", ")}. Bu kalemler için "enName" BOŞ bırakılır (listeden seçilmez):`,
+  ];
+  if (facilities.includes("pool"))
+    lines.push(
+      "- Kapalı havuz: kardiyo/aktif dinlenme olarak kullan. Ya ayrı bir yüzme günü (örn. 'Serbest stil yüzme', sets 1, reps '20-30 dk') ya da ağırlık gününün sonunda kısa bir yüzme bitirişi ekle. Yüzme bilmeyenler için havuzda yürüyüş / su içi egzersiz öner. Seviyeye uygun süre ver.",
+    );
+  if (facilities.includes("sauna"))
+    lines.push(
+      "- Sauna: yalnızca antrenman SONRASI toparlanma olarak, uygun günlerin son kalemi ('Sauna', sets 1, reps '10-15 dk'). note: 'Bol su iç; tansiyon/kalp sorunu varsa doktora danış'. Her güne koyma.",
+    );
+  if (facilities.includes("salt_room"))
+    lines.push(
+      "- Tuz odası: dinlenme/rahatlama seansı olarak haftada 1-2 kez, antrenmanın son kalemi ('Tuz odası', sets 1, reps '20-30 dk'). Tıbbi fayda iddiasında bulunma.",
+    );
+  return lines.join("\n");
+}
 
 /** AI ile yapılandırılmış haftalık antrenman programı üretir. */
 export async function generateWorkoutProgram(
@@ -86,7 +116,7 @@ export async function generateWorkoutProgram(
   const equipLine =
     p.mode === "gym"
       ? p.equipment.length > 0
-        ? `Spor salonu. SADECE şu mevcut aletleri/ekipmanı kullan: ${p.equipment.join(", ")}. Bunların dışında alet gerektiren hareket verme.`
+        ? `${p.gymName ? `${p.gymName} spor salonu` : "Spor salonu"}. SADECE şu mevcut aletleri/ekipmanı kullan: ${p.equipment.join(", ")}. Bunların dışında alet gerektiren hareket verme.`
         : "Spor salonu. Tipik bir salonda bulunan serbest ağırlık + makinelerden dengeli, karışık bir program kur."
       : "Ev / kendi vücut ağırlığı. Hiçbir alet gerektirmeyen (gerekirse direnç bandı) hareketler kullan.";
 
@@ -113,7 +143,7 @@ export async function generateWorkoutProgram(
 - ÖZ VE KISA yaz: egzersiz "note" alanlarını boş bırak ya da en fazla 5-6 kelimelik tek ipucu. Genel "note" en fazla 2 kısa cümle (ısınma + ilerleme).
 - Seviyeye ve hedefe uygun, gerçekçi ol.
 
-Kişi: ${p.intakeSummary}${vocabBlock}
+Kişi: ${p.intakeSummary}${vocabBlock}${facilityBlock(p.facilities ?? [])}
 Programı save_workout ile döndür.`;
 
   const res = await anthropic.messages.create({

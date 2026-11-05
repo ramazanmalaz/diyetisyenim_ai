@@ -3,7 +3,7 @@ import { requireProfile } from "@/lib/auth";
 
 export const metadata = { title: "Spor Asistanı — Başlangıç" };
 // AI program üretimi uzun sürebilir; fonksiyon zaman aşımını yükselt.
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export default async function SporBaslangicPage() {
   await requireProfile();

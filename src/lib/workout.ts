@@ -98,3 +98,46 @@ export const EQUIPMENT_OPTIONS: { group: string; items: string[] }[] = [
 ];
 
 export const ALL_EQUIPMENT = EQUIPMENT_OPTIONS.flatMap((g) => g.items);
+
+/** Salonun aletlerine ek olarak programa katılabilen tesis olanakları. */
+export type GymFacility = "pool" | "sauna" | "salt_room";
+
+export const FACILITY_LABEL: Record<GymFacility, string> = {
+  pool: "Kapalı havuz",
+  sauna: "Sauna",
+  salt_room: "Tuz odası",
+};
+
+export type GymPreset = {
+  id: string;
+  name: string;
+  desc: string;
+  equipment: string[];
+  facilities: GymFacility[];
+};
+
+/**
+ * Hazır salon paketleri: aletleri bilinen bir salonun üyesi fotoğraf çekmeden
+ * ya da liste işaretlemeden, yalnızca o salonda yapılabilecek bir program alır.
+ */
+export const GYM_PRESETS: GymPreset[] = [
+  {
+    id: "baskent-vadi",
+    name: "Başkent Vadi Konutları",
+    desc: "Site spor salonu · havuz, sauna, tuz odası",
+    equipment: [
+      "Dambıl seti (5–30 kg, 2,5 kg artışlı) + hafif aerobik dambıllar",
+      "Ayarlanabilir bench (düz/eğimli) — 2 adet",
+      "Smith machine + çift kablo istasyonu (functional trainer, cable crossover) — barfiks tutamağı, leg extension/leg curl aparatlı bench",
+      "Çok istasyonlu ağırlık makinesi (Volt): lat pulldown, chest press, pec deck kolları, leg extension/leg curl, alt makara (seated cable row)",
+      "Olimpik bar + ağırlık plakaları (5–20 kg)",
+      "EZ bar ve kısa barlar",
+      "Kablo aparatları (D tutamak, halat, çubuk)",
+      "Direnç bantları",
+      "Pilates / fitness topu",
+      "Koşu bandı",
+      "Eliptik bisiklet",
+    ],
+    facilities: ["pool", "sauna", "salt_room"],
+  },
+];

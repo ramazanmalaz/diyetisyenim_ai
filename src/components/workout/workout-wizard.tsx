@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Building2,
   Camera,
   Check,
   Dumbbell,
@@ -20,7 +21,11 @@ import { cn } from "@/lib/utils";
 import {
   DAYS_OPTIONS,
   EQUIPMENT_OPTIONS,
+  FACILITY_LABEL,
   GOAL_OPTIONS,
+  GYM_PRESETS,
+  type GymFacility,
+  type GymPreset,
   LEVEL_OPTIONS,
   SESSION_OPTIONS,
   STYLE_OPTIONS,
@@ -41,7 +46,8 @@ type Step =
   | "mode"
   | "gympath"
   | "equipment"
-  | "photo";
+  | "photo"
+  | "preset";
 
 export function WorkoutWizard() {
   const router = useRouter();
@@ -55,6 +61,8 @@ export function WorkoutWizard() {
   const [injuries, setInjuries] = useState("");
   const [mode, setMode] = useState<"bodyweight" | "gym" | null>(null);
   const [equipment, setEquipment] = useState<string[]>([]);
+  const [preset, setPreset] = useState<GymPreset | null>(null);
+  const [facilities, setFacilities] = useState<GymFacility[]>([]);
   const [generating, setGenerating] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanNote, setScanNote] = useState<string | null>(null);
@@ -67,7 +75,17 @@ export function WorkoutWizard() {
     );
   }
 
-  async function runGenerate(eq: string[], m: "bodyweight" | "gym") {
+  function toggleFacility(f: GymFacility) {
+    setFacilities((prev) =>
+      prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f],
+    );
+  }
+
+  async function runGenerate(
+    eq: string[],
+    m: "bodyweight" | "gym",
+    pack?: { id: string; facilities: GymFacility[] },
+  ) {
     setGenerating(true);
     setError(null);
     try {
@@ -81,6 +99,8 @@ export function WorkoutWizard() {
         sessionMin,
         style,
         injuries: injuries.trim() || undefined,
+        gymPreset: pack?.id,
+        facilities: pack?.facilities ?? [],
       });
       // Başarıda action sunucudan /spor'a redirect eder (buraya düşmez).
       if ("ok" in res) {
@@ -179,7 +199,7 @@ export function WorkoutWizard() {
         </p>
       </div>
 
-      {error && (step === "mode" || step === "gympath") && (
+      {error && (step === "mode" || step === "gympath" || step === "preset") && (
         <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {error}
         </div>
@@ -360,6 +380,19 @@ export function WorkoutWizard() {
       {/* SALON ALT-YOLLARI */}
       {step === "gympath" && (
         <Question title="Salonda nasıl ilerleyelim?" onBack={() => setStep("mode")}>
+          {GYM_PRESETS.map((g) => (
+            <BigChoice
+              key={g.id}
+              icon={Building2}
+              title={`${g.name} salonu`}
+              desc={g.desc}
+              onClick={() => {
+                setPreset(g);
+                setFacilities(g.facilities);
+                setStep("preset");
+              }}
+            />
+          ))}
           <BigChoice
             icon={Shuffle}
             title="Karışık program hazırla"
@@ -491,6 +524,51 @@ export function WorkoutWizard() {
                 : "Karışık program oluştur →"}
             </button>
           )}
+        </Question>
+      )}
+
+      {/* HAZIR SALON PAKETİ */}
+      {step === "preset" && preset && (
+        <Question
+          title={`${preset.name} salonundaki aletlerle programını kuralım. Hangi olanakları da kullanmak istersin?`}
+          onBack={() => setStep("gympath")}
+        >
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <p className="mb-2 text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+              Salondaki aletler
+            </p>
+            <ul className="space-y-1 text-sm text-zinc-300">
+              {preset.equipment.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-lime-400" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {preset.facilities.map((f) => (
+              <Chip
+                key={f}
+                active={facilities.includes(f)}
+                onClick={() => toggleFacility(f)}
+              >
+                {FACILITY_LABEL[f]}
+              </Chip>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              void runGenerate(preset.equipment, "gym", {
+                id: preset.id,
+                facilities,
+              })
+            }
+            className="mt-3 w-full rounded-full bg-white px-4 py-3 text-sm font-bold text-black shadow-[0_10px_30px_-10px_rgba(255,255,255,0.4)] transition-[transform,filter] duration-200 ease-[var(--ease-out)] hover:bg-zinc-100 active:scale-[0.98]"
+          >
+            Programı oluştur →
+          </button>
         </Question>
       )}
 
