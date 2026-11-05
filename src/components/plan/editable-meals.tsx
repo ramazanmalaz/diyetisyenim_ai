@@ -113,6 +113,27 @@ function parseFree(content: string): { amount: string; name: string } {
   return { amount: toks.slice(0, i).join(" "), name: toks.slice(i).join(" ") };
 }
 
+// Eski AI planları bir öğünü tek kayıtta "+" ile birleştiriyordu; okunur olsun
+// diye besinleri alt alta gösteririz. Parantez içindeki "+" (ör. "zeytinyağı +
+// limon soslu") bölünmez.
+function splitCompound(text: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const ch of text) {
+    if (ch === "(") depth++;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    if (ch === "+" && depth === 0) {
+      parts.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  parts.push(current.trim());
+  return parts.filter(Boolean);
+}
+
 // "3 çay kaşığı" -> { qty: 3, unit: "çay kaşığı" }; "2" -> { qty: 2, unit: "adet" }
 function parseAmount(amount: string): { qty: number; unit: string } | null {
   const a = amount.trim();
@@ -487,6 +508,7 @@ export function EditableMeals({
                         {(() => {
                           const p = m.food_id ? null : parseFree(m.content);
                           const nameLine = p ? p.name || m.content : cleanName(m);
+                          const parts = splitCompound(nameLine);
                           const amountLine = p
                             ? p.amount || null
                             : m.quantity != null && m.quantity !== 1
@@ -498,14 +520,33 @@ export function EditableMeals({
                               onClick={() => openEdit(m)}
                               className="min-w-0 flex-1 text-left"
                             >
-                              <p
-                                className={cn(
-                                  "break-words text-sm font-medium leading-snug transition",
-                                  struck && "text-gray-400 line-through",
-                                )}
-                              >
-                                {nameLine}
-                              </p>
+                              {parts.length > 1 ? (
+                                <ul
+                                  className={cn(
+                                    "space-y-1 text-sm font-medium leading-snug transition",
+                                    struck && "text-gray-400 line-through",
+                                  )}
+                                >
+                                  {parts.map((part, i) => (
+                                    <li key={i} className="flex gap-2 break-words">
+                                      <span
+                                        aria-hidden
+                                        className="mt-[0.45em] h-1 w-1 shrink-0 rounded-full bg-current opacity-40"
+                                      />
+                                      {part}
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p
+                                  className={cn(
+                                    "break-words text-sm font-medium leading-snug transition",
+                                    struck && "text-gray-400 line-through",
+                                  )}
+                                >
+                                  {nameLine}
+                                </p>
+                              )}
                               {amountLine && (
                                 <p
                                   className={cn(

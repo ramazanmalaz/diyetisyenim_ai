@@ -7,7 +7,7 @@ import { PLAN_STATUS_LABEL } from "@/lib/diet";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // AI şablon üretimi bu route'tan tetikleniyor (Hobby limiti 60 sn).
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export default async function PlanlarPage() {
   const staff = await requireStaff();

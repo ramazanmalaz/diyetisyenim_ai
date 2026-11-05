@@ -115,7 +115,134 @@ Yalnızca save_diet_plan aracını çağır.`;
 
   const meals = planSchema.parse(toolUse.input).meals;
   // Standart gıdaların kalorisini USDA ile doğrula/güncelle (best-effort).
-  return enrichMealsWithUsda(meals);
+  const enriched = await enrichMealsWithUsda(meals);
+  return splitMealsIntoFoods(enriched);
+}
+
+const splitSchema = z.object({
+  meals: z.array(
+    z.object({
+      index: z.number().int().min(0),
+      foods: z
+        .array(
+          z.object({
+            item: z.string().min(1).max(200),
+            calories: z.number().int().min(0).max(3000),
+          }),
+        )
+        .min(1)
+        .max(8),
+    }),
+  ),
+});
+
+const SPLIT_SCHEMA: AnthropicNS.Tool.InputSchema = {
+  type: "object",
+  properties: {
+    meals: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          index: { type: "integer", description: "Öğünün listedeki sırası" },
+          foods: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                item: { type: "string", description: "Tek besin, miktarıyla" },
+                calories: { type: "integer" },
+              },
+              required: ["item", "calories"],
+            },
+          },
+        },
+        required: ["index", "foods"],
+      },
+    },
+  },
+  required: ["meals"],
+};
+
+/**
+ * Plan önce öğün başına tek kayıt ("2 yumurta + 5 zeytin + …") üretilir: AI
+ * 35 öğün kalorisini toplarken hedefi tutturur, 100+ ayrı besinde ise belirgin
+ * şekilde eksik toplar. Sonra her öğün besinlerine bölünür ki kullanıcı tek tek
+ * işaretleyip değiştirebilsin; öğün toplamı birebir korunur. Bölünemeyen gün
+ * olduğu gibi kalır (plan ekranı "+"lı öğünü yine alt alta gösterir).
+ */
+async function splitMealsIntoFoods(
+  meals: GeneratedMeal[],
+): Promise<GeneratedMeal[]> {
+  const days = [0, 1, 2, 3, 4, 5, 6].map((d) =>
+    meals.filter((m) => m.day_of_week === d),
+  );
+  const split = await Promise.all(
+    days.map(async (dayMeals) => {
+      if (!dayMeals.some((m) => m.item.includes("+"))) return dayMeals;
+      try {
+        return await splitDay(dayMeals);
+      } catch (e) {
+        console.error(
+          "[plan] öğünler besinlere bölünemedi:",
+          e instanceof Error ? e.message : e,
+        );
+        return dayMeals;
+      }
+    }),
+  );
+  return split.flat();
+}
+
+async function splitDay(dayMeals: GeneratedMeal[]): Promise<GeneratedMeal[]> {
+  const list = dayMeals
+    .map((m, i) => `${i} | ${m.calories} kcal | ${m.item}`)
+    .join("\n");
+
+  const response = await anthropic.messages.create({
+    model: DEFAULT_MODEL,
+    max_tokens: 4096,
+    tools: [
+      {
+        name: "save_foods",
+        description: "Besinlerine ayrılmış öğünleri kaydeder.",
+        input_schema: SPLIT_SCHEMA,
+      },
+    ],
+    tool_choice: { type: "tool", name: "save_foods" },
+    messages: [
+      {
+        role: "user",
+        content: `Her satır bir öğün: "sıra | toplam kcal | içerik". Her öğünü "+" işaretlerinden tek tek besinlere ayır.
+- Metni değiştirme, yalnızca böl; her besin miktarıyla kalsın. Parantez içi açıklamalar ait olduğu besinde kalsın.
+- Her besine gerçekçi kalori ver; bir öğündeki besinlerin toplamı o öğünün toplamına TAM EŞİT olsun.
+- Tüm sıraları döndür.
+
+${list}`,
+      },
+    ],
+  });
+
+  const toolUse = response.content.find((block) => block.type === "tool_use");
+  if (response.stop_reason === "max_tokens" || toolUse?.type !== "tool_use") {
+    throw new Error("Bölme yanıtı eksik.");
+  }
+  const byIndex = new Map(
+    splitSchema.parse(toolUse.input).meals.map((m) => [m.index, m.foods]),
+  );
+
+  return dayMeals.flatMap((meal, i) => {
+    const foods = byIndex.get(i);
+    if (!foods) return [meal];
+    const out = foods.map((f) => ({ ...meal, item: f.item, calories: f.calories }));
+    // Yuvarlama farkını en büyük besine yükle: öğün toplamı değişmesin.
+    const diff = meal.calories - out.reduce((s, f) => s + f.calories, 0);
+    if (diff !== 0) {
+      const biggest = out.reduce((b, f) => (f.calories > b.calories ? f : b));
+      biggest.calories = Math.max(0, biggest.calories + diff);
+    }
+    return out;
+  });
 }
 
 /**

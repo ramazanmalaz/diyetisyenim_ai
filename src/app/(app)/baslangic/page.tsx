@@ -6,7 +6,7 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 // Plan üretimi (generatePlan) birden çok AI çağrısı yapar; varsayılan süreyi aşmasın.
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export default async function BaslangicPage() {
   await requireProfile();
